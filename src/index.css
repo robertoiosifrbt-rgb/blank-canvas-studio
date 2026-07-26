@@ -1,0 +1,85 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@300;400;500;600;700&display=swap");
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 92%;
+    --foreground: 0 0% 6%;
+
+    --card: 0 0% 92%;
+    --card-foreground: 0 0% 6%;
+
+    --popover: 0 0% 92%;
+    --popover-foreground: 0 0% 6%;
+
+    --primary: 225 91% 34%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 223 63% 77%;
+    --secondary-foreground: 0 0% 4%;
+
+    --muted: 0 0% 88%;
+    --muted-foreground: 0 0% 46%;
+
+    --accent: 216 89% 41%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 83%;
+    --input: 0 0% 83%;
+    --ring: 225 91% 34%;
+
+    --chart-1: 225 91% 34%;
+    --chart-2: 12 70% 55%;
+    --chart-3: 173 70% 55%;
+    --chart-4: 257 70% 55%;
+    --chart-5: 43 70% 55%;
+
+    --radius: 1.3rem;
+
+    --sidebar-background: 0 0% 92%;
+    --sidebar-foreground: 0 0% 6%;
+    --sidebar-primary: 225 91% 34%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 216 89% 41%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 83%;
+    --sidebar-ring: 225 91% 34%;
+
+    --font-sans: 'Inter', 'Helvetica Neue', sans-serif;
+    --font-mono: 'Fira Code', monospace;
+    --shadow-x: 0px;
+    --shadow-y: 0px;
+    --shadow-blur: 0px;
+    --shadow-spread: 0px;
+    --shadow-opacity: 0;
+    --shadow-color: #000000;
+    --shadow-rgb: 0 0 0;
+
+    --shadow-2xs: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) rgb(var(--shadow-rgb) / calc(var(--shadow-opacity) * 0.5));
+    --shadow-xs: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) rgb(var(--shadow-rgb) / calc(var(--shadow-opacity) * 0.5));
+    --shadow-sm: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) rgb(var(--shadow-rgb) / var(--shadow-opacity)), var(--shadow-x) calc(var(--shadow-y) / 4) calc(var(--shadow-blur) / 2) calc(var(--shadow-spread) - 1px) rgb(var(--shadow-rgb) / var(--shadow-opacity));
+    --shadow: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) rgb(var(--shadow-rgb) / var(--shadow-opacity)), var(--shadow-x) calc(var(--shadow-y) / 2) calc(var(--shadow-blur) / 2) calc(var(--shadow-spread) - 1px) rgb(var(--shadow-rgb) / var(--shadow-opacity));
+    --shadow-md: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) rgb(var(--shadow-rgb) / var(--shadow-opacity)), var(--shadow-x) calc(var(--shadow-y) / 2) calc(var(--shadow-blur) * 2) calc(var(--shadow-spread) - 1px) rgb(var(--shadow-rgb) / var(--shadow-opacity));
+    --shadow-lg: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) rgb(var(--shadow-rgb) / var(--shadow-opacity)), var(--shadow-x) var(--shadow-y) calc(var(--shadow-blur) * 3) calc(var(--shadow-spread) - 1px) rgb(var(--shadow-rgb) / var(--shadow-opacity));
+    --shadow-xl: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) rgb(var(--shadow-rgb) / var(--shadow-opacity)), var(--shadow-x) calc(var(--shadow-y) * 2) calc(var(--shadow-blur) * 5) calc(var(--shadow-spread) - 1px) rgb(var(--shadow-rgb) / var(--shadow-opacity));
+    --shadow-2xl: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) rgb(var(--shadow-rgb) / calc(var(--shadow-opacity) * 2.5));
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    /* ACHU-059: Minimum supported viewport width — 360px for Admin */
+    min-width: 360px;
+  }
+}
