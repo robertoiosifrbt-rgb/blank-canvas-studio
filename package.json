@@ -10,47 +10,18 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@fillout/react": "latest",
-    "@radix-ui/react-alert-dialog": "latest",
-    "@radix-ui/react-checkbox": "latest",
-    "@radix-ui/react-collapsible": "latest",
-    "@radix-ui/react-dialog": "latest",
-    "@radix-ui/react-label": "latest",
-    "@radix-ui/react-select": "latest",
-    "@radix-ui/react-separator": "latest",
-    "class-variance-authority": "latest",
-    "clsx": "latest",
-    "lucide-react": "latest",
-    "openai": "latest",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.30.1",
-    "recharts": "latest",
-    "sonner": "latest",
-    "tailwind-merge": "latest",
-    "use-debounce": "latest",
-    "zite-auth-sdk": "latest",
-    "zite-endpoints-sdk": "latest",
-    "zite-file-upload-sdk": "latest",
-    "zite-integrations-backend-sdk": "latest",
-    "zod": "latest",
-    "@radix-ui/react-slot": "latest"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@eslint/js": "latest",
     "@types/node": "latest",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
-    "@vitejs/plugin-react": "latest",
+    "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "latest",
-    "eslint": "latest",
-    "eslint-plugin-react-hooks": "latest",
-    "eslint-plugin-react-refresh": "latest",
-    "globals": "latest",
     "postcss": "latest",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.7.2",
-    "typescript-eslint": "latest",
-    "vite": "^6.0.5"
+    "vite": "^5.4.10"
   }
 }
