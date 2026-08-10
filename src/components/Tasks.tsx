@@ -22,16 +22,69 @@ interface Task {
   pinned: boolean;
 }
 
+const DEFAULT_CATEGORIES = ['Work', 'Personal', 'Shopping'];
+
+const loadTasks = (): Task[] => {
+  try {
+    const saved = localStorage.getItem('tasks');
+    if (!saved) return [];
+
+    const parsed: unknown = JSON.parse(saved);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .filter((task): task is Record<string, unknown> => Boolean(task) && typeof task === 'object')
+      .map((task) => ({
+        id: typeof task.id === 'string' ? task.id : crypto.randomUUID(),
+        name: typeof task.name === 'string' ? task.name : '',
+        description: typeof task.description === 'string' ? task.description : '',
+        dueDate: typeof task.dueDate === 'string' ? task.dueDate : '',
+        completed: Boolean(task.completed),
+        priority:
+          task.priority === 'high' || task.priority === 'low' || task.priority === 'medium'
+            ? task.priority
+            : 'medium',
+        category: typeof task.category === 'string' && task.category ? task.category : 'Personal',
+        subtasks: Array.isArray(task.subtasks)
+          ? task.subtasks
+              .filter((subtask): subtask is Record<string, unknown> =>
+                Boolean(subtask) && typeof subtask === 'object'
+              )
+              .map((subtask) => ({
+                id: typeof subtask.id === 'string' ? subtask.id : crypto.randomUUID(),
+                name: typeof subtask.name === 'string' ? subtask.name : '',
+                completed: Boolean(subtask.completed),
+              }))
+          : [],
+        pinned: Boolean(task.pinned),
+      }))
+      .filter((task) => task.name.trim().length > 0);
+  } catch {
+    return [];
+  }
+};
+
+const loadCategories = (): string[] => {
+  try {
+    const saved = localStorage.getItem('categories');
+    if (!saved) return DEFAULT_CATEGORIES;
+
+    const parsed: unknown = JSON.parse(saved);
+    if (!Array.isArray(parsed)) return DEFAULT_CATEGORIES;
+
+    const valid = parsed.filter(
+      (category): category is string => typeof category === 'string' && category.trim().length > 0
+    );
+    return valid.length > 0 ? [...new Set(valid)] : DEFAULT_CATEGORIES;
+  } catch {
+    return DEFAULT_CATEGORIES;
+  }
+};
+
 export const Tasks = () => {
   const { t } = useTranslation();
-  const [tasks, setTasks] = useState<Task[]>(() => {
-    const saved = localStorage.getItem('tasks');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [categories, setCategories] = useState<string[]>(() => {
-    const saved = localStorage.getItem('categories');
-    return saved ? JSON.parse(saved) : ['Work', 'Personal', 'Shopping'];
-  });
+  const [tasks, setTasks] = useState<Task[]>(loadTasks);
+  const [categories, setCategories] = useState<string[]>(loadCategories);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showForm, setShowForm] = useState(false);
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
@@ -46,19 +99,27 @@ export const Tasks = () => {
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
+    try {
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+    } catch {
+      // Keep the app usable when browser storage is unavailable or full.
+    }
   }, [tasks]);
 
   useEffect(() => {
-    localStorage.setItem('categories', JSON.stringify(categories));
+    try {
+      localStorage.setItem('categories', JSON.stringify(categories));
+    } catch {
+      // Keep the app usable when browser storage is unavailable or full.
+    }
   }, [categories]);
 
   const addTask = () => {
     if (formData.name.trim()) {
       const newTask: Task = {
         id: Date.now().toString(),
-        name: formData.name,
-        description: formData.description,
+        name: formData.name.trim(),
+        description: formData.description.trim(),
         dueDate: formData.dueDate,
         completed: false,
         priority: formData.priority,
@@ -91,12 +152,15 @@ export const Tasks = () => {
   };
 
   const addSubtask = (taskId: string, subtaskName: string) => {
-    setTasks(
-      tasks.map((t) =>
+    const name = subtaskName.trim();
+    if (!name) return;
+
+    setTasks((currentTasks) =>
+      currentTasks.map((t) =>
         t.id === taskId
           ? {
               ...t,
-              subtasks: [...t.subtasks, { id: Date.now().toString(), name: subtaskName, completed: false }],
+              subtasks: [...t.subtasks, { id: crypto.randomUUID(), name, completed: false }],
             }
           : t
       )
@@ -129,8 +193,10 @@ export const Tasks = () => {
   };
 
   const addCategory = () => {
-    if (newCategory.trim() && !categories.includes(newCategory)) {
-      setCategories([...categories, newCategory]);
+    const category = newCategory.trim();
+    if (category && !categories.some((item) => item.toLowerCase() === category.toLowerCase())) {
+      setCategories([...categories, category]);
+      setFormData((current) => ({ ...current, category }));
       setNewCategory('');
       setShowNewCategoryInput(false);
     }
@@ -146,6 +212,8 @@ export const Tasks = () => {
   const pinnedTasks = filteredTasks.filter((t) => t.pinned && !t.completed);
   const pendingTasks = filteredTasks.filter((t) => !t.pinned && !t.completed);
   const completedTasks = filteredTasks.filter((t) => t.completed);
+  const completedCount = tasks.filter((task) => task.completed).length;
+  const progress = tasks.length === 0 ? 0 : Math.round((completedCount / tasks.length) * 100);
 
   const getPriorityColor = (priority: Priority) => {
     switch (priority) {
@@ -173,6 +241,25 @@ export const Tasks = () => {
           <Plus size={20} />
           {t('add_task')}
         </button>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm p-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-medium">{completedCount} / {tasks.length} {t('completed').toLowerCase()}</span>
+          <span className="font-bold text-blue-600">{progress}%</span>
+        </div>
+        <div
+          className="h-3 w-full overflow-hidden rounded-full bg-gray-200"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progress}
+        >
+          <div
+            className="h-full rounded-full bg-blue-500 transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
       </div>
 
       {showForm && (
@@ -527,14 +614,14 @@ const TaskItem = ({
         </div>
 
         <div className="flex items-center gap-1">
-          {task.subtasks.length > 0 && (
-            <button
-              onClick={onToggleExpand}
-              className="text-gray-400 hover:text-blue-500 p-1"
-            >
-              <ChevronDown size={20} className={expanded ? 'rotate-180' : ''} />
-            </button>
-          )}
+          <button
+            onClick={onToggleExpand}
+            className="text-gray-400 hover:text-blue-500 p-1"
+            aria-label={t('add_subtask')}
+            title={t('add_subtask')}
+          >
+            <ChevronDown size={20} className={expanded ? 'rotate-180' : ''} />
+          </button>
           <button
             onClick={onTogglePin}
             className={task.pinned ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'}
