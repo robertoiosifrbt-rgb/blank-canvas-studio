@@ -15,6 +15,8 @@ interface Item {
   name: string;
   description: string;
   dueDate: string;
+  startAt: string;
+  endAt: string;
   completed: boolean;
   priority: Priority;
   groupId: string | null;
@@ -59,6 +61,8 @@ const normalizeItem = (value: unknown): Item | null => {
     name,
     description: typeof row.description === 'string' ? row.description : '',
     dueDate: typeof row.dueDate === 'string' ? row.dueDate : '',
+    startAt: typeof row.startAt === 'string' ? row.startAt : (typeof row.dueDate === 'string' && row.dueDate ? `${row.dueDate}T09:00` : ''),
+    endAt: typeof row.endAt === 'string' ? row.endAt : (typeof row.dueDate === 'string' && row.dueDate ? `${row.dueDate}T10:00` : ''),
     completed: Boolean(row.completed),
     priority: row.priority === 'high' || row.priority === 'low' ? row.priority : 'medium',
     groupId: typeof row.groupId === 'string' ? row.groupId : null,
@@ -154,7 +158,7 @@ export const Tasks = () => {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [showGroupForm, setShowGroupForm] = useState(false);
-  const [taskForm, setTaskForm] = useState({ name: '', description: '', dueDate: '', priority: 'medium' as Priority, groupId: '' });
+  const [taskForm, setTaskForm] = useState({ name: '', description: '', startAt: '', endAt: '', priority: 'medium' as Priority, groupId: '' });
   const [groupForm, setGroupForm] = useState({ name: '', parentId: '' });
 
   useEffect(() => {
@@ -195,14 +199,16 @@ export const Tasks = () => {
       id: crypto.randomUUID(),
       name,
       description: taskForm.description.trim(),
-      dueDate: taskForm.dueDate,
+      dueDate: taskForm.startAt.slice(0, 10),
+      startAt: taskForm.startAt,
+      endAt: taskForm.endAt,
       completed: false,
       priority: taskForm.priority,
       groupId: taskForm.groupId || null,
       children: [],
       comments: [],
     }, ...current]);
-    setTaskForm({ name: '', description: '', dueDate: '', priority: 'medium', groupId: '' });
+    setTaskForm({ name: '', description: '', startAt: '', endAt: '', priority: 'medium', groupId: '' });
     setShowTaskForm(false);
   };
 
@@ -283,7 +289,10 @@ export const Tasks = () => {
           <input value={taskForm.name} onChange={(e) => setTaskForm({ ...taskForm, name: e.target.value })} placeholder={t('task_name')} className="w-full rounded-lg border px-3 py-3" />
           <textarea value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} placeholder={t('description')} className="min-h-24 w-full rounded-lg border px-3 py-3" />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="text-sm text-gray-600">{t('due_date')}<input type="date" value={taskForm.dueDate} onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3" /></label>
+            <label className="text-sm text-gray-600">{ro ? 'De la' : 'From'}<input type="datetime-local" value={taskForm.startAt} onChange={(e) => setTaskForm({ ...taskForm, startAt: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3" /></label>
+            <label className="text-sm text-gray-600">{ro ? 'Până la' : 'To'}<input type="datetime-local" value={taskForm.endAt} onChange={(e) => setTaskForm({ ...taskForm, endAt: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3" /></label>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="text-sm text-gray-600">{t('priority')}<select value={taskForm.priority} onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value as Priority })} className="mt-1 w-full rounded-lg border px-3 py-3"><option value="low">{t('low')}</option><option value="medium">{t('medium')}</option><option value="high">{t('high')}</option></select></label>
           </div>
           <label className="block text-sm text-gray-600">{ro ? 'Grup' : 'Group'}<select value={taskForm.groupId} onChange={(e) => setTaskForm({ ...taskForm, groupId: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3"><option value="">{ro ? 'Fără grup' : 'No group'}</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
@@ -315,7 +324,7 @@ export const Tasks = () => {
           onBack={() => selection.path.length ? setSelection({ ...selection, path: selection.path.slice(0, -1) }) : setSelection(null)}
           onOpenChild={(id) => setSelection({ ...selection, path: [...selection.path, id] })}
           onChange={(patch) => updateSelection((item) => ({ ...item, ...patch }))}
-          onAddChild={(name) => updateSelection((item) => ({ ...item, children: [...item.children, { id: crypto.randomUUID(), name, description: '', dueDate: '', completed: false, priority: 'medium', groupId: item.groupId, children: [], comments: [] }] }))}
+          onAddChild={(name) => updateSelection((item) => ({ ...item, children: [...item.children, { id: crypto.randomUUID(), name, description: '', dueDate: '', startAt: '', endAt: '', completed: false, priority: 'medium', groupId: item.groupId, children: [], comments: [] }] }))}
           onToggleChild={(id) => updateSelection((item) => ({ ...item, children: item.children.map((child) => child.id === id ? { ...child, completed: !child.completed } : child) }))}
           onDeleteChild={(id) => updateSelection((item) => ({ ...item, children: item.children.filter((child) => child.id !== id) }))}
           onAddComment={(text) => updateSelection((item) => ({ ...item, comments: [...item.comments, { id: crypto.randomUUID(), text, createdAt: new Date().toISOString() }] }))}
@@ -369,8 +378,9 @@ const ItemDetail = ({ item, groups, ro, onClose, onDelete, onBack, onOpenChild, 
       </header>
       <main className="space-y-0">
         <section className="border-b p-5"><input value={item.name} onChange={(e) => onChange({ name: e.target.value })} className="w-full border-0 text-2xl font-bold outline-none" /></section>
-        <section className="grid grid-cols-1 gap-4 border-b p-5 sm:grid-cols-3">
-          <label className="text-sm text-gray-500"><span className="flex items-center gap-2"><CalendarDays size={19} />{ro ? 'Data scadenței' : 'Due date'}</span><input type="date" value={item.dueDate} onChange={(e) => onChange({ dueDate: e.target.value })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900" /></label>
+        <section className="grid grid-cols-1 gap-4 border-b p-5 sm:grid-cols-2">
+          <label className="text-sm text-gray-500"><span className="flex items-center gap-2"><CalendarDays size={19} />{ro ? 'De la' : 'From'}</span><input type="datetime-local" value={item.startAt} onChange={(e) => onChange({ startAt: e.target.value, dueDate: e.target.value.slice(0, 10) })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900" /></label>
+          <label className="text-sm text-gray-500"><span className="flex items-center gap-2"><CalendarDays size={19} />{ro ? 'Până la' : 'To'}</span><input type="datetime-local" value={item.endAt} onChange={(e) => onChange({ endAt: e.target.value })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900" /></label>
           <label className="text-sm text-gray-500"><span className="flex items-center gap-2"><Folder size={19} />{ro ? 'Grup' : 'Group'}</span><select value={item.groupId || ''} onChange={(e) => onChange({ groupId: e.target.value || null })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900"><option value="">{ro ? 'Fără grup' : 'No group'}</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
           <label className="text-sm text-gray-500">{ro ? 'Prioritate' : 'Priority'}<select value={item.priority} onChange={(e) => onChange({ priority: e.target.value as Priority })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900"><option value="low">{ro ? 'Joasă' : 'Low'}</option><option value="medium">{ro ? 'Medie' : 'Medium'}</option><option value="high">{ro ? 'Înaltă' : 'High'}</option></select></label>
         </section>
