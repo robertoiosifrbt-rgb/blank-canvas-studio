@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface Task {
@@ -9,6 +9,8 @@ interface Task {
   completed: boolean;
   priority: 'high' | 'medium' | 'low';
   category: string;
+  startAt?: string;
+  endAt?: string;
 }
 
 interface CalendarEvent {
@@ -17,23 +19,11 @@ interface CalendarEvent {
   date: string;
   category: string;
   color: string;
+  startTime: string;
+  endTime: string;
 }
 
-interface Day {
-  date: Date;
-  isCurrentMonth: boolean;
-  isToday: boolean;
-  events: (Task | CalendarEvent)[];
-}
 
-const ROMANIAN_HOLIDAYS = [
-  { date: '01-01', name: 'New Year' },
-  { date: '01-24', name: 'Unity Day' },
-  { date: '05-01', name: 'Labor Day' },
-  { date: '12-01', name: 'National Day' },
-  { date: '12-25', name: 'Christmas' },
-  { date: '12-26', name: 'Christmas' },
-];
 
 const CATEGORY_COLORS = {
   Work: 'bg-blue-100 border-blue-300 text-blue-700',
@@ -46,412 +36,130 @@ const CATEGORY_COLORS = {
 type ViewMode = 'month' | 'week' | 'day';
 
 export const Calendar = () => {
-  const { t } = useTranslation();
+  const { i18n } = useTranslation();
+  const ro = i18n.language.startsWith('ro');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [tasks] = useState<Task[]>(() => {
-    const saved = localStorage.getItem('tasks');
-    return saved ? JSON.parse(saved) : [];
+  const [dayForm, setDayForm] = useState<'event' | 'task' | null>(null);
+  const [form, setForm] = useState({ name: '', startTime: '09:00', endTime: '10:00' });
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    try { const raw = localStorage.getItem('tasks'); return raw ? JSON.parse(raw) : []; } catch { return []; }
   });
   const [events, setEvents] = useState<CalendarEvent[]>(() => {
-    const saved = localStorage.getItem('calendarEvents');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [eventCategories] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('eventCategories');
-      const parsed: unknown = saved ? JSON.parse(saved) : null;
-      return Array.isArray(parsed) && parsed.every((value) => typeof value === 'string')
-        ? [...new Set([...Object.keys(CATEGORY_COLORS), ...parsed])]
-        : Object.keys(CATEGORY_COLORS);
-    } catch {
-      return Object.keys(CATEGORY_COLORS);
-    }
+    try { const raw = localStorage.getItem('calendarEvents'); return raw ? JSON.parse(raw) : []; } catch { return []; }
   });
 
+  useEffect(() => { localStorage.setItem('tasks', JSON.stringify(tasks)); }, [tasks]);
+  useEffect(() => { localStorage.setItem('calendarEvents', JSON.stringify(events)); }, [events]);
 
-  useEffect(() => {
-    localStorage.setItem('calendarEvents', JSON.stringify(events));
-  }, [events]);
-
-  useEffect(() => {
-    localStorage.setItem('eventCategories', JSON.stringify(eventCategories));
-  }, [eventCategories]);
-
-  const isHoliday = (date: Date) => {
-    const monthDay = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    return ROMANIAN_HOLIDAYS.find((h) => h.date === monthDay);
-  };
-
-  const getEventsForDate = (date: Date): (Task | CalendarEvent)[] => {
-    const dateStr = date.toISOString().split('T')[0];
-    const taskEvents = tasks.filter((t) => t.dueDate === dateStr && !t.completed);
-    const calendarEvents = events.filter((e) => e.date === dateStr);
-    return [...taskEvents, ...calendarEvents];
-  };
-
-
-
-  const deleteEvent = (id: string) => {
-    setEvents(events.filter((e) => e.id !== id));
-  };
-
-  const updateEvent = (id: string, patch: Partial<CalendarEvent>) => {
-    setEvents((current) => current.map((event) => event.id === id ? { ...event, ...patch } : event));
-  };
-
-
-
-  const getDaysInMonth = (date: Date): Day[] => {
+  const dateKey = (date: Date) => {
     const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
-    const days: Day[] = [];
-    const today = new Date();
+  const itemsForDate = (date: Date) => {
+    const key = dateKey(date);
+    const taskItems = tasks.filter((task) => (task.startAt?.slice(0, 10) || task.dueDate) === key);
+    const eventItems = events.filter((event) => event.date === key);
+    return [
+      ...taskItems.map((task) => ({ id: task.id, name: task.name, start: task.startAt?.slice(11, 16) || '09:00', end: task.endAt?.slice(11, 16) || '10:00', kind: 'task' as const })),
+      ...eventItems.map((event) => ({ id: event.id, name: event.name, start: event.startTime || '09:00', end: event.endTime || '10:00', kind: 'event' as const })),
+    ];
+  };
 
-    for (let i = startingDayOfWeek - 1; i >= 0; i--) {
-      const dateObj = new Date(year, month, -i);
-      days.push({
-        date: dateObj,
-        isCurrentMonth: false,
-        isToday: false,
-        events: getEventsForDate(dateObj),
-      });
+  const openDay = (date: Date) => {
+    setCurrentDate(date);
+    setViewMode('day');
+    setDayForm(null);
+  };
+
+  const addFromDay = () => {
+    const name = form.name.trim();
+    if (!name) return;
+    const date = dateKey(currentDate);
+    if (dayForm === 'event') {
+      setEvents((current) => [...current, { id: crypto.randomUUID(), name, date, category: 'Personal', color: 'bg-blue-100', startTime: form.startTime, endTime: form.endTime }]);
+    } else {
+      setTasks((current) => [...current, {
+        id: crypto.randomUUID(), name, dueDate: date, startAt: `${date}T${form.startTime}`, endAt: `${date}T${form.endTime}`, completed: false, priority: 'medium', category: 'Personal',
+        description: '', groupId: null, children: [], comments: [],
+      } as Task]);
     }
-
-    for (let i = 1; i <= daysInMonth; i++) {
-      const dateObj = new Date(year, month, i);
-      const isToday =
-        dateObj.getDate() === today.getDate() &&
-        dateObj.getMonth() === today.getMonth() &&
-        dateObj.getFullYear() === today.getFullYear();
-      days.push({
-        date: dateObj,
-        isCurrentMonth: true,
-        isToday,
-        events: getEventsForDate(dateObj),
-      });
-    }
-
-    const remainingDays = 42 - days.length;
-    for (let i = 1; i <= remainingDays; i++) {
-      const dateObj = new Date(year, month + 1, i);
-      days.push({
-        date: dateObj,
-        isCurrentMonth: false,
-        isToday: false,
-        events: getEventsForDate(dateObj),
-      });
-    }
-
-    return days;
+    setForm({ name: '', startTime: '09:00', endTime: '10:00' });
+    setDayForm(null);
   };
 
-  const getWeekDays = (date: Date): Day[] => {
-    const startOfWeek = new Date(date);
-    startOfWeek.setDate(date.getDate() - date.getDay() + 1);
-
-    const days: Day[] = [];
-    for (let i = 0; i < 7; i++) {
-      const dateObj = new Date(startOfWeek);
-      dateObj.setDate(startOfWeek.getDate() + i);
-      days.push({
-        date: dateObj,
-        isCurrentMonth: true,
-        isToday: dateObj.toDateString() === new Date().toDateString(),
-        events: getEventsForDate(dateObj),
-      });
-    }
-    return days;
+  const changePeriod = (amount: number) => {
+    const next = new Date(currentDate);
+    if (viewMode === 'month') next.setMonth(next.getMonth() + amount);
+    else if (viewMode === 'week') next.setDate(next.getDate() + amount * 7);
+    else next.setDate(next.getDate() + amount);
+    setCurrentDate(next);
   };
 
-  const getDayDetails = (date: Date): Day => {
-    return {
-      date,
-      isCurrentMonth: true,
-      isToday: date.toDateString() === new Date().toDateString(),
-      events: getEventsForDate(date),
-    };
+  const weekDays = () => {
+    const monday = new Date(currentDate);
+    const day = monday.getDay() || 7;
+    monday.setDate(monday.getDate() - day + 1);
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + index);
+      return date;
+    });
   };
 
-  const handlePrevMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
-  };
-
-  const handlePrevWeek = () => {
-    const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() - 7);
-    setCurrentDate(newDate);
-  };
-
-  const handleNextWeek = () => {
-    const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() + 7);
-    setCurrentDate(newDate);
-  };
-
-  const handlePrevDay = () => {
-    const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() - 1);
-    setCurrentDate(newDate);
-  };
-
-  const handleNextDay = () => {
-    const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() + 1);
-    setCurrentDate(newDate);
-  };
-
-  const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">{monthName}</h2>
-          <div className="flex gap-2">
-            <select
-              value={viewMode}
-              onChange={(e) => {
-                const mode = e.target.value as ViewMode;
-                setViewMode(mode);
-                if (mode === 'day') setSelectedDate(currentDate);
-              }}
-              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="month">📅 Month</option>
-              <option value="week">📊 Week</option>
-              <option value="day">📄 Day</option>
-            </select>
-            <button
-              onClick={viewMode === 'month' ? handlePrevMonth : viewMode === 'week' ? handlePrevWeek : handlePrevDay}
-              className="p-2 hover:bg-gray-100 rounded-lg transition"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <button
-              onClick={viewMode === 'month' ? handleNextMonth : viewMode === 'week' ? handleNextWeek : handleNextDay}
-              className="p-2 hover:bg-gray-100 rounded-lg transition"
-            >
-              <ChevronRight size={20} />
-            </button>
-          </div>
-        </div>
-
-        {viewMode === 'month' && <MonthView days={getDaysInMonth(currentDate)} dayNames={dayNames} selectedDate={selectedDate} onDateClick={setSelectedDate} />}
-
-        {viewMode === 'week' && (
-          <WeekView
-            days={getWeekDays(currentDate)}
-            selectedDate={selectedDate}
-            onDateClick={setSelectedDate}
-          />
-        )}
-
-        {viewMode === 'day' && (
-          <DayView
-            day={getDayDetails(currentDate)}
-            onDeleteEvent={deleteEvent}
-            onUpdateEvent={updateEvent}
-          />
-        )}
-      </div>
-
-      {selectedDate && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold">
-              {selectedDate.toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </h3>
-            <button
-              onClick={() => setSelectedDate(null)}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          {isHoliday(selectedDate) && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-lg text-red-700 font-medium">
-              🎉 {isHoliday(selectedDate)?.name}
-            </div>
-          )}
-
-          <div className="space-y-3 mb-4">
-            {getEventsForDate(selectedDate).map((event) => (
-              <div
-                key={event.id}
-                className={`p-3 rounded-lg border ${
-                  CATEGORY_COLORS[event.category as keyof typeof CATEGORY_COLORS] ||
-                  'bg-gray-100 border-gray-300 text-gray-700'
-                }`}
-              >
-                {'date' in event ? (
-                  <div className="space-y-2">
-                    <input value={event.name} onChange={(e) => updateEvent(event.id, { name: e.target.value })} className="w-full rounded border bg-white px-3 py-2 font-medium text-gray-900" />
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      <input type="date" value={event.date} onChange={(e) => updateEvent(event.id, { date: e.target.value })} className="rounded border bg-white px-3 py-2 text-gray-900" />
-                      <select value={event.category} onChange={(e) => updateEvent(event.id, { category: e.target.value })} className="rounded border bg-white px-3 py-2 text-gray-900">{eventCategories.map((category) => <option key={category}>{category}</option>)}</select>
-                    </div>
-                  <button
-                    onClick={() => deleteEvent(event.id)}
-                    className="flex items-center gap-2 text-red-600"
-                  >
-                    <Trash2 size={18} /> {t('delete')}
-                  </button>
-                  </div>
-                ) : <div><p className="font-medium">{event.name}</p><p className="text-sm opacity-75">{event.category}</p></div>}
-              </div>
-            ))}
-          </div>
-
-
-        </div>
-      )}
-    </div>
-  );
-};
-
-const MonthView = ({
-  days,
-  dayNames,
-  selectedDate,
-  onDateClick,
-}: {
-  days: Array<{ date: Date; isCurrentMonth: boolean; isToday: boolean; events: any[] }>;
-  dayNames: string[];
-  selectedDate: Date | null;
-  onDateClick: (date: Date) => void;
-}) => {
-  return (
-    <>
-      <div className="grid grid-cols-7 gap-2 mb-2">
-        {dayNames.map((day) => (
-          <div key={day} className="text-center font-semibold text-gray-600 py-2">
-            {day}
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7 gap-2">
-        {days.map((day, index) => (
-          <button
-            key={index}
-            onClick={() => onDateClick(day.date)}
-            className={`aspect-square flex flex-col items-center justify-start p-2 rounded-lg text-sm font-medium transition cursor-pointer ${
-              selectedDate && day.date.toDateString() === selectedDate.toDateString()
-                ? 'bg-blue-700 text-white ring-4 ring-blue-200'
-                : day.isToday
-                ? 'bg-blue-500 text-white'
-                : day.isCurrentMonth
-                  ? 'bg-gray-50 hover:bg-gray-100'
-                  : 'bg-gray-100 text-gray-400'
-            }`}
-          >
-            <span>{day.date.getDate()}</span>
-            {day.events.length > 0 && (
-              <div className="flex gap-1 mt-1 flex-wrap justify-center">
-                {day.events.slice(0, 2).map((_, i) => (
-                  <div key={i} className="w-1.5 h-1.5 bg-red-500 rounded-full" />
-                ))}
-                {day.events.length > 2 && <span className="text-xs">+{day.events.length - 2}</span>}
-              </div>
-            )}
-          </button>
-        ))}
-      </div>
-    </>
-  );
-};
-
-const WeekView = ({
-  days,
-  selectedDate,
-  onDateClick,
-}: {
-  days: Array<{ date: Date; isCurrentMonth: boolean; isToday: boolean; events: any[] }>;
-  selectedDate: Date | null;
-  onDateClick: (date: Date) => void;
-}) => {
-  return (
-    <div className="space-y-3">
-      {days.map((day, i) => (
-        <button key={i} onClick={() => onDateClick(day.date)} className={`w-full flex gap-4 p-3 rounded-lg transition cursor-pointer text-left ${selectedDate && day.date.toDateString() === selectedDate.toDateString() ? 'bg-blue-100 ring-2 ring-blue-500' : 'bg-gray-50 hover:bg-gray-100'}`}>
-          <div className="w-24 flex-shrink-0">
-            <p className="font-semibold text-blue-600">{day.date.toLocaleDateString('en-US', { weekday: 'short' })}</p>
-            <p className="text-2xl font-bold">{day.date.getDate()}</p>
-          </div>
-          <div className="flex-1 space-y-2">
-            {day.events.map((event) => (
-              <div key={event.id} className="text-sm bg-white p-2 rounded border-l-4 border-blue-500">
-                {event.name}
-              </div>
-            ))}
-            {day.events.length === 0 && <p className="text-gray-400 text-sm">No events</p>}
-          </div>
-        </button>
-      ))}
-    </div>
-  );
-};
-
-const DayView = ({
-  day,
-  onDeleteEvent,
-  onUpdateEvent,
-}: {
-  day: { date: Date; isCurrentMonth: boolean; isToday: boolean; events: any[] };
-  onDeleteEvent: (id: string) => void;
-  onUpdateEvent: (id: string, patch: Partial<CalendarEvent>) => void;
-}) => {
   return (
     <div className="space-y-4">
-      <h3 className="text-2xl font-bold">
-        {day.date.toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        })}
-      </h3>
-
-      <div className="space-y-2">
-        {day.events.map((event) => (
-          <div key={event.id} className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-            <div className="flex justify-between items-start">
-              {'date' in event ? <div className="flex-1 space-y-2"><input value={event.name} onChange={(e) => onUpdateEvent(event.id, { name: e.target.value })} className="w-full rounded border bg-white px-3 py-2 font-semibold" /><input type="date" value={event.date} onChange={(e) => onUpdateEvent(event.id, { date: e.target.value })} className="rounded border bg-white px-3 py-2" /></div> : <div><p className="font-semibold text-lg">{event.name}</p><p className="text-sm text-gray-600">{event.category}</p></div>}
-              {'date' in event && <button
-                onClick={() => onDeleteEvent(event.id)}
-                className="text-gray-400 hover:text-red-500"
-              >
-                <Trash2 size={20} />
-              </button>}
-            </div>
+      <section className="rounded-xl bg-white p-4 shadow-md">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-2xl font-bold">{currentDate.toLocaleDateString(ro ? 'ro-RO' : 'en-GB', { month: 'long', year: 'numeric', ...(viewMode === 'day' ? { day: 'numeric' } : {}) })}</h2>
+          <div className="flex items-center gap-2">
+            <select value={viewMode} onChange={(event) => setViewMode(event.target.value as ViewMode)} className="rounded-lg border px-3 py-2">
+              <option value="month">{ro ? 'Lună' : 'Month'}</option>
+              <option value="week">{ro ? 'Săptămână' : 'Week'}</option>
+              <option value="day">{ro ? 'Zi' : 'Day'}</option>
+            </select>
+            <button onClick={() => changePeriod(-1)} className="rounded-lg p-2 hover:bg-gray-100"><ChevronLeft /></button>
+            <button onClick={() => changePeriod(1)} className="rounded-lg p-2 hover:bg-gray-100"><ChevronRight /></button>
           </div>
-        ))}
-      </div>
+        </div>
 
-      {day.events.length === 0 && <p className="text-gray-500 text-center py-8">No events scheduled</p>}
-
+        {viewMode === 'month' && <MonthCalendar date={currentDate} onDay={openDay} getCount={(date) => itemsForDate(date).length} />}
+        {viewMode === 'week' && <TimeGrid days={weekDays()} itemsForDate={itemsForDate} onDay={openDay} />}
+        {viewMode === 'day' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setDayForm('event')} className="rounded-lg bg-blue-600 px-4 py-3 text-white"><Plus className="mr-2 inline" size={18} />{ro ? 'Adaugă eveniment' : 'Add event'}</button>
+              <button onClick={() => setDayForm('task')} className="rounded-lg bg-green-600 px-4 py-3 text-white"><Plus className="mr-2 inline" size={18} />{ro ? 'Adaugă sarcină' : 'Add task'}</button>
+            </div>
+            {dayForm && <div className="space-y-3 rounded-lg border p-4"><h3 className="font-semibold">{dayForm === 'event' ? (ro ? 'Eveniment nou' : 'New event') : (ro ? 'Sarcină nouă' : 'New task')}</h3><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={ro ? 'Nume' : 'Name'} className="w-full rounded-lg border px-3 py-2" /><div className="grid grid-cols-2 gap-3"><label className="text-sm">{ro ? 'De la' : 'From'}<input type="time" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2" /></label><label className="text-sm">{ro ? 'Până la' : 'To'}<input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2" /></label></div><div className="grid grid-cols-2 gap-2"><button onClick={addFromDay} className="rounded-lg bg-blue-600 py-2 text-white">{ro ? 'Salvare' : 'Save'}</button><button onClick={() => setDayForm(null)} className="rounded-lg bg-gray-200 py-2">{ro ? 'Anulare' : 'Cancel'}</button></div></div>}
+            <TimeGrid days={[currentDate]} itemsForDate={itemsForDate} onDay={openDay} />
+          </div>
+        )}
+      </section>
     </div>
   );
 };
 
+const MonthCalendar = ({ date, onDay, getCount }: { date: Date; onDay: (date: Date) => void; getCount: (date: Date) => number }) => {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const first = new Date(year, month, 1);
+  const start = new Date(year, month, 1 - first.getDay());
+  const days = Array.from({ length: 42 }, (_, index) => {
+    const day = new Date(start);
+    day.setDate(start.getDate() + index);
+    return day;
+  });
+  return <div><div className="mb-2 grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-500">{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((name) => <div key={name}>{name}</div>)}</div><div className="grid grid-cols-7 gap-1">{days.map((day) => { const count = getCount(day); return <button key={day.toISOString()} onClick={() => onDay(day)} className={`aspect-square rounded-lg p-1 text-sm ${day.getMonth() === month ? 'bg-gray-50' : 'bg-gray-100 text-gray-400'} hover:ring-2 hover:ring-blue-500`}><span>{day.getDate()}</span>{count > 0 && <div className="mx-auto mt-1 h-1.5 w-1.5 rounded-full bg-blue-600" />}</button>; })}</div></div>;
+};
+
+const TimeGrid = ({ days, itemsForDate, onDay }: { days: Date[]; itemsForDate: (date: Date) => Array<{ id: string; name: string; start: string; end: string; kind: 'task' | 'event' }>; onDay: (date: Date) => void }) => {
+  const hours = Array.from({ length: 24 }, (_, hour) => hour);
+  return <div className="overflow-x-auto"><div style={{ minWidth: days.length > 1 ? 760 : 320 }}><div className="grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(96px, 1fr))` }}><div /><>{days.map((day) => <button key={day.toISOString()} onClick={() => onDay(day)} className="border-b p-2 text-center font-semibold text-blue-600">{day.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}</button>)}</></div>{hours.map((hour) => <div key={hour} className="grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(96px, 1fr))` }}><div className="border-r border-t pr-2 pt-1 text-right text-xs text-gray-400">{String(hour).padStart(2, '0')}:00</div>{days.map((day) => { const entries = itemsForDate(day).filter((item) => Number(item.start.slice(0,2)) === hour); return <div key={day.toISOString()} className="min-h-16 border-r border-t p-1">{entries.map((item) => <div key={item.id} className={`mb-1 rounded px-2 py-1 text-xs ${item.kind === 'event' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}><strong className="block truncate">{item.name}</strong><span>{item.start}–{item.end}</span></div>)}</div>; })}</div>)}</div></div>;
+};
 
 export const Events = () => {
   const { t, i18n } = useTranslation();
@@ -477,7 +185,7 @@ export const Events = () => {
     }
   });
   const [newCategory, setNewCategory] = useState('');
-  const [form, setForm] = useState({ name: '', date: '', category: 'Personal' });
+  const [form, setForm] = useState({ name: '', date: '', startTime: '09:00', endTime: '10:00', category: 'Personal' });
 
   useEffect(() => {
     localStorage.setItem('calendarEvents', JSON.stringify(events));
@@ -504,8 +212,10 @@ export const Events = () => {
       date: form.date,
       category: form.category,
       color: CATEGORY_COLORS[form.category as keyof typeof CATEGORY_COLORS] || 'bg-gray-100',
+      startTime: form.startTime,
+      endTime: form.endTime,
     }]);
-    setForm({ name: '', date: '', category: form.category });
+    setForm({ name: '', date: '', startTime: '09:00', endTime: '10:00', category: form.category });
   };
 
   const updateEvent = (id: string, patch: Partial<CalendarEvent>) =>
@@ -524,6 +234,7 @@ export const Events = () => {
         <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={ro ? 'Nume eveniment' : 'Event name'} className="w-full rounded-lg border px-3 py-3" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="rounded-lg border px-3 py-3" />
+          <div className="grid grid-cols-2 gap-2"><input type="time" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="rounded-lg border px-3 py-3" /><input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="rounded-lg border px-3 py-3" /></div>
           <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="rounded-lg border px-3 py-3">{categories.map((category) => <option key={category}>{category}</option>)}</select>
         </div>
         <button onClick={addEvent} className="w-full rounded-lg bg-blue-600 px-4 py-3 text-white">{ro ? 'Adaugă eveniment' : 'Add event'}</button>
@@ -538,8 +249,9 @@ export const Events = () => {
         {[...events].sort((a, b) => a.date.localeCompare(b.date)).map((event) => (
           <div key={event.id} className="space-y-2 rounded-xl bg-white p-4 shadow-sm">
             <input value={event.name} onChange={(e) => updateEvent(event.id, { name: e.target.value })} className="w-full rounded border px-3 py-2 font-medium" />
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <input type="date" value={event.date} onChange={(e) => updateEvent(event.id, { date: e.target.value })} className="rounded border px-3 py-2" />
+              <div className="grid grid-cols-2 gap-2"><input type="time" value={event.startTime || '09:00'} onChange={(e) => updateEvent(event.id, { startTime: e.target.value })} className="rounded border px-3 py-2" /><input type="time" value={event.endTime || '10:00'} onChange={(e) => updateEvent(event.id, { endTime: e.target.value })} className="rounded border px-3 py-2" /></div>
               <select value={event.category} onChange={(e) => updateEvent(event.id, { category: e.target.value })} className="rounded border px-3 py-2">{categories.map((category) => <option key={category}>{category}</option>)}</select>
               <button onClick={() => deleteEvent(event.id)} className="flex items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-red-600"><Trash2 size={18} />{t('delete')}</button>
             </div>
@@ -550,3 +262,5 @@ export const Events = () => {
     </div>
   );
 };
+
+
