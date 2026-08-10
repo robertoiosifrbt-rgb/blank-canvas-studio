@@ -99,6 +99,10 @@ export const Calendar = () => {
     setEvents(events.filter((e) => e.id !== id));
   };
 
+  const updateEvent = (id: string, patch: Partial<CalendarEvent>) => {
+    setEvents((current) => current.map((event) => event.id === id ? { ...event, ...patch } : event));
+  };
+
   const getDaysInMonth = (date: Date): Day[] => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -260,6 +264,7 @@ export const Calendar = () => {
               setShowEventForm(true);
             }}
             onDeleteEvent={deleteEvent}
+            onUpdateEvent={updateEvent}
           />
         )}
       </div>
@@ -296,20 +301,23 @@ export const Calendar = () => {
                 className={`p-3 rounded-lg border ${
                   CATEGORY_COLORS[event.category as keyof typeof CATEGORY_COLORS] ||
                   'bg-gray-100 border-gray-300 text-gray-700'
-                } flex justify-between items-center`}
+                }`}
               >
-                <div>
-                  <p className="font-medium">{event.name}</p>
-                  <p className="text-sm opacity-75">{event.category}</p>
-                </div>
-                {'dueDate' in event && !event.dueDate ? null : (
+                {'date' in event ? (
+                  <div className="space-y-2">
+                    <input value={event.name} onChange={(e) => updateEvent(event.id, { name: e.target.value })} className="w-full rounded border bg-white px-3 py-2 font-medium text-gray-900" />
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <input type="date" value={event.date} onChange={(e) => updateEvent(event.id, { date: e.target.value })} className="rounded border bg-white px-3 py-2 text-gray-900" />
+                      <select value={event.category} onChange={(e) => updateEvent(event.id, { category: e.target.value })} className="rounded border bg-white px-3 py-2 text-gray-900">{Object.keys(CATEGORY_COLORS).map((category) => <option key={category}>{category}</option>)}</select>
+                    </div>
                   <button
                     onClick={() => deleteEvent(event.id)}
-                    className="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100"
+                    className="flex items-center gap-2 text-red-600"
                   >
-                    <Trash2 size={18} />
+                    <Trash2 size={18} /> {t('delete')}
                   </button>
-                )}
+                  </div>
+                ) : <div><p className="font-medium">{event.name}</p><p className="text-sm opacity-75">{event.category}</p></div>}
               </div>
             ))}
           </div>
@@ -451,10 +459,12 @@ const DayView = ({
   day,
   onShowForm,
   onDeleteEvent,
+  onUpdateEvent,
 }: {
   day: { date: Date; isCurrentMonth: boolean; isToday: boolean; events: any[] };
   onShowForm: () => void;
   onDeleteEvent: (id: string) => void;
+  onUpdateEvent: (id: string, patch: Partial<CalendarEvent>) => void;
 }) => {
   return (
     <div className="space-y-4">
@@ -471,16 +481,13 @@ const DayView = ({
         {day.events.map((event) => (
           <div key={event.id} className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
             <div className="flex justify-between items-start">
-              <div>
-                <p className="font-semibold text-lg">{event.name}</p>
-                <p className="text-sm text-gray-600">{event.category}</p>
-              </div>
-              <button
+              {'date' in event ? <div className="flex-1 space-y-2"><input value={event.name} onChange={(e) => onUpdateEvent(event.id, { name: e.target.value })} className="w-full rounded border bg-white px-3 py-2 font-semibold" /><input type="date" value={event.date} onChange={(e) => onUpdateEvent(event.id, { date: e.target.value })} className="rounded border bg-white px-3 py-2" /></div> : <div><p className="font-semibold text-lg">{event.name}</p><p className="text-sm text-gray-600">{event.category}</p></div>}
+              {'date' in event && <button
                 onClick={() => onDeleteEvent(event.id)}
                 className="text-gray-400 hover:text-red-500"
               >
                 <Trash2 size={20} />
-              </button>
+              </button>}
             </div>
           </div>
         ))}
