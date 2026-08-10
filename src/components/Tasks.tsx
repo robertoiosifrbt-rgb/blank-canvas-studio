@@ -267,7 +267,6 @@ export const Tasks = () => {
         <ItemDetail
           item={selectedItem}
           groups={groups}
-          path={selection.path}
           ro={ro}
           onClose={() => setSelection(null)}
           onBack={() => selection.path.length ? setSelection({ ...selection, path: selection.path.slice(0, -1) }) : setSelection(null)}
@@ -308,8 +307,8 @@ const GroupRows = ({ groups, items, parentId, depth, selected, onSelect }: { gro
   </>
 );
 
-const ItemDetail = ({ item, groups, path, ro, onClose, onBack, onOpenChild, onChange, onAddChild, onToggleChild, onDeleteChild, onAddComment }: {
-  item: Item; groups: Group[]; path: string[]; ro: boolean; onClose: () => void; onBack: () => void; onOpenChild: (id: string) => void; onChange: (patch: Partial<Item>) => void; onAddChild: (name: string) => void; onToggleChild: (id: string) => void; onDeleteChild: (id: string) => void; onAddComment: (text: string) => void;
+const ItemDetail = ({ item, groups, ro, onClose, onBack, onOpenChild, onChange, onAddChild, onToggleChild, onDeleteChild, onAddComment }: {
+  item: Item; groups: Group[]; ro: boolean; onClose: () => void; onBack: () => void; onOpenChild: (id: string) => void; onChange: (patch: Partial<Item>) => void; onAddChild: (name: string) => void; onToggleChild: (id: string) => void; onDeleteChild: (id: string) => void; onAddComment: (text: string) => void;
 }) => {
   const [childName, setChildName] = useState('');
   const [comment, setComment] = useState('');
@@ -341,4 +340,3 @@ const ItemDetail = ({ item, groups, path, ro, onClose, onBack, onOpenChild, onCh
     </div>
   </div>;
 };
-
