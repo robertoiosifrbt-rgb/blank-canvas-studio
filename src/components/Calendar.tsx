@@ -50,7 +50,6 @@ export const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [showEventForm, setShowEventForm] = useState(false);
   const [tasks] = useState<Task[]>(() => {
     const saved = localStorage.getItem('tasks');
     return saved ? JSON.parse(saved) : [];
@@ -70,10 +69,7 @@ export const Calendar = () => {
       return Object.keys(CATEGORY_COLORS);
     }
   });
-  const [eventForm, setEventForm] = useState({
-    name: '',
-    category: 'Personal',
-  });
+
 
   useEffect(() => {
     localStorage.setItem('calendarEvents', JSON.stringify(events));
@@ -95,20 +91,7 @@ export const Calendar = () => {
     return [...taskEvents, ...calendarEvents];
   };
 
-  const addEvent = () => {
-    if (eventForm.name.trim() && selectedDate) {
-      const newEvent: CalendarEvent = {
-        id: Date.now().toString(),
-        name: eventForm.name,
-        date: selectedDate.toISOString().split('T')[0],
-        category: eventForm.category,
-        color: CATEGORY_COLORS[eventForm.category as keyof typeof CATEGORY_COLORS] || 'bg-gray-100',
-      };
-      setEvents([...events, newEvent]);
-      setEventForm({ name: '', category: 'Personal' });
-      setShowEventForm(false);
-    }
-  };
+
 
   const deleteEvent = (id: string) => {
     setEvents(events.filter((e) => e.id !== id));
@@ -239,7 +222,11 @@ export const Calendar = () => {
           <div className="flex gap-2">
             <select
               value={viewMode}
-              onChange={(e) => setViewMode(e.target.value as ViewMode)}
+              onChange={(e) => {
+                const mode = e.target.value as ViewMode;
+                setViewMode(mode);
+                if (mode === 'day') setSelectedDate(currentDate);
+              }}
               className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="month">📅 Month</option>
@@ -261,25 +248,19 @@ export const Calendar = () => {
           </div>
         </div>
 
-        {viewMode === 'month' && <MonthView days={getDaysInMonth(currentDate)} dayNames={dayNames} onDateClick={setSelectedDate} />}
+        {viewMode === 'month' && <MonthView days={getDaysInMonth(currentDate)} dayNames={dayNames} selectedDate={selectedDate} onDateClick={setSelectedDate} />}
 
         {viewMode === 'week' && (
           <WeekView
             days={getWeekDays(currentDate)}
-            onShowForm={(date) => {
-              setSelectedDate(date);
-              setShowEventForm(true);
-            }}
+            selectedDate={selectedDate}
+            onDateClick={setSelectedDate}
           />
         )}
 
         {viewMode === 'day' && (
           <DayView
             day={getDayDetails(currentDate)}
-            onShowForm={() => {
-              setSelectedDate(currentDate);
-              setShowEventForm(true);
-            }}
             onDeleteEvent={deleteEvent}
             onUpdateEvent={updateEvent}
           />
@@ -339,50 +320,7 @@ export const Calendar = () => {
             ))}
           </div>
 
-          {!showEventForm ? (
-            <button
-              onClick={() => setShowEventForm(true)}
-              className="w-full flex items-center justify-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
-            >
-              <Plus size={20} />
-              {t('add_task')}
-            </button>
-          ) : (
-            <div className="space-y-3 border-t pt-4">
-              <input
-                type="text"
-                placeholder="Event name..."
-                value={eventForm.name}
-                onChange={(e) => setEventForm({ ...eventForm, name: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <select
-                value={eventForm.category}
-                onChange={(e) => setEventForm({ ...eventForm, category: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {eventCategories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-              <div className="flex gap-2">
-                <button
-                  onClick={addEvent}
-                  className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
-                >
-                  {t('save')}
-                </button>
-                <button
-                  onClick={() => setShowEventForm(false)}
-                  className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition"
-                >
-                  {t('cancel')}
-                </button>
-              </div>
-            </div>
-          )}
+
         </div>
       )}
     </div>
@@ -392,10 +330,12 @@ export const Calendar = () => {
 const MonthView = ({
   days,
   dayNames,
+  selectedDate,
   onDateClick,
 }: {
   days: Array<{ date: Date; isCurrentMonth: boolean; isToday: boolean; events: any[] }>;
   dayNames: string[];
+  selectedDate: Date | null;
   onDateClick: (date: Date) => void;
 }) => {
   return (
@@ -414,7 +354,9 @@ const MonthView = ({
             key={index}
             onClick={() => onDateClick(day.date)}
             className={`aspect-square flex flex-col items-center justify-start p-2 rounded-lg text-sm font-medium transition cursor-pointer ${
-              day.isToday
+              selectedDate && day.date.toDateString() === selectedDate.toDateString()
+                ? 'bg-blue-700 text-white ring-4 ring-blue-200'
+                : day.isToday
                 ? 'bg-blue-500 text-white'
                 : day.isCurrentMonth
                   ? 'bg-gray-50 hover:bg-gray-100'
@@ -439,15 +381,17 @@ const MonthView = ({
 
 const WeekView = ({
   days,
-  onShowForm,
+  selectedDate,
+  onDateClick,
 }: {
   days: Array<{ date: Date; isCurrentMonth: boolean; isToday: boolean; events: any[] }>;
-  onShowForm: (date: Date) => void;
+  selectedDate: Date | null;
+  onDateClick: (date: Date) => void;
 }) => {
   return (
     <div className="space-y-3">
       {days.map((day, i) => (
-        <div key={i} className="flex gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition cursor-pointer">
+        <button key={i} onClick={() => onDateClick(day.date)} className={`w-full flex gap-4 p-3 rounded-lg transition cursor-pointer text-left ${selectedDate && day.date.toDateString() === selectedDate.toDateString() ? 'bg-blue-100 ring-2 ring-blue-500' : 'bg-gray-50 hover:bg-gray-100'}`}>
           <div className="w-24 flex-shrink-0">
             <p className="font-semibold text-blue-600">{day.date.toLocaleDateString('en-US', { weekday: 'short' })}</p>
             <p className="text-2xl font-bold">{day.date.getDate()}</p>
@@ -459,14 +403,8 @@ const WeekView = ({
               </div>
             ))}
             {day.events.length === 0 && <p className="text-gray-400 text-sm">No events</p>}
-            <button
-              onClick={() => onShowForm(day.date)}
-              className="text-blue-500 hover:text-blue-700 text-sm font-medium"
-            >
-              + Add event
-            </button>
           </div>
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -474,12 +412,10 @@ const WeekView = ({
 
 const DayView = ({
   day,
-  onShowForm,
   onDeleteEvent,
   onUpdateEvent,
 }: {
   day: { date: Date; isCurrentMonth: boolean; isToday: boolean; events: any[] };
-  onShowForm: () => void;
   onDeleteEvent: (id: string) => void;
   onUpdateEvent: (id: string, patch: Partial<CalendarEvent>) => void;
 }) => {
@@ -512,13 +448,6 @@ const DayView = ({
 
       {day.events.length === 0 && <p className="text-gray-500 text-center py-8">No events scheduled</p>}
 
-      <button
-        onClick={onShowForm}
-        className="w-full flex items-center justify-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
-      >
-        <Plus size={20} />
-        Add event
-      </button>
     </div>
   );
 };
