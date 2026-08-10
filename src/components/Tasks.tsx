@@ -40,10 +40,11 @@ const loadTasks = (): Task[] => {
         description: typeof task.description === 'string' ? task.description : '',
         dueDate: typeof task.dueDate === 'string' ? task.dueDate : '',
         completed: Boolean(task.completed),
-        priority:
+        priority: (
           task.priority === 'high' || task.priority === 'low' || task.priority === 'medium'
             ? task.priority
-            : 'medium',
+            : 'medium'
+        ) as Priority,
         category: typeof task.category === 'string' && task.category ? task.category : 'Personal',
         subtasks: Array.isArray(task.subtasks)
           ? task.subtasks
