@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Trash2, Plus, CheckCircle2, Circle, ChevronDown, Pin, Zap } from 'lucide-react';
+import { Trash2, Plus, CheckCircle2, Circle, ChevronDown, Pin } from 'lucide-react';
 
 type Priority = 'high' | 'medium' | 'low';
 
