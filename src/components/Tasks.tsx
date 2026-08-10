@@ -132,6 +132,13 @@ const countProgress = (item: Item) => {
 const flattenItems = (items: Item[]): Item[] =>
   items.flatMap((item) => [item, ...flattenItems(item.children)]);
 
+const moveItemsFromGroup = (items: Item[], groupId: string, replacement: string | null): Item[] =>
+  items.map((item) => ({
+    ...item,
+    groupId: item.groupId === groupId ? replacement : item.groupId,
+    children: moveItemsFromGroup(item.children, groupId, replacement),
+  }));
+
 const ProgressBar = ({ value, compact = false }: { value: number; compact?: boolean }) => (
   <div className={`${compact ? 'h-1.5' : 'h-2.5'} w-full overflow-hidden rounded-full bg-gray-200`}>
     <div className="h-full rounded-full bg-blue-500 transition-all" style={{ width: `${value}%` }} />
@@ -209,6 +216,21 @@ export const Tasks = () => {
     setShowGroupForm(false);
   };
 
+  const renameGroup = (id: string, name: string) => {
+    setGroups((current) => current.map((group) => group.id === id ? { ...group, name } : group));
+  };
+
+  const deleteGroup = (id: string) => {
+    const group = groups.find((candidate) => candidate.id === id);
+    if (!group || !window.confirm(ro ? 'Ștergi grupul? Taskurile și subgrupurile vor urca un nivel.' : 'Delete this group? Tasks and subgroups will move up one level.')) return;
+    setGroups((current) => current
+      .filter((candidate) => candidate.id !== id)
+      .map((candidate) => candidate.parentId === id ? { ...candidate, parentId: group.parentId } : candidate)
+    );
+    setTasks((current) => moveItemsFromGroup(current, id, group.parentId));
+    if (selectedGroup === id) setSelectedGroup(group.parentId || 'all');
+  };
+
   const updateSelection = (updater: (item: Item) => Item) => {
     if (!selection) return;
     setTasks((current) => current.map((task) =>
@@ -273,7 +295,7 @@ export const Tasks = () => {
         <div className="flex items-center justify-between"><h3 className="flex items-center gap-2 text-lg font-semibold"><Folder size={20} />{ro ? 'Grupuri' : 'Groups'}</h3><button onClick={() => setShowGroupForm((value) => !value)} className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-white"><FolderPlus size={18} />{ro ? 'Adaugă' : 'Add'}</button></div>
         {showGroupForm && <div className="grid grid-cols-1 gap-2 sm:grid-cols-3"><input value={groupForm.name} onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })} placeholder={ro ? 'Nume grup' : 'Group name'} className="rounded-lg border px-3 py-2" /><select value={groupForm.parentId} onChange={(e) => setGroupForm({ ...groupForm, parentId: e.target.value })} className="rounded-lg border px-3 py-2"><option value="">{ro ? 'Nivel principal' : 'Top level'}</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select><button onClick={addGroup} className="rounded-lg bg-blue-600 px-3 py-2 text-white">{t('save')}</button></div>}
         <button onClick={() => setSelectedGroup('all')} className={`w-full rounded-lg px-3 py-2 text-left ${selectedGroup === 'all' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'}`}>{ro ? 'Toate grupurile' : 'All groups'}</button>
-        <GroupRows groups={groups} items={allItems} parentId={null} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} />
+        <GroupRows groups={groups} items={allItems} parentId={null} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />
       </section>
 
       <section className="space-y-2">
@@ -319,13 +341,13 @@ const TaskRow = ({ item, depth, onOpen, onToggle, path = [] }: { item: Item; dep
   </div>;
 };
 
-const GroupRows = ({ groups, items, parentId, depth, selected, onSelect }: { groups: Group[]; items: Item[]; parentId: string | null; depth: number; selected: string; onSelect: (id: string) => void }) => (
+const GroupRows = ({ groups, items, parentId, depth, selected, onSelect, onRename, onDelete }: { groups: Group[]; items: Item[]; parentId: string | null; depth: number; selected: string; onSelect: (id: string) => void; onRename: (id: string, name: string) => void; onDelete: (id: string) => void }) => (
   <>
     {groups.filter((group) => group.parentId === parentId).map((group) => {
       const direct = items.filter((item) => item.groupId === group.id);
       const done = direct.filter((item) => item.completed).length;
       const percent = direct.length ? Math.round((done / direct.length) * 100) : 0;
-      return <div key={group.id}><button onClick={() => onSelect(group.id)} className={`w-full rounded-lg py-2 pr-3 text-left ${selected === group.id ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'}`} style={{ paddingLeft: 12 + depth * 20 }}><div className="flex items-center justify-between"><span className="flex items-center gap-2"><Folder size={17} />{group.name}</span><span className="text-xs font-semibold">{percent}%</span></div><ProgressBar value={percent} compact /></button><GroupRows groups={groups} items={items} parentId={group.id} depth={depth + 1} selected={selected} onSelect={onSelect} /></div>;
+      return <div key={group.id}><div className={`w-full rounded-lg py-2 pr-3 ${selected === group.id ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'}`} style={{ paddingLeft: 12 + depth * 20 }}><div className="flex items-center gap-2"><button onClick={() => onSelect(group.id)} className="text-gray-500"><Folder size={17} /></button><input value={group.name} onChange={(event) => onRename(group.id, event.target.value)} onFocus={() => onSelect(group.id)} className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 font-medium focus:border-blue-300 focus:bg-white" /><span className="text-xs font-semibold">{percent}%</span><button onClick={() => onDelete(group.id)} className="text-red-500"><Trash2 size={17} /></button></div><ProgressBar value={percent} compact /></div><GroupRows groups={groups} items={items} parentId={group.id} depth={depth + 1} selected={selected} onSelect={onSelect} onRename={onRename} onDelete={onDelete} /></div>;
     })}
   </>
 );
