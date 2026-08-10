@@ -51,7 +51,7 @@ export const Calendar = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showEventForm, setShowEventForm] = useState(false);
-  const [tasks, setTasks] = useState<Task[]>(() => {
+  const [tasks] = useState<Task[]>(() => {
     const saved = localStorage.getItem('tasks');
     return saved ? JSON.parse(saved) : [];
   });
@@ -245,7 +245,6 @@ export const Calendar = () => {
         {viewMode === 'week' && (
           <WeekView
             days={getWeekDays(currentDate)}
-            onDateClick={setSelectedDate}
             onShowForm={(date) => {
               setSelectedDate(date);
               setShowEventForm(true);
@@ -400,7 +399,7 @@ const MonthView = ({
             <span>{day.date.getDate()}</span>
             {day.events.length > 0 && (
               <div className="flex gap-1 mt-1 flex-wrap justify-center">
-                {day.events.slice(0, 2).map((event, i) => (
+                {day.events.slice(0, 2).map((_, i) => (
                   <div key={i} className="w-1.5 h-1.5 bg-red-500 rounded-full" />
                 ))}
                 {day.events.length > 2 && <span className="text-xs">+{day.events.length - 2}</span>}
@@ -415,11 +414,9 @@ const MonthView = ({
 
 const WeekView = ({
   days,
-  onDateClick,
   onShowForm,
 }: {
   days: Array<{ date: Date; isCurrentMonth: boolean; isToday: boolean; events: any[] }>;
-  onDateClick: (date: Date) => void;
   onShowForm: (date: Date) => void;
 }) => {
   return (
