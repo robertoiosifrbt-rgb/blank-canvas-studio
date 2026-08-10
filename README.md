@@ -1,9 +1,16 @@
-# ACHU Business Hub
+# Tasks & Calendar
 
-Source reconstructed from the Zite JSON export for GitHub/Lovable import.
+A modern task management and calendar application.
 
-## Important
+## Getting Started
 
-The application still uses Zite-specific authentication, endpoint and database SDKs.
-Importing the repository into Lovable transfers the source code, but the Zite backend,
-authentication and integrations may require replacement or reconfiguration in Lovable.
+```bash
+npm install
+npm run dev
+```
+
+## Build
+
+```bash
+npm run build
+```
