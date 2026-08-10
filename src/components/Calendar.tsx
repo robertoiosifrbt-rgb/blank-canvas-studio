@@ -269,6 +269,54 @@ export const Calendar = () => {
         )}
       </div>
 
+      <div className="rounded-lg bg-white p-4 shadow-md sm:p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-xl font-bold">{t('calendar')} — {t('tasks') === 'Sarcini' ? 'Evenimente' : 'Events'}</h3>
+          <span className="text-sm text-gray-500">{events.length}</span>
+        </div>
+        <div className="space-y-3">
+          {[...events]
+            .sort((a, b) => a.date.localeCompare(b.date))
+            .map((event) => (
+              <div key={event.id} className="space-y-2 rounded-lg border p-3">
+                <input
+                  value={event.name}
+                  onChange={(e) => updateEvent(event.id, { name: e.target.value })}
+                  className="w-full rounded border px-3 py-2 font-medium"
+                />
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <input
+                    type="date"
+                    value={event.date}
+                    onChange={(e) => updateEvent(event.id, { date: e.target.value })}
+                    className="rounded border px-3 py-2"
+                  />
+                  <select
+                    value={event.category}
+                    onChange={(e) => updateEvent(event.id, { category: e.target.value })}
+                    className="rounded border px-3 py-2"
+                  >
+                    {Object.keys(CATEGORY_COLORS).map((category) => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => deleteEvent(event.id)}
+                    className="flex items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-red-600"
+                  >
+                    <Trash2 size={18} /> {t('delete')}
+                  </button>
+                </div>
+              </div>
+            ))}
+          {events.length === 0 && (
+            <p className="py-6 text-center text-gray-500">
+              {t('tasks') === 'Sarcini' ? 'Nu există evenimente.' : 'No events yet.'}
+            </p>
+          )}
+        </div>
+      </div>
+
       {selectedDate && (
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex justify-between items-center mb-4">
