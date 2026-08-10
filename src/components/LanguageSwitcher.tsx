@@ -1,8 +1,7 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Globe } from 'lucide-react';
 
-export const LanguageSwitcher: React.FC = () => {
+export const LanguageSwitcher = () => {
   const { i18n, t } = useTranslation();
 
   const toggleLanguage = () => {
