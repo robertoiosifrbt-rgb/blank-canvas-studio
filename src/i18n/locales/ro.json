@@ -37,5 +37,12 @@
   "edit": "Editare",
   "description": "Descriere",
   "all_tasks": "Toate sarcinile",
-  "important": "Important"
+  "important": "Important",
+  "groups": "Grupuri",
+  "add_group": "Adaugă grup",
+  "group_name": "Nume grup",
+  "root_group": "Nivel principal",
+  "all_groups": "Toate grupurile",
+  "group": "Grup",
+  "no_group": "Fără grup"
 }
