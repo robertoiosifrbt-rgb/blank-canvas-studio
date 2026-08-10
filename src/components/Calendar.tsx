@@ -11,6 +11,7 @@ interface Task {
   category: string;
   startAt?: string;
   endAt?: string;
+  calendarId?: string;
 }
 
 interface CalendarEvent {
@@ -21,6 +22,13 @@ interface CalendarEvent {
   color: string;
   startTime: string;
   endTime: string;
+  calendarId?: string;
+}
+
+interface UserCalendar {
+  id: string;
+  name: string;
+  color: string;
 }
 
 
@@ -41,7 +49,19 @@ export const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [dayForm, setDayForm] = useState<'event' | 'task' | null>(null);
-  const [form, setForm] = useState({ name: '', startTime: '09:00', endTime: '10:00' });
+  const [calendars, setCalendars] = useState<UserCalendar[]>(() => {
+    try {
+      const raw = localStorage.getItem('userCalendars');
+      const parsed: unknown = raw ? JSON.parse(raw) : null;
+      return Array.isArray(parsed) && parsed.length ? parsed : [{ id: 'personal', name: 'Personal', color: '#2563eb' }, { id: 'work', name: 'Work', color: '#16a34a' }];
+    } catch {
+      return [{ id: 'personal', name: 'Personal', color: '#2563eb' }, { id: 'work', name: 'Work', color: '#16a34a' }];
+    }
+  });
+  const [newCalendar, setNewCalendar] = useState('');
+  const [calendarFilter, setCalendarFilter] = useState('all');
+  const [kindFilter, setKindFilter] = useState<'all' | 'task' | 'event'>('all');
+  const [form, setForm] = useState({ name: '', startTime: '09:00', endTime: '10:00', calendarId: 'personal' });
   const [tasks, setTasks] = useState<Task[]>(() => {
     try { const raw = localStorage.getItem('tasks'); return raw ? JSON.parse(raw) : []; } catch { return []; }
   });
@@ -51,6 +71,7 @@ export const Calendar = () => {
 
   useEffect(() => { localStorage.setItem('tasks', JSON.stringify(tasks)); }, [tasks]);
   useEffect(() => { localStorage.setItem('calendarEvents', JSON.stringify(events)); }, [events]);
+  useEffect(() => { localStorage.setItem('userCalendars', JSON.stringify(calendars)); }, [calendars]);
 
   const dateKey = (date: Date) => {
     const year = date.getFullYear();
@@ -64,9 +85,9 @@ export const Calendar = () => {
     const taskItems = tasks.filter((task) => (task.startAt?.slice(0, 10) || task.dueDate) === key);
     const eventItems = events.filter((event) => event.date === key);
     return [
-      ...taskItems.map((task) => ({ id: task.id, name: task.name, start: task.startAt?.slice(11, 16) || '09:00', end: task.endAt?.slice(11, 16) || '10:00', kind: 'task' as const })),
-      ...eventItems.map((event) => ({ id: event.id, name: event.name, start: event.startTime || '09:00', end: event.endTime || '10:00', kind: 'event' as const })),
-    ];
+      ...taskItems.map((task) => ({ id: task.id, name: task.name, start: task.startAt?.slice(11, 16) || '09:00', end: task.endAt?.slice(11, 16) || '10:00', kind: 'task' as const, calendarId: task.calendarId || 'personal' })),
+      ...eventItems.map((event) => ({ id: event.id, name: event.name, start: event.startTime || '09:00', end: event.endTime || '10:00', kind: 'event' as const, calendarId: event.calendarId || 'personal' })),
+    ].filter((item) => (kindFilter === 'all' || item.kind === kindFilter) && (calendarFilter === 'all' || item.calendarId === calendarFilter));
   };
 
   const openDay = (date: Date) => {
@@ -80,14 +101,14 @@ export const Calendar = () => {
     if (!name) return;
     const date = dateKey(currentDate);
     if (dayForm === 'event') {
-      setEvents((current) => [...current, { id: crypto.randomUUID(), name, date, category: 'Personal', color: 'bg-blue-100', startTime: form.startTime, endTime: form.endTime }]);
+      setEvents((current) => [...current, { id: crypto.randomUUID(), name, date, category: 'Personal', color: 'bg-blue-100', startTime: form.startTime, endTime: form.endTime, calendarId: form.calendarId }]);
     } else {
       setTasks((current) => [...current, {
         id: crypto.randomUUID(), name, dueDate: date, startAt: `${date}T${form.startTime}`, endAt: `${date}T${form.endTime}`, completed: false, priority: 'medium', category: 'Personal',
-        description: '', groupId: null, children: [], comments: [],
+        description: '', groupId: null, calendarId: form.calendarId, children: [], comments: [],
       } as Task]);
     }
-    setForm({ name: '', startTime: '09:00', endTime: '10:00' });
+    setForm({ name: '', startTime: '09:00', endTime: '10:00', calendarId: form.calendarId });
     setDayForm(null);
   };
 
@@ -110,9 +131,28 @@ export const Calendar = () => {
     });
   };
 
+  const addCalendar = () => {
+    const name = newCalendar.trim();
+    if (!name) return;
+    const calendar = { id: crypto.randomUUID(), name, color: ['#7c3aed', '#ea580c', '#0891b2', '#db2777'][calendars.length % 4] };
+    setCalendars((current) => [...current, calendar]);
+    setForm((current) => ({ ...current, calendarId: calendar.id }));
+    setNewCalendar('');
+  };
+
   return (
     <div className="space-y-4">
       <section className="rounded-xl bg-white p-4 shadow-md">
+        <div className="mb-4 space-y-3 border-b pb-4">
+          <div className="grid grid-cols-3 gap-2">
+            {(['all', 'task', 'event'] as const).map((kind) => <button key={kind} onClick={() => setKindFilter(kind)} className={`rounded-lg px-3 py-2 font-medium ${kindFilter === kind ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}>{kind === 'all' ? (ro ? 'Toate' : 'All') : kind === 'task' ? (ro ? 'Taskuri' : 'Tasks') : (ro ? 'Evenimente' : 'Events')}</button>)}
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            <button onClick={() => setCalendarFilter('all')} className={`whitespace-nowrap rounded-full px-3 py-2 ${calendarFilter === 'all' ? 'bg-gray-900 text-white' : 'bg-gray-100'}`}>{ro ? 'Toate calendarele' : 'All calendars'}</button>
+            {calendars.map((calendar) => <button key={calendar.id} onClick={() => setCalendarFilter(calendar.id)} className={`whitespace-nowrap rounded-full border px-3 py-2 ${calendarFilter === calendar.id ? 'text-white' : 'bg-white'}`} style={calendarFilter === calendar.id ? { backgroundColor: calendar.color } : { borderColor: calendar.color }}>{calendar.name}</button>)}
+          </div>
+          <div className="flex gap-2"><input value={newCalendar} onChange={(e) => setNewCalendar(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addCalendar()} placeholder={ro ? 'Calendar nou' : 'New calendar'} className="min-w-0 flex-1 rounded-lg border px-3 py-2" /><button onClick={addCalendar} className="rounded-lg bg-blue-600 px-4 text-white"><Plus size={18} /></button></div>
+        </div>
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-2xl font-bold">{currentDate.toLocaleDateString(ro ? 'ro-RO' : 'en-GB', { month: 'long', year: 'numeric', ...(viewMode === 'day' ? { day: 'numeric' } : {}) })}</h2>
           <div className="flex items-center gap-2">
@@ -134,7 +174,7 @@ export const Calendar = () => {
               <button onClick={() => setDayForm('event')} className="rounded-lg bg-blue-600 px-4 py-3 text-white"><Plus className="mr-2 inline" size={18} />{ro ? 'Adaugă eveniment' : 'Add event'}</button>
               <button onClick={() => setDayForm('task')} className="rounded-lg bg-green-600 px-4 py-3 text-white"><Plus className="mr-2 inline" size={18} />{ro ? 'Adaugă sarcină' : 'Add task'}</button>
             </div>
-            {dayForm && <div className="space-y-3 rounded-lg border p-4"><h3 className="font-semibold">{dayForm === 'event' ? (ro ? 'Eveniment nou' : 'New event') : (ro ? 'Sarcină nouă' : 'New task')}</h3><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={ro ? 'Nume' : 'Name'} className="w-full rounded-lg border px-3 py-2" /><div className="grid grid-cols-2 gap-3"><label className="text-sm">{ro ? 'De la' : 'From'}<input type="time" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2" /></label><label className="text-sm">{ro ? 'Până la' : 'To'}<input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2" /></label></div><div className="grid grid-cols-2 gap-2"><button onClick={addFromDay} className="rounded-lg bg-blue-600 py-2 text-white">{ro ? 'Salvare' : 'Save'}</button><button onClick={() => setDayForm(null)} className="rounded-lg bg-gray-200 py-2">{ro ? 'Anulare' : 'Cancel'}</button></div></div>}
+            {dayForm && <div className="space-y-3 rounded-lg border p-4"><h3 className="font-semibold">{dayForm === 'event' ? (ro ? 'Eveniment nou' : 'New event') : (ro ? 'Sarcină nouă' : 'New task')}</h3><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={ro ? 'Nume' : 'Name'} className="w-full rounded-lg border px-3 py-2" /><div className="grid grid-cols-2 gap-3"><label className="text-sm">{ro ? 'De la' : 'From'}<input type="time" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2" /></label><label className="text-sm">{ro ? 'Până la' : 'To'}<input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2" /></label></div><select value={form.calendarId} onChange={(e) => setForm({ ...form, calendarId: e.target.value })} className="w-full rounded-lg border px-3 py-2">{calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select><div className="grid grid-cols-2 gap-2"><button onClick={addFromDay} className="rounded-lg bg-blue-600 py-2 text-white">{ro ? 'Salvare' : 'Save'}</button><button onClick={() => setDayForm(null)} className="rounded-lg bg-gray-200 py-2">{ro ? 'Anulare' : 'Cancel'}</button></div></div>}
             <TimeGrid days={[currentDate]} itemsForDate={itemsForDate} onDay={openDay} />
           </div>
         )}
@@ -156,9 +196,14 @@ const MonthCalendar = ({ date, onDay, getCount }: { date: Date; onDay: (date: Da
   return <div><div className="mb-2 grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-500">{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((name) => <div key={name}>{name}</div>)}</div><div className="grid grid-cols-7 gap-1">{days.map((day) => { const count = getCount(day); return <button key={day.toISOString()} onClick={() => onDay(day)} className={`aspect-square rounded-lg p-1 text-sm ${day.getMonth() === month ? 'bg-gray-50' : 'bg-gray-100 text-gray-400'} hover:ring-2 hover:ring-blue-500`}><span>{day.getDate()}</span>{count > 0 && <div className="mx-auto mt-1 h-1.5 w-1.5 rounded-full bg-blue-600" />}</button>; })}</div></div>;
 };
 
-const TimeGrid = ({ days, itemsForDate, onDay }: { days: Date[]; itemsForDate: (date: Date) => Array<{ id: string; name: string; start: string; end: string; kind: 'task' | 'event' }>; onDay: (date: Date) => void }) => {
-  const hours = Array.from({ length: 24 }, (_, hour) => hour);
-  return <div className="overflow-x-auto"><div style={{ minWidth: days.length > 1 ? 760 : 320 }}><div className="grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(96px, 1fr))` }}><div /><>{days.map((day) => <button key={day.toISOString()} onClick={() => onDay(day)} className="border-b p-2 text-center font-semibold text-blue-600">{day.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}</button>)}</></div>{hours.map((hour) => <div key={hour} className="grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(96px, 1fr))` }}><div className="border-r border-t pr-2 pt-1 text-right text-xs text-gray-400">{String(hour).padStart(2, '0')}:00</div>{days.map((day) => { const entries = itemsForDate(day).filter((item) => Number(item.start.slice(0,2)) === hour); return <div key={day.toISOString()} className="min-h-16 border-r border-t p-1">{entries.map((item) => <div key={item.id} className={`mb-1 rounded px-2 py-1 text-xs ${item.kind === 'event' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}><strong className="block truncate">{item.name}</strong><span>{item.start}–{item.end}</span></div>)}</div>; })}</div>)}</div></div>;
+const TimeGrid = ({ days, itemsForDate, onDay }: { days: Date[]; itemsForDate: (date: Date) => Array<{ id: string; name: string; start: string; end: string; kind: 'task' | 'event'; calendarId: string }>; onDay: (date: Date) => void }) => {
+  const hourHeight = 72;
+  const totalHeight = hourHeight * 24;
+  const minutes = (value: string) => {
+    const [hour, minute] = value.split(':').map(Number);
+    return hour * 60 + minute;
+  };
+  return <div className="overflow-x-auto"><div style={{ minWidth: days.length > 1 ? 820 : 320 }}><div className="grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(100px, 1fr))` }}><div />{days.map((day) => <button key={day.toISOString()} onClick={() => onDay(day)} className="border-b p-2 text-center font-semibold text-blue-600">{day.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}</button>)}</div><div className="grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(100px, 1fr))` }}><div className="relative border-r" style={{ height: totalHeight }}>{Array.from({ length: 24 }, (_, hour) => <span key={hour} className="absolute right-2 text-xs text-gray-400" style={{ top: hour * hourHeight - 7 }}>{String(hour).padStart(2, '0')}:00</span>)}</div>{days.map((day) => <div key={day.toISOString()} className="relative border-r" style={{ height: totalHeight, backgroundImage: 'repeating-linear-gradient(to bottom, #e5e7eb 0, #e5e7eb 1px, transparent 1px, transparent 72px)' }}>{itemsForDate(day).map((item) => { const startMinute = minutes(item.start); const endMinute = Math.max(minutes(item.end), startMinute + 15); const top = startMinute / 60 * hourHeight; const height = Math.max((endMinute - startMinute) / 60 * hourHeight, 20); return <div key={item.id} className={`absolute left-1 right-1 z-10 overflow-hidden rounded-md border-l-4 px-2 py-1 text-xs shadow-sm ${item.kind === 'event' ? 'border-blue-600 bg-blue-100 text-blue-900' : 'border-green-600 bg-green-100 text-green-900'}`} style={{ top, height }}><strong className="block truncate">{item.name}</strong><span>{item.start}–{item.end}</span></div>; })}</div>)}</div></div></div>;
 };
 
 export const Events = () => {
