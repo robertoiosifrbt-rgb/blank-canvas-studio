@@ -20,6 +20,8 @@ interface Item {
   completed: boolean;
   priority: Priority;
   groupId: string | null;
+  calendarId: string | null;
+  reminderMinutes: number;
   children: Item[];
   comments: Comment[];
 }
@@ -66,6 +68,8 @@ const normalizeItem = (value: unknown): Item | null => {
     completed: Boolean(row.completed),
     priority: row.priority === 'high' || row.priority === 'low' ? row.priority : 'medium',
     groupId: typeof row.groupId === 'string' ? row.groupId : null,
+    calendarId: typeof row.calendarId === 'string' ? row.calendarId : null,
+    reminderMinutes: typeof row.reminderMinutes === 'number' ? row.reminderMinutes : 15,
     children: rawChildren.map(normalizeItem).filter((item): item is Item => item !== null),
     comments: Array.isArray(row.comments)
       ? row.comments.map(normalizeComment).filter((item): item is Comment => item !== null)
@@ -154,11 +158,12 @@ export const Tasks = () => {
   const ro = i18n.language.startsWith('ro');
   const [tasks, setTasks] = useState<Item[]>(loadItems);
   const [groups, setGroups] = useState<Group[]>(loadGroups);
+  const [calendars] = useState<Array<{ id: string; name: string }>>(() => { try { const raw = localStorage.getItem('userCalendars'); const parsed = raw ? JSON.parse(raw) : []; return Array.isArray(parsed) && parsed.length ? parsed : [{ id: 'personal', name: 'Personal' }]; } catch { return [{ id: 'personal', name: 'Personal' }]; } });
   const [selectedGroup, setSelectedGroup] = useState('all');
   const [selection, setSelection] = useState<Selection | null>(null);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [showGroupForm, setShowGroupForm] = useState(false);
-  const [taskForm, setTaskForm] = useState({ name: '', description: '', startAt: '', endAt: '', priority: 'medium' as Priority, groupId: '' });
+  const [taskForm, setTaskForm] = useState({ name: '', description: '', startAt: '', endAt: '', priority: 'medium' as Priority, groupId: '', calendarId: calendars[0]?.id || 'personal' });
   const [groupForm, setGroupForm] = useState({ name: '', parentId: '' });
 
   useEffect(() => {
@@ -205,10 +210,12 @@ export const Tasks = () => {
       completed: false,
       priority: taskForm.priority,
       groupId: taskForm.groupId || null,
+      calendarId: taskForm.calendarId,
+      reminderMinutes: 15,
       children: [],
       comments: [],
     }, ...current]);
-    setTaskForm({ name: '', description: '', startAt: '', endAt: '', priority: 'medium', groupId: '' });
+    setTaskForm({ name: '', description: '', startAt: '', endAt: '', priority: 'medium', groupId: '', calendarId: taskForm.calendarId });
     setShowTaskForm(false);
   };
 
@@ -296,6 +303,7 @@ export const Tasks = () => {
             <label className="text-sm text-gray-600">{t('priority')}<select value={taskForm.priority} onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value as Priority })} className="mt-1 w-full rounded-lg border px-3 py-3"><option value="low">{t('low')}</option><option value="medium">{t('medium')}</option><option value="high">{t('high')}</option></select></label>
           </div>
           <label className="block text-sm text-gray-600">{ro ? 'Grup' : 'Group'}<select value={taskForm.groupId} onChange={(e) => setTaskForm({ ...taskForm, groupId: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3"><option value="">{ro ? 'Fără grup' : 'No group'}</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
+          <label className="block text-sm text-gray-600">Calendar<select value={taskForm.calendarId} onChange={(e) => setTaskForm({ ...taskForm, calendarId: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3">{calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select></label>
           <div className="grid grid-cols-2 gap-3"><button onClick={addTask} className="rounded-lg bg-blue-600 py-3 text-white">{t('save')}</button><button onClick={() => setShowTaskForm(false)} className="rounded-lg bg-gray-200 py-3">{t('cancel')}</button></div>
         </section>
       )}
@@ -318,13 +326,14 @@ export const Tasks = () => {
         <ItemDetail
           item={selectedItem}
           groups={groups}
+          calendars={calendars}
           ro={ro}
           onClose={() => setSelection(null)}
           onDelete={deleteSelection}
           onBack={() => selection.path.length ? setSelection({ ...selection, path: selection.path.slice(0, -1) }) : setSelection(null)}
           onOpenChild={(id) => setSelection({ ...selection, path: [...selection.path, id] })}
           onChange={(patch) => updateSelection((item) => ({ ...item, ...patch }))}
-          onAddChild={(name) => updateSelection((item) => ({ ...item, children: [...item.children, { id: crypto.randomUUID(), name, description: '', dueDate: '', startAt: '', endAt: '', completed: false, priority: 'medium', groupId: item.groupId, children: [], comments: [] }] }))}
+          onAddChild={(name) => updateSelection((item) => ({ ...item, children: [...item.children, { id: crypto.randomUUID(), name, description: '', dueDate: '', startAt: '', endAt: '', completed: false, priority: 'medium', groupId: item.groupId, calendarId: item.calendarId, reminderMinutes: 15, children: [], comments: [] }] }))}
           onToggleChild={(id) => updateSelection((item) => ({ ...item, children: item.children.map((child) => child.id === id ? { ...child, completed: !child.completed } : child) }))}
           onDeleteChild={(id) => updateSelection((item) => ({ ...item, children: item.children.filter((child) => child.id !== id) }))}
           onAddComment={(text) => updateSelection((item) => ({ ...item, comments: [...item.comments, { id: crypto.randomUUID(), text, createdAt: new Date().toISOString() }] }))}
@@ -361,8 +370,8 @@ const GroupRows = ({ groups, items, parentId, depth, selected, onSelect, onRenam
   </>
 );
 
-const ItemDetail = ({ item, groups, ro, onClose, onDelete, onBack, onOpenChild, onChange, onAddChild, onToggleChild, onDeleteChild, onAddComment, onEditComment, onDeleteComment }: {
-  item: Item; groups: Group[]; ro: boolean; onClose: () => void; onDelete: () => void; onBack: () => void; onOpenChild: (id: string) => void; onChange: (patch: Partial<Item>) => void; onAddChild: (name: string) => void; onToggleChild: (id: string) => void; onDeleteChild: (id: string) => void; onAddComment: (text: string) => void; onEditComment: (id: string, text: string) => void; onDeleteComment: (id: string) => void;
+const ItemDetail = ({ item, groups, calendars, ro, onClose, onDelete, onBack, onOpenChild, onChange, onAddChild, onToggleChild, onDeleteChild, onAddComment, onEditComment, onDeleteComment }: {
+  item: Item; groups: Group[]; calendars: Array<{ id: string; name: string }>; ro: boolean; onClose: () => void; onDelete: () => void; onBack: () => void; onOpenChild: (id: string) => void; onChange: (patch: Partial<Item>) => void; onAddChild: (name: string) => void; onToggleChild: (id: string) => void; onDeleteChild: (id: string) => void; onAddComment: (text: string) => void; onEditComment: (id: string, text: string) => void; onDeleteComment: (id: string) => void;
 }) => {
   const [childName, setChildName] = useState('');
   const [comment, setComment] = useState('');
@@ -382,6 +391,8 @@ const ItemDetail = ({ item, groups, ro, onClose, onDelete, onBack, onOpenChild, 
           <label className="text-sm text-gray-500"><span className="flex items-center gap-2"><CalendarDays size={19} />{ro ? 'De la' : 'From'}</span><input type="datetime-local" value={item.startAt} onChange={(e) => onChange({ startAt: e.target.value, dueDate: e.target.value.slice(0, 10) })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900" /></label>
           <label className="text-sm text-gray-500"><span className="flex items-center gap-2"><CalendarDays size={19} />{ro ? 'Până la' : 'To'}</span><input type="datetime-local" value={item.endAt} onChange={(e) => onChange({ endAt: e.target.value })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900" /></label>
           <label className="text-sm text-gray-500"><span className="flex items-center gap-2"><Folder size={19} />{ro ? 'Grup' : 'Group'}</span><select value={item.groupId || ''} onChange={(e) => onChange({ groupId: e.target.value || null })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900"><option value="">{ro ? 'Fără grup' : 'No group'}</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
+          <label className="text-sm text-gray-500">Calendar<select value={item.calendarId || calendars[0]?.id || ''} onChange={(e) => onChange({ calendarId: e.target.value })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900">{calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select></label>
+          <label className="text-sm text-gray-500">{ro ? 'Alarmă' : 'Reminder'}<select value={item.reminderMinutes} onChange={(e) => onChange({ reminderMinutes: Number(e.target.value) })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900"><option value={-1}>{ro ? 'Fără alarmă' : 'No reminder'}</option><option value={0}>{ro ? 'La început' : 'At start'}</option><option value={5}>5 min</option><option value={15}>15 min</option><option value={30}>30 min</option><option value={60}>1 h</option><option value={1440}>1 zi</option></select></label>
           <label className="text-sm text-gray-500">{ro ? 'Prioritate' : 'Priority'}<select value={item.priority} onChange={(e) => onChange({ priority: e.target.value as Priority })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900"><option value="low">{ro ? 'Joasă' : 'Low'}</option><option value="medium">{ro ? 'Medie' : 'Medium'}</option><option value="high">{ro ? 'Înaltă' : 'High'}</option></select></label>
         </section>
         <section className="border-b p-5"><h3 className="mb-3 text-xl font-semibold">{ro ? 'Descriere' : 'Description'}</h3><textarea value={item.description} onChange={(e) => onChange({ description: e.target.value })} placeholder={ro ? 'Adaugă o descriere…' : 'Add a description…'} className="min-h-28 w-full rounded-lg border p-3" /></section>
