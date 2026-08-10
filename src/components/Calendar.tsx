@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface Task {
@@ -12,6 +12,7 @@ interface Task {
   startAt?: string;
   endAt?: string;
   calendarId?: string;
+  reminderMinutes?: number;
 }
 
 interface CalendarEvent {
@@ -23,6 +24,7 @@ interface CalendarEvent {
   startTime: string;
   endTime: string;
   calendarId?: string;
+  reminderMinutes?: number;
 }
 
 interface UserCalendar {
@@ -49,6 +51,7 @@ export const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [dayForm, setDayForm] = useState<'event' | 'task' | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<{ kind: 'task' | 'event'; id: string } | null>(null);
   const [calendars, setCalendars] = useState<UserCalendar[]>(() => {
     try {
       const raw = localStorage.getItem('userCalendars');
@@ -72,6 +75,29 @@ export const Calendar = () => {
   useEffect(() => { localStorage.setItem('tasks', JSON.stringify(tasks)); }, [tasks]);
   useEffect(() => { localStorage.setItem('calendarEvents', JSON.stringify(events)); }, [events]);
   useEffect(() => { localStorage.setItem('userCalendars', JSON.stringify(calendars)); }, [calendars]);
+
+  useEffect(() => {
+    const checkAlarms = () => {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      const now = Date.now();
+      const candidates = [
+        ...tasks.map((task) => ({ id: task.id, name: task.name, start: task.startAt || (task.dueDate ? `${task.dueDate}T09:00` : ''), reminder: task.reminderMinutes ?? 15 })),
+        ...events.map((event) => ({ id: event.id, name: event.name, start: `${event.date}T${event.startTime || '09:00'}`, reminder: event.reminderMinutes ?? 15 })),
+      ];
+      candidates.forEach((item) => {
+        if (!item.start || item.reminder < 0) return;
+        const alarmAt = new Date(item.start).getTime() - item.reminder * 60000;
+        const key = `calendarAlarm:${item.id}:${item.start}:${item.reminder}`;
+        if (alarmAt <= now && now - alarmAt < 60000 && !localStorage.getItem(key)) {
+          new Notification(item.name, { body: ro ? `Începe la ${new Date(item.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : `Starts at ${new Date(item.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` });
+          localStorage.setItem(key, '1');
+        }
+      });
+    };
+    checkAlarms();
+    const timer = window.setInterval(checkAlarms, 30000);
+    return () => window.clearInterval(timer);
+  }, [events, tasks, ro]);
 
   const dateKey = (date: Date) => {
     const year = date.getFullYear();
@@ -101,11 +127,11 @@ export const Calendar = () => {
     if (!name) return;
     const date = dateKey(currentDate);
     if (dayForm === 'event') {
-      setEvents((current) => [...current, { id: crypto.randomUUID(), name, date, category: 'Personal', color: 'bg-blue-100', startTime: form.startTime, endTime: form.endTime, calendarId: form.calendarId }]);
+      setEvents((current) => [...current, { id: crypto.randomUUID(), name, date, category: 'Personal', color: 'bg-blue-100', startTime: form.startTime, endTime: form.endTime, calendarId: form.calendarId, reminderMinutes: 15 }]);
     } else {
       setTasks((current) => [...current, {
         id: crypto.randomUUID(), name, dueDate: date, startAt: `${date}T${form.startTime}`, endAt: `${date}T${form.endTime}`, completed: false, priority: 'medium', category: 'Personal',
-        description: '', groupId: null, calendarId: form.calendarId, children: [], comments: [],
+        description: '', groupId: null, calendarId: form.calendarId, reminderMinutes: 15, children: [], comments: [],
       } as Task]);
     }
     setForm({ name: '', startTime: '09:00', endTime: '10:00', calendarId: form.calendarId });
@@ -140,6 +166,13 @@ export const Calendar = () => {
     setNewCalendar('');
   };
 
+  const requestAlarms = async () => {
+    if ('Notification' in window) await Notification.requestPermission();
+  };
+
+  const selectedTask = selectedEntry?.kind === 'task' ? tasks.find((task) => task.id === selectedEntry.id) : null;
+  const selectedEvent = selectedEntry?.kind === 'event' ? events.find((event) => event.id === selectedEntry.id) : null;
+
   return (
     <div className="space-y-4">
       <section className="rounded-xl bg-white p-4 shadow-md">
@@ -156,6 +189,7 @@ export const Calendar = () => {
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-2xl font-bold">{currentDate.toLocaleDateString(ro ? 'ro-RO' : 'en-GB', { month: 'long', year: 'numeric', ...(viewMode === 'day' ? { day: 'numeric' } : {}) })}</h2>
           <div className="flex items-center gap-2">
+            <button onClick={requestAlarms} className="rounded-lg p-2 hover:bg-gray-100" title={ro ? 'Activează alarmele' : 'Enable alarms'}><Bell /></button>
             <select value={viewMode} onChange={(event) => setViewMode(event.target.value as ViewMode)} className="rounded-lg border px-3 py-2">
               <option value="month">{ro ? 'Lună' : 'Month'}</option>
               <option value="week">{ro ? 'Săptămână' : 'Week'}</option>
@@ -167,7 +201,7 @@ export const Calendar = () => {
         </div>
 
         {viewMode === 'month' && <MonthCalendar date={currentDate} onDay={openDay} getCount={(date) => itemsForDate(date).length} />}
-        {viewMode === 'week' && <TimeGrid days={weekDays()} itemsForDate={itemsForDate} onDay={openDay} />}
+        {viewMode === 'week' && <TimeGrid days={weekDays()} itemsForDate={itemsForDate} onDay={openDay} onItem={setSelectedEntry} />}
         {viewMode === 'day' && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
@@ -175,10 +209,34 @@ export const Calendar = () => {
               <button onClick={() => setDayForm('task')} className="rounded-lg bg-green-600 px-4 py-3 text-white"><Plus className="mr-2 inline" size={18} />{ro ? 'Adaugă sarcină' : 'Add task'}</button>
             </div>
             {dayForm && <div className="space-y-3 rounded-lg border p-4"><h3 className="font-semibold">{dayForm === 'event' ? (ro ? 'Eveniment nou' : 'New event') : (ro ? 'Sarcină nouă' : 'New task')}</h3><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={ro ? 'Nume' : 'Name'} className="w-full rounded-lg border px-3 py-2" /><div className="grid grid-cols-2 gap-3"><label className="text-sm">{ro ? 'De la' : 'From'}<input type="time" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2" /></label><label className="text-sm">{ro ? 'Până la' : 'To'}<input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2" /></label></div><select value={form.calendarId} onChange={(e) => setForm({ ...form, calendarId: e.target.value })} className="w-full rounded-lg border px-3 py-2">{calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select><div className="grid grid-cols-2 gap-2"><button onClick={addFromDay} className="rounded-lg bg-blue-600 py-2 text-white">{ro ? 'Salvare' : 'Save'}</button><button onClick={() => setDayForm(null)} className="rounded-lg bg-gray-200 py-2">{ro ? 'Anulare' : 'Cancel'}</button></div></div>}
-            <TimeGrid days={[currentDate]} itemsForDate={itemsForDate} onDay={openDay} />
+            <TimeGrid days={[currentDate]} itemsForDate={itemsForDate} onDay={openDay} onItem={setSelectedEntry} />
           </div>
         )}
       </section>
+      {(selectedTask || selectedEvent) && (
+        <div className="fixed inset-0 z-[120] overflow-y-auto bg-black/30 p-3">
+          <div className="mx-auto mt-10 max-w-lg space-y-4 rounded-xl bg-white p-5 shadow-xl">
+            <div className="flex items-center justify-between"><h3 className="text-xl font-bold">{selectedTask ? (ro ? 'Task' : 'Task') : (ro ? 'Eveniment' : 'Event')}</h3><button onClick={() => setSelectedEntry(null)}><X /></button></div>
+            {selectedTask ? (
+              <>
+                <input value={selectedTask.name} onChange={(e) => setTasks((current) => current.map((task) => task.id === selectedTask.id ? { ...task, name: e.target.value } : task))} className="w-full rounded-lg border px-3 py-3 font-semibold" />
+                <label className="block text-sm">{ro ? 'De la' : 'From'}<input type="datetime-local" value={selectedTask.startAt || ''} onChange={(e) => setTasks((current) => current.map((task) => task.id === selectedTask.id ? { ...task, startAt: e.target.value, dueDate: e.target.value.slice(0, 10) } : task))} className="mt-1 w-full rounded-lg border px-3 py-3" /></label>
+                <label className="block text-sm">{ro ? 'Până la' : 'To'}<input type="datetime-local" value={selectedTask.endAt || ''} onChange={(e) => setTasks((current) => current.map((task) => task.id === selectedTask.id ? { ...task, endAt: e.target.value } : task))} className="mt-1 w-full rounded-lg border px-3 py-3" /></label>
+                <ReminderSelect value={selectedTask.reminderMinutes ?? 15} ro={ro} onChange={(value) => setTasks((current) => current.map((task) => task.id === selectedTask.id ? { ...task, reminderMinutes: value } : task))} />
+                <button onClick={() => { if (window.confirm(ro ? 'Ștergi taskul?' : 'Delete task?')) { setTasks((current) => current.filter((task) => task.id !== selectedTask.id)); setSelectedEntry(null); } }} className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 py-3 text-red-600"><Trash2 size={18} />{ro ? 'Șterge' : 'Delete'}</button>
+              </>
+            ) : selectedEvent && (
+              <>
+                <input value={selectedEvent.name} onChange={(e) => setEvents((current) => current.map((event) => event.id === selectedEvent.id ? { ...event, name: e.target.value } : event))} className="w-full rounded-lg border px-3 py-3 font-semibold" />
+                <label className="block text-sm">{ro ? 'Data' : 'Date'}<input type="date" value={selectedEvent.date} onChange={(e) => setEvents((current) => current.map((event) => event.id === selectedEvent.id ? { ...event, date: e.target.value } : event))} className="mt-1 w-full rounded-lg border px-3 py-3" /></label>
+                <div className="grid grid-cols-2 gap-3"><label className="text-sm">{ro ? 'De la' : 'From'}<input type="time" value={selectedEvent.startTime || '09:00'} onChange={(e) => setEvents((current) => current.map((event) => event.id === selectedEvent.id ? { ...event, startTime: e.target.value } : event))} className="mt-1 w-full rounded-lg border px-3 py-3" /></label><label className="text-sm">{ro ? 'Până la' : 'To'}<input type="time" value={selectedEvent.endTime || '10:00'} onChange={(e) => setEvents((current) => current.map((event) => event.id === selectedEvent.id ? { ...event, endTime: e.target.value } : event))} className="mt-1 w-full rounded-lg border px-3 py-3" /></label></div>
+                <ReminderSelect value={selectedEvent.reminderMinutes ?? 15} ro={ro} onChange={(value) => setEvents((current) => current.map((event) => event.id === selectedEvent.id ? { ...event, reminderMinutes: value } : event))} />
+                <button onClick={() => { if (window.confirm(ro ? 'Ștergi evenimentul?' : 'Delete event?')) { setEvents((current) => current.filter((event) => event.id !== selectedEvent.id)); setSelectedEntry(null); } }} className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 py-3 text-red-600"><Trash2 size={18} />{ro ? 'Șterge' : 'Delete'}</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -196,15 +254,19 @@ const MonthCalendar = ({ date, onDay, getCount }: { date: Date; onDay: (date: Da
   return <div><div className="mb-2 grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-500">{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((name) => <div key={name}>{name}</div>)}</div><div className="grid grid-cols-7 gap-1">{days.map((day) => { const count = getCount(day); return <button key={day.toISOString()} onClick={() => onDay(day)} className={`aspect-square rounded-lg p-1 text-sm ${day.getMonth() === month ? 'bg-gray-50' : 'bg-gray-100 text-gray-400'} hover:ring-2 hover:ring-blue-500`}><span>{day.getDate()}</span>{count > 0 && <div className="mx-auto mt-1 h-1.5 w-1.5 rounded-full bg-blue-600" />}</button>; })}</div></div>;
 };
 
-const TimeGrid = ({ days, itemsForDate, onDay }: { days: Date[]; itemsForDate: (date: Date) => Array<{ id: string; name: string; start: string; end: string; kind: 'task' | 'event'; calendarId: string }>; onDay: (date: Date) => void }) => {
+const TimeGrid = ({ days, itemsForDate, onDay, onItem }: { days: Date[]; itemsForDate: (date: Date) => Array<{ id: string; name: string; start: string; end: string; kind: 'task' | 'event'; calendarId: string }>; onDay: (date: Date) => void; onItem: (item: { kind: 'task' | 'event'; id: string }) => void }) => {
   const hourHeight = 72;
   const totalHeight = hourHeight * 24;
   const minutes = (value: string) => {
     const [hour, minute] = value.split(':').map(Number);
     return hour * 60 + minute;
   };
-  return <div className="overflow-x-auto"><div style={{ minWidth: days.length > 1 ? 820 : 320 }}><div className="grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(100px, 1fr))` }}><div />{days.map((day) => <button key={day.toISOString()} onClick={() => onDay(day)} className="border-b p-2 text-center font-semibold text-blue-600">{day.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}</button>)}</div><div className="grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(100px, 1fr))` }}><div className="relative border-r" style={{ height: totalHeight }}>{Array.from({ length: 24 }, (_, hour) => <span key={hour} className="absolute right-2 text-xs text-gray-400" style={{ top: hour * hourHeight - 7 }}>{String(hour).padStart(2, '0')}:00</span>)}</div>{days.map((day) => <div key={day.toISOString()} className="relative border-r" style={{ height: totalHeight, backgroundImage: 'repeating-linear-gradient(to bottom, #e5e7eb 0, #e5e7eb 1px, transparent 1px, transparent 72px)' }}>{itemsForDate(day).map((item) => { const startMinute = minutes(item.start); const endMinute = Math.max(minutes(item.end), startMinute + 15); const top = startMinute / 60 * hourHeight; const height = Math.max((endMinute - startMinute) / 60 * hourHeight, 20); return <div key={item.id} className={`absolute left-1 right-1 z-10 overflow-hidden rounded-md border-l-4 px-2 py-1 text-xs shadow-sm ${item.kind === 'event' ? 'border-blue-600 bg-blue-100 text-blue-900' : 'border-green-600 bg-green-100 text-green-900'}`} style={{ top, height }}><strong className="block truncate">{item.name}</strong><span>{item.start}–{item.end}</span></div>; })}</div>)}</div></div></div>;
+  return <div className="overflow-x-auto"><div style={{ minWidth: days.length > 1 ? 820 : 320 }}><div className="grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(100px, 1fr))` }}><div />{days.map((day) => <button key={day.toISOString()} onClick={() => onDay(day)} className="border-b p-2 text-center font-semibold text-blue-600">{day.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}</button>)}</div><div className="grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(100px, 1fr))` }}><div className="relative border-r" style={{ height: totalHeight }}>{Array.from({ length: 24 }, (_, hour) => <span key={hour} className="absolute right-2 text-xs text-gray-400" style={{ top: hour * hourHeight - 7 }}>{String(hour).padStart(2, '0')}:00</span>)}</div>{days.map((day) => <div key={day.toISOString()} className="relative border-r" style={{ height: totalHeight, backgroundImage: 'repeating-linear-gradient(to bottom, #e5e7eb 0, #e5e7eb 1px, transparent 1px, transparent 72px)' }}>{itemsForDate(day).map((item) => { const startMinute = minutes(item.start); const endMinute = Math.max(minutes(item.end), startMinute + 15); const top = startMinute / 60 * hourHeight; const height = Math.max((endMinute - startMinute) / 60 * hourHeight, 20); return <button onClick={() => onItem({ kind: item.kind, id: item.id })} key={item.id} className={`absolute left-1 right-1 z-10 text-left overflow-hidden rounded-md border-l-4 px-2 py-1 text-xs shadow-sm ${item.kind === 'event' ? 'border-blue-600 bg-blue-100 text-blue-900' : 'border-green-600 bg-green-100 text-green-900'}`} style={{ top, height }}><strong className="block truncate">{item.name}</strong><span>{item.start}–{item.end}</span></button>; })}</div>)}</div></div></div>;
 };
+
+const ReminderSelect = ({ value, ro, onChange }: { value: number; ro: boolean; onChange: (value: number) => void }) => (
+  <label className="block text-sm"><span className="flex items-center gap-2"><Bell size={18} />{ro ? 'Alarmă' : 'Reminder'}</span><select value={value} onChange={(event) => onChange(Number(event.target.value))} className="mt-1 w-full rounded-lg border px-3 py-3"><option value={-1}>{ro ? 'Fără alarmă' : 'No reminder'}</option><option value={0}>{ro ? 'La ora începerii' : 'At start time'}</option><option value={5}>5 min</option><option value={10}>10 min</option><option value={15}>15 min</option><option value={30}>30 min</option><option value={60}>1 h</option><option value={1440}>1 zi</option></select></label>
+);
 
 export const Events = () => {
   const { t, i18n } = useTranslation();
