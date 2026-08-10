@@ -1,6 +1,31 @@
-node_modules
-dist
-.env
-.env.*
-!.env.example
+node_modules/
+dist/
+*.local
 .DS_Store
+
+# TypeScript
+*.tsbuildinfo
+*.d.ts
+
+# Vite
+.vite/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build
+build/
+coverage/
+
+# OS
+Thumbs.db
+.thumbsdb
