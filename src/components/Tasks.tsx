@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Trash2, Plus, CheckCircle2, Circle, ChevronDown, Pin } from 'lucide-react';
+import { Trash2, Plus, CheckCircle2, Circle, ChevronDown, Pin, Folder, FolderPlus } from 'lucide-react';
 
 type Priority = 'high' | 'medium' | 'low';
 
@@ -20,6 +20,13 @@ interface Task {
   category: string;
   subtasks: Subtask[];
   pinned: boolean;
+  groupId: string | null;
+}
+
+interface Group {
+  id: string;
+  name: string;
+  parentId: string | null;
 }
 
 const DEFAULT_CATEGORIES = ['Work', 'Personal', 'Shopping'];
@@ -58,8 +65,29 @@ const loadTasks = (): Task[] => {
               }))
           : [],
         pinned: Boolean(task.pinned),
+        groupId: typeof task.groupId === 'string' ? task.groupId : null,
       }))
       .filter((task) => task.name.trim().length > 0);
+  } catch {
+    return [];
+  }
+};
+
+const loadGroups = (): Group[] => {
+  try {
+    const saved = localStorage.getItem('taskGroups');
+    if (!saved) return [];
+    const parsed: unknown = JSON.parse(saved);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((group): group is Record<string, unknown> => Boolean(group) && typeof group === 'object')
+      .filter((group) => typeof group.id === 'string' && typeof group.name === 'string')
+      .map((group) => ({
+        id: group.id as string,
+        name: (group.name as string).trim(),
+        parentId: typeof group.parentId === 'string' ? group.parentId : null,
+      }))
+      .filter((group) => group.name.length > 0);
   } catch {
     return [];
   }
@@ -86,6 +114,10 @@ export const Tasks = () => {
   const { t } = useTranslation();
   const [tasks, setTasks] = useState<Task[]>(loadTasks);
   const [categories, setCategories] = useState<string[]>(loadCategories);
+  const [groups, setGroups] = useState<Group[]>(loadGroups);
+  const [selectedGroup, setSelectedGroup] = useState<string>('all');
+  const [showGroupForm, setShowGroupForm] = useState(false);
+  const [groupForm, setGroupForm] = useState({ name: '', parentId: '' });
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showForm, setShowForm] = useState(false);
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
@@ -95,6 +127,7 @@ export const Tasks = () => {
     dueDate: '',
     priority: 'medium' as Priority,
     category: 'Personal',
+    groupId: '',
   });
   const [newCategory, setNewCategory] = useState('');
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
@@ -115,6 +148,14 @@ export const Tasks = () => {
     }
   }, [categories]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('taskGroups', JSON.stringify(groups));
+    } catch {
+      // Keep the app usable when browser storage is unavailable or full.
+    }
+  }, [groups]);
+
   const addTask = () => {
     if (formData.name.trim()) {
       const newTask: Task = {
@@ -127,6 +168,7 @@ export const Tasks = () => {
         category: formData.category,
         subtasks: [],
         pinned: false,
+        groupId: formData.groupId || null,
       };
       setTasks([newTask, ...tasks]);
       setFormData({
@@ -135,6 +177,7 @@ export const Tasks = () => {
         dueDate: '',
         priority: 'medium',
         category: 'Personal',
+        groupId: '',
       });
       setShowForm(false);
     }
@@ -203,12 +246,48 @@ export const Tasks = () => {
     }
   };
 
-  const filteredTasks =
+  const addGroup = () => {
+    const name = groupForm.name.trim();
+    if (!name) return;
+    const newGroup: Group = {
+      id: crypto.randomUUID(),
+      name,
+      parentId: groupForm.parentId || null,
+    };
+    setGroups((current) => [...current, newGroup]);
+    setSelectedGroup(newGroup.id);
+    setGroupForm({ name: '', parentId: '' });
+    setShowGroupForm(false);
+  };
+
+  const descendantGroupIds = (groupId: string): Set<string> => {
+    const ids = new Set<string>([groupId]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      groups.forEach((group) => {
+        if (group.parentId && ids.has(group.parentId) && !ids.has(group.id)) {
+          ids.add(group.id);
+          changed = true;
+        }
+      });
+    }
+    return ids;
+  };
+
+  const categoryFilteredTasks =
     selectedCategory === 'all'
       ? tasks
       : selectedCategory === 'pinned'
         ? tasks.filter((t) => t.pinned)
         : tasks.filter((t) => t.category === selectedCategory);
+  const filteredTasks =
+    selectedGroup === 'all'
+      ? categoryFilteredTasks
+      : categoryFilteredTasks.filter((task) => {
+          const visibleGroups = descendantGroupIds(selectedGroup);
+          return task.groupId !== null && visibleGroups.has(task.groupId);
+        });
 
   const pinnedTasks = filteredTasks.filter((t) => t.pinned && !t.completed);
   const pendingTasks = filteredTasks.filter((t) => !t.pinned && !t.completed);
@@ -263,6 +342,54 @@ export const Tasks = () => {
         </div>
       </div>
 
+      <div className="bg-white rounded-lg shadow-sm p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-lg flex items-center gap-2">
+            <Folder size={20} /> {t('groups')}
+          </h3>
+          <button
+            onClick={() => setShowGroupForm((open) => !open)}
+            className="flex items-center gap-2 bg-blue-500 text-white px-3 py-2 rounded-lg"
+          >
+            <FolderPlus size={18} /> {t('add_group')}
+          </button>
+        </div>
+        {showGroupForm && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input
+              value={groupForm.name}
+              onChange={(event) => setGroupForm({ ...groupForm, name: event.target.value })}
+              onKeyDown={(event) => event.key === 'Enter' && addGroup()}
+              placeholder={t('group_name')}
+              className="px-3 py-2 border rounded-lg"
+              autoFocus
+            />
+            <select
+              value={groupForm.parentId}
+              onChange={(event) => setGroupForm({ ...groupForm, parentId: event.target.value })}
+              className="px-3 py-2 border rounded-lg"
+            >
+              <option value="">{t('root_group')}</option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>{group.name}</option>
+              ))}
+            </select>
+            <button onClick={addGroup} className="bg-blue-500 text-white rounded-lg px-3 py-2">
+              {t('save')}
+            </button>
+          </div>
+        )}
+        <div className="space-y-1">
+          <button
+            onClick={() => setSelectedGroup('all')}
+            className={`w-full text-left px-3 py-2 rounded-lg ${selectedGroup === 'all' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'}`}
+          >
+            {t('all_groups')}
+          </button>
+          <GroupTree groups={groups} parentId={null} selectedGroup={selectedGroup} onSelect={setSelectedGroup} depth={0} />
+        </div>
+      </div>
+
       {showForm && (
         <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
           <input
@@ -278,7 +405,7 @@ export const Tasks = () => {
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-24"
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm text-gray-600 block mb-2">{t('due_date')}</label>
               <input
@@ -315,6 +442,19 @@ export const Tasks = () => {
             ))}
             </select>
           </div>
+          <div>
+            <label className="text-sm text-gray-600 block mb-2">{t('group')}</label>
+            <select
+              value={formData.groupId}
+              onChange={(event) => setFormData({ ...formData, groupId: event.target.value })}
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">{t('no_group')}</option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>{group.name}</option>
+              ))}
+            </select>
+          </div>
           <div className="flex gap-2">
             <button
               onClick={addTask}
@@ -331,6 +471,7 @@ export const Tasks = () => {
                   dueDate: '',
                   priority: 'medium',
                   category: 'Personal',
+                  groupId: '',
                 });
               }}
               className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition"
@@ -495,6 +636,45 @@ export const Tasks = () => {
     </div>
   );
 };
+
+const GroupTree = ({
+  groups,
+  parentId,
+  selectedGroup,
+  onSelect,
+  depth,
+}: {
+  groups: Group[];
+  parentId: string | null;
+  selectedGroup: string;
+  onSelect: (id: string) => void;
+  depth: number;
+}) => (
+  <>
+    {groups
+      .filter((group) => group.parentId === parentId)
+      .map((group) => (
+        <div key={group.id}>
+          <button
+            onClick={() => onSelect(group.id)}
+            className={`w-full text-left py-2 pr-3 rounded-lg flex items-center gap-2 ${
+              selectedGroup === group.id ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+            }`}
+            style={{ paddingLeft: `${12 + depth * 20}px` }}
+          >
+            <Folder size={17} /> {group.name}
+          </button>
+          <GroupTree
+            groups={groups}
+            parentId={group.id}
+            selectedGroup={selectedGroup}
+            onSelect={onSelect}
+            depth={depth + 1}
+          />
+        </div>
+      ))}
+  </>
+);
 
 interface TaskItemProps {
   task: Task;
