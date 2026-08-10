@@ -216,6 +216,26 @@ export const Tasks = () => {
     ));
   };
 
+  const deleteSelection = () => {
+    if (!selection) return;
+    if (!window.confirm(ro ? 'Ștergi acest element și toate subsarcinile lui?' : 'Delete this item and all its subtasks?')) return;
+    if (selection.path.length === 0) {
+      setTasks((current) => current.filter((task) => task.id !== selection.taskId));
+    } else {
+      const parentPath = selection.path.slice(0, -1);
+      const targetId = selection.path[selection.path.length - 1];
+      setTasks((current) => current.map((task) =>
+        task.id === selection.taskId
+          ? updateAtPath(task, parentPath, (parent) => ({
+              ...parent,
+              children: parent.children.filter((child) => child.id !== targetId),
+            }))
+          : task
+      ));
+    }
+    setSelection(null);
+  };
+
   const selectedTask = selection ? tasks.find((task) => task.id === selection.taskId) : null;
   const selectedItem = selectedTask && selection ? getAtPath(selectedTask, selection.path) : null;
 
@@ -269,6 +289,7 @@ export const Tasks = () => {
           groups={groups}
           ro={ro}
           onClose={() => setSelection(null)}
+          onDelete={deleteSelection}
           onBack={() => selection.path.length ? setSelection({ ...selection, path: selection.path.slice(0, -1) }) : setSelection(null)}
           onOpenChild={(id) => setSelection({ ...selection, path: [...selection.path, id] })}
           onChange={(patch) => updateSelection((item) => ({ ...item, ...patch }))}
@@ -276,6 +297,8 @@ export const Tasks = () => {
           onToggleChild={(id) => updateSelection((item) => ({ ...item, children: item.children.map((child) => child.id === id ? { ...child, completed: !child.completed } : child) }))}
           onDeleteChild={(id) => updateSelection((item) => ({ ...item, children: item.children.filter((child) => child.id !== id) }))}
           onAddComment={(text) => updateSelection((item) => ({ ...item, comments: [...item.comments, { id: crypto.randomUUID(), text, createdAt: new Date().toISOString() }] }))}
+          onEditComment={(id, text) => updateSelection((item) => ({ ...item, comments: item.comments.map((entry) => entry.id === id ? { ...entry, text } : entry) }))}
+          onDeleteComment={(id) => updateSelection((item) => ({ ...item, comments: item.comments.filter((entry) => entry.id !== id) }))}
         />
       )}
     </div>
@@ -307,8 +330,8 @@ const GroupRows = ({ groups, items, parentId, depth, selected, onSelect }: { gro
   </>
 );
 
-const ItemDetail = ({ item, groups, ro, onClose, onBack, onOpenChild, onChange, onAddChild, onToggleChild, onDeleteChild, onAddComment }: {
-  item: Item; groups: Group[]; ro: boolean; onClose: () => void; onBack: () => void; onOpenChild: (id: string) => void; onChange: (patch: Partial<Item>) => void; onAddChild: (name: string) => void; onToggleChild: (id: string) => void; onDeleteChild: (id: string) => void; onAddComment: (text: string) => void;
+const ItemDetail = ({ item, groups, ro, onClose, onDelete, onBack, onOpenChild, onChange, onAddChild, onToggleChild, onDeleteChild, onAddComment, onEditComment, onDeleteComment }: {
+  item: Item; groups: Group[]; ro: boolean; onClose: () => void; onDelete: () => void; onBack: () => void; onOpenChild: (id: string) => void; onChange: (patch: Partial<Item>) => void; onAddChild: (name: string) => void; onToggleChild: (id: string) => void; onDeleteChild: (id: string) => void; onAddComment: (text: string) => void; onEditComment: (id: string, text: string) => void; onDeleteComment: (id: string) => void;
 }) => {
   const [childName, setChildName] = useState('');
   const [comment, setComment] = useState('');
@@ -320,13 +343,14 @@ const ItemDetail = ({ item, groups, ro, onClose, onBack, onOpenChild, onChange, 
       <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-4 py-3">
         <button onClick={onBack} className="p-2 text-gray-600"><ArrowLeft /></button>
         <button onClick={() => onChange({ completed: !item.completed })} className={`flex items-center gap-2 rounded-full border px-4 py-2 font-medium ${item.completed ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300'}`}>{item.completed ? <CheckCircle2 size={20} /> : <Circle size={20} />}{item.completed ? (ro ? 'Finalizat' : 'Completed') : (ro ? 'Marchează finalizat' : 'Mark complete')}</button>
-        <div className="flex"><MoreHorizontal className="text-gray-500" /><button onClick={onClose} className="ml-3"><X /></button></div>
+        <div className="flex items-center gap-3"><button onClick={onDelete} className="text-red-500" title={ro ? 'Șterge' : 'Delete'}><Trash2 /></button><MoreHorizontal className="text-gray-500" /><button onClick={onClose}><X /></button></div>
       </header>
       <main className="space-y-0">
         <section className="border-b p-5"><input value={item.name} onChange={(e) => onChange({ name: e.target.value })} className="w-full border-0 text-2xl font-bold outline-none" /></section>
-        <section className="grid grid-cols-1 gap-4 border-b p-5 sm:grid-cols-2">
+        <section className="grid grid-cols-1 gap-4 border-b p-5 sm:grid-cols-3">
           <label className="text-sm text-gray-500"><span className="flex items-center gap-2"><CalendarDays size={19} />{ro ? 'Data scadenței' : 'Due date'}</span><input type="date" value={item.dueDate} onChange={(e) => onChange({ dueDate: e.target.value })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900" /></label>
           <label className="text-sm text-gray-500"><span className="flex items-center gap-2"><Folder size={19} />{ro ? 'Grup' : 'Group'}</span><select value={item.groupId || ''} onChange={(e) => onChange({ groupId: e.target.value || null })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900"><option value="">{ro ? 'Fără grup' : 'No group'}</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
+          <label className="text-sm text-gray-500">{ro ? 'Prioritate' : 'Priority'}<select value={item.priority} onChange={(e) => onChange({ priority: e.target.value as Priority })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900"><option value="low">{ro ? 'Joasă' : 'Low'}</option><option value="medium">{ro ? 'Medie' : 'Medium'}</option><option value="high">{ro ? 'Înaltă' : 'High'}</option></select></label>
         </section>
         <section className="border-b p-5"><h3 className="mb-3 text-xl font-semibold">{ro ? 'Descriere' : 'Description'}</h3><textarea value={item.description} onChange={(e) => onChange({ description: e.target.value })} placeholder={ro ? 'Adaugă o descriere…' : 'Add a description…'} className="min-h-28 w-full rounded-lg border p-3" /></section>
         <section className="border-b p-5"><div className="mb-2 flex justify-between"><h3 className="text-xl font-semibold">{ro ? 'Progres' : 'Progress'}</h3><strong>{progress.percent}%</strong></div><ProgressBar value={progress.percent} /></section>
@@ -335,7 +359,7 @@ const ItemDetail = ({ item, groups, ro, onClose, onBack, onOpenChild, onChange, 
           <div className="space-y-2">{item.children.map((child) => { const childProgress = countProgress(child); return <div key={child.id} className="rounded-lg border p-3"><div className="flex items-center gap-2"><button onClick={() => onToggleChild(child.id)} className={child.completed ? 'text-green-600' : 'text-gray-400'}>{child.completed ? <CheckCircle2 size={20} /> : <Circle size={20} />}</button><button onClick={() => onOpenChild(child.id)} className="min-w-0 flex-1 text-left font-medium">{child.name}</button><span className="text-xs font-semibold">{childProgress.percent}%</span><button onClick={() => onDeleteChild(child.id)} className="text-gray-400"><Trash2 size={17} /></button><button onClick={() => onOpenChild(child.id)}><ChevronRight size={20} /></button></div><div className="mt-2"><ProgressBar value={childProgress.percent} compact /></div></div> })}</div>
           <div className="mt-3 flex gap-2"><input value={childName} onChange={(e) => setChildName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submitChild()} placeholder={ro ? 'Nume subsarcină' : 'Subtask name'} className="min-w-0 flex-1 rounded-lg border px-3 py-3" /><button onClick={submitChild} className="rounded-lg bg-blue-600 px-4 text-white"><Plus /></button></div>
         </section>
-        <section className="p-5"><h3 className="mb-4 flex items-center gap-2 text-xl font-semibold"><MessageSquare size={21} />{ro ? 'Comentarii' : 'Comments'}</h3><div className="space-y-3">{item.comments.map((entry) => <div key={entry.id} className="rounded-lg bg-gray-50 p-3"><p>{entry.text}</p><p className="mt-1 text-xs text-gray-400">{new Date(entry.createdAt).toLocaleString()}</p></div>)}</div><div className="mt-4 flex gap-2"><textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={ro ? 'Scrie un comentariu…' : 'Write a comment…'} className="min-h-20 min-w-0 flex-1 rounded-lg border p-3" /><button onClick={submitComment} className="self-end rounded-lg bg-blue-600 px-4 py-3 text-white">{ro ? 'Trimite' : 'Send'}</button></div></section>
+        <section className="p-5"><h3 className="mb-4 flex items-center gap-2 text-xl font-semibold"><MessageSquare size={21} />{ro ? 'Comentarii' : 'Comments'}</h3><div className="space-y-3">{item.comments.map((entry) => <div key={entry.id} className="rounded-lg bg-gray-50 p-3"><div className="flex gap-2"><textarea value={entry.text} onChange={(e) => onEditComment(entry.id, e.target.value)} className="min-h-16 min-w-0 flex-1 rounded border bg-white p-2" /><button onClick={() => onDeleteComment(entry.id)} className="text-red-500"><Trash2 size={18} /></button></div><p className="mt-1 text-xs text-gray-400">{new Date(entry.createdAt).toLocaleString()}</p></div>)}</div><div className="mt-4 flex gap-2"><textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={ro ? 'Scrie un comentariu…' : 'Write a comment…'} className="min-h-20 min-w-0 flex-1 rounded-lg border p-3" /><button onClick={submitComment} className="self-end rounded-lg bg-blue-600 px-4 py-3 text-white">{ro ? 'Trimite' : 'Send'}</button></div></section>
       </main>
     </div>
   </div>;
