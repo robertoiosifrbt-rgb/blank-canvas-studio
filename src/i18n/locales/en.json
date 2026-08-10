@@ -1,0 +1,23 @@
+{
+  "app_title": "Tasks & Calendar",
+  "calendar": "Calendar",
+  "tasks": "Tasks",
+  "settings": "Settings",
+  "language": "Language",
+  "english": "English",
+  "romanian": "Romanian",
+  "add_task": "Add Task",
+  "task_name": "Task name",
+  "due_date": "Due date",
+  "cancel": "Cancel",
+  "save": "Save",
+  "delete": "Delete",
+  "complete": "Complete",
+  "no_tasks": "No tasks yet",
+  "today": "Today",
+  "tomorrow": "Tomorrow",
+  "this_week": "This week",
+  "overdue": "Overdue",
+  "completed": "Completed",
+  "pending": "Pending"
+}

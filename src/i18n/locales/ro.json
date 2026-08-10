@@ -1,0 +1,23 @@
+{
+  "app_title": "Sarcini & Calendar",
+  "calendar": "Calendar",
+  "tasks": "Sarcini",
+  "settings": "Setări",
+  "language": "Limbă",
+  "english": "Engleză",
+  "romanian": "Română",
+  "add_task": "Adauga sarcină",
+  "task_name": "Nume sarcină",
+  "due_date": "Data scadenţei",
+  "cancel": "Anulare",
+  "save": "Salvare",
+  "delete": "Ştergere",
+  "complete": "Completat",
+  "no_tasks": "Nicio sarcină încă",
+  "today": "Azi",
+  "tomorrow": "Mâine",
+  "this_week": "Această săptămână",
+  "overdue": "Expirat",
+  "completed": "Finalizat",
+  "pending": "În aşteptare"
+}
