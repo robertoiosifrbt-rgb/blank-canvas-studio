@@ -59,7 +59,7 @@ export const Calendar = () => {
     const saved = localStorage.getItem('calendarEvents');
     return saved ? JSON.parse(saved) : [];
   });
-  const [eventCategories, setEventCategories] = useState<string[]>(() => {
+  const [eventCategories] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('eventCategories');
       const parsed: unknown = saved ? JSON.parse(saved) : null;
@@ -70,7 +70,6 @@ export const Calendar = () => {
       return Object.keys(CATEGORY_COLORS);
     }
   });
-  const [newEventCategory, setNewEventCategory] = useState('');
   const [eventForm, setEventForm] = useState({
     name: '',
     category: 'Personal',
@@ -119,13 +118,7 @@ export const Calendar = () => {
     setEvents((current) => current.map((event) => event.id === id ? { ...event, ...patch } : event));
   };
 
-  const addEventCategory = () => {
-    const category = newEventCategory.trim();
-    if (!category || eventCategories.some((value) => value.toLowerCase() === category.toLowerCase())) return;
-    setEventCategories((current) => [...current, category]);
-    setEventForm((current) => ({ ...current, category }));
-    setNewEventCategory('');
-  };
+
 
   const getDaysInMonth = (date: Date): Day[] => {
     const year = date.getFullYear();
@@ -291,66 +284,6 @@ export const Calendar = () => {
             onUpdateEvent={updateEvent}
           />
         )}
-      </div>
-
-      <div className="rounded-lg bg-white p-4 shadow-md sm:p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-xl font-bold">{t('calendar')} — {t('tasks') === 'Sarcini' ? 'Evenimente' : 'Events'}</h3>
-          <span className="text-sm text-gray-500">{events.length}</span>
-        </div>
-        <div className="mb-4 flex gap-2">
-          <input
-            value={newEventCategory}
-            onChange={(e) => setNewEventCategory(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addEventCategory()}
-            placeholder={t('tasks') === 'Sarcini' ? 'Categorie nouă' : 'New category'}
-            className="min-w-0 flex-1 rounded-lg border px-3 py-2"
-          />
-          <button onClick={addEventCategory} className="rounded-lg bg-blue-600 px-4 text-white">
-            <Plus size={18} />
-          </button>
-        </div>
-        <div className="space-y-3">
-          {[...events]
-            .sort((a, b) => a.date.localeCompare(b.date))
-            .map((event) => (
-              <div key={event.id} className="space-y-2 rounded-lg border p-3">
-                <input
-                  value={event.name}
-                  onChange={(e) => updateEvent(event.id, { name: e.target.value })}
-                  className="w-full rounded border px-3 py-2 font-medium"
-                />
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                  <input
-                    type="date"
-                    value={event.date}
-                    onChange={(e) => updateEvent(event.id, { date: e.target.value })}
-                    className="rounded border px-3 py-2"
-                  />
-                  <select
-                    value={event.category}
-                    onChange={(e) => updateEvent(event.id, { category: e.target.value })}
-                    className="rounded border px-3 py-2"
-                  >
-                    {eventCategories.map((category) => (
-                      <option key={category} value={category}>{category}</option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => deleteEvent(event.id)}
-                    className="flex items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-red-600"
-                  >
-                    <Trash2 size={18} /> {t('delete')}
-                  </button>
-                </div>
-              </div>
-            ))}
-          {events.length === 0 && (
-            <p className="py-6 text-center text-gray-500">
-              {t('tasks') === 'Sarcini' ? 'Nu există evenimente.' : 'No events yet.'}
-            </p>
-          )}
-        </div>
       </div>
 
       {selectedDate && (
@@ -586,6 +519,105 @@ const DayView = ({
         <Plus size={20} />
         Add event
       </button>
+    </div>
+  );
+};
+
+
+export const Events = () => {
+  const { t, i18n } = useTranslation();
+  const ro = i18n.language.startsWith('ro');
+  const [events, setEvents] = useState<CalendarEvent[]>(() => {
+    try {
+      const saved = localStorage.getItem('calendarEvents');
+      const parsed: unknown = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  const [categories, setCategories] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('eventCategories');
+      const parsed: unknown = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed)
+        ? [...new Set([...Object.keys(CATEGORY_COLORS), ...parsed.filter((value): value is string => typeof value === 'string')])]
+        : Object.keys(CATEGORY_COLORS);
+    } catch {
+      return Object.keys(CATEGORY_COLORS);
+    }
+  });
+  const [newCategory, setNewCategory] = useState('');
+  const [form, setForm] = useState({ name: '', date: '', category: 'Personal' });
+
+  useEffect(() => {
+    localStorage.setItem('calendarEvents', JSON.stringify(events));
+  }, [events]);
+
+  useEffect(() => {
+    localStorage.setItem('eventCategories', JSON.stringify(categories));
+  }, [categories]);
+
+  const addCategory = () => {
+    const name = newCategory.trim();
+    if (!name || categories.some((category) => category.toLowerCase() === name.toLowerCase())) return;
+    setCategories((current) => [...current, name]);
+    setForm((current) => ({ ...current, category: name }));
+    setNewCategory('');
+  };
+
+  const addEvent = () => {
+    const name = form.name.trim();
+    if (!name || !form.date) return;
+    setEvents((current) => [...current, {
+      id: crypto.randomUUID(),
+      name,
+      date: form.date,
+      category: form.category,
+      color: CATEGORY_COLORS[form.category as keyof typeof CATEGORY_COLORS] || 'bg-gray-100',
+    }]);
+    setForm({ name: '', date: '', category: form.category });
+  };
+
+  const updateEvent = (id: string, patch: Partial<CalendarEvent>) =>
+    setEvents((current) => current.map((event) => event.id === id ? { ...event, ...patch } : event));
+
+  const deleteEvent = (id: string) => {
+    if (!window.confirm(ro ? 'Ștergi evenimentul?' : 'Delete this event?')) return;
+    setEvents((current) => current.filter((event) => event.id !== id));
+  };
+
+  return (
+    <div className="space-y-5">
+      <h2 className="text-2xl font-bold">{ro ? 'Evenimente' : 'Events'}</h2>
+      <section className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
+        <h3 className="font-semibold">{ro ? 'Eveniment nou' : 'New event'}</h3>
+        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={ro ? 'Nume eveniment' : 'Event name'} className="w-full rounded-lg border px-3 py-3" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="rounded-lg border px-3 py-3" />
+          <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="rounded-lg border px-3 py-3">{categories.map((category) => <option key={category}>{category}</option>)}</select>
+        </div>
+        <button onClick={addEvent} className="w-full rounded-lg bg-blue-600 px-4 py-3 text-white">{ro ? 'Adaugă eveniment' : 'Add event'}</button>
+      </section>
+
+      <section className="rounded-xl bg-white p-4 shadow-sm">
+        <h3 className="mb-3 font-semibold">{ro ? 'Categorii' : 'Categories'}</h3>
+        <div className="flex gap-2"><input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addCategory()} placeholder={ro ? 'Categorie nouă' : 'New category'} className="min-w-0 flex-1 rounded-lg border px-3 py-2" /><button onClick={addCategory} className="rounded-lg bg-blue-600 px-4 text-white"><Plus size={18} /></button></div>
+      </section>
+
+      <section className="space-y-3">
+        {[...events].sort((a, b) => a.date.localeCompare(b.date)).map((event) => (
+          <div key={event.id} className="space-y-2 rounded-xl bg-white p-4 shadow-sm">
+            <input value={event.name} onChange={(e) => updateEvent(event.id, { name: e.target.value })} className="w-full rounded border px-3 py-2 font-medium" />
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <input type="date" value={event.date} onChange={(e) => updateEvent(event.id, { date: e.target.value })} className="rounded border px-3 py-2" />
+              <select value={event.category} onChange={(e) => updateEvent(event.id, { category: e.target.value })} className="rounded border px-3 py-2">{categories.map((category) => <option key={category}>{category}</option>)}</select>
+              <button onClick={() => deleteEvent(event.id)} className="flex items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-red-600"><Trash2 size={18} />{t('delete')}</button>
+            </div>
+          </div>
+        ))}
+        {!events.length && <p className="py-10 text-center text-gray-500">{ro ? 'Nu există evenimente.' : 'No events yet.'}</p>}
+      </section>
     </div>
   );
 };
