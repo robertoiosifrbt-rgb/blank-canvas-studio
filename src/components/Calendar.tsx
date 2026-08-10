@@ -59,6 +59,18 @@ export const Calendar = () => {
     const saved = localStorage.getItem('calendarEvents');
     return saved ? JSON.parse(saved) : [];
   });
+  const [eventCategories, setEventCategories] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('eventCategories');
+      const parsed: unknown = saved ? JSON.parse(saved) : null;
+      return Array.isArray(parsed) && parsed.every((value) => typeof value === 'string')
+        ? [...new Set([...Object.keys(CATEGORY_COLORS), ...parsed])]
+        : Object.keys(CATEGORY_COLORS);
+    } catch {
+      return Object.keys(CATEGORY_COLORS);
+    }
+  });
+  const [newEventCategory, setNewEventCategory] = useState('');
   const [eventForm, setEventForm] = useState({
     name: '',
     category: 'Personal',
@@ -67,6 +79,10 @@ export const Calendar = () => {
   useEffect(() => {
     localStorage.setItem('calendarEvents', JSON.stringify(events));
   }, [events]);
+
+  useEffect(() => {
+    localStorage.setItem('eventCategories', JSON.stringify(eventCategories));
+  }, [eventCategories]);
 
   const isHoliday = (date: Date) => {
     const monthDay = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -101,6 +117,14 @@ export const Calendar = () => {
 
   const updateEvent = (id: string, patch: Partial<CalendarEvent>) => {
     setEvents((current) => current.map((event) => event.id === id ? { ...event, ...patch } : event));
+  };
+
+  const addEventCategory = () => {
+    const category = newEventCategory.trim();
+    if (!category || eventCategories.some((value) => value.toLowerCase() === category.toLowerCase())) return;
+    setEventCategories((current) => [...current, category]);
+    setEventForm((current) => ({ ...current, category }));
+    setNewEventCategory('');
   };
 
   const getDaysInMonth = (date: Date): Day[] => {
@@ -274,6 +298,18 @@ export const Calendar = () => {
           <h3 className="text-xl font-bold">{t('calendar')} — {t('tasks') === 'Sarcini' ? 'Evenimente' : 'Events'}</h3>
           <span className="text-sm text-gray-500">{events.length}</span>
         </div>
+        <div className="mb-4 flex gap-2">
+          <input
+            value={newEventCategory}
+            onChange={(e) => setNewEventCategory(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addEventCategory()}
+            placeholder={t('tasks') === 'Sarcini' ? 'Categorie nouă' : 'New category'}
+            className="min-w-0 flex-1 rounded-lg border px-3 py-2"
+          />
+          <button onClick={addEventCategory} className="rounded-lg bg-blue-600 px-4 text-white">
+            <Plus size={18} />
+          </button>
+        </div>
         <div className="space-y-3">
           {[...events]
             .sort((a, b) => a.date.localeCompare(b.date))
@@ -296,7 +332,7 @@ export const Calendar = () => {
                     onChange={(e) => updateEvent(event.id, { category: e.target.value })}
                     className="rounded border px-3 py-2"
                   >
-                    {Object.keys(CATEGORY_COLORS).map((category) => (
+                    {eventCategories.map((category) => (
                       <option key={category} value={category}>{category}</option>
                     ))}
                   </select>
@@ -356,7 +392,7 @@ export const Calendar = () => {
                     <input value={event.name} onChange={(e) => updateEvent(event.id, { name: e.target.value })} className="w-full rounded border bg-white px-3 py-2 font-medium text-gray-900" />
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <input type="date" value={event.date} onChange={(e) => updateEvent(event.id, { date: e.target.value })} className="rounded border bg-white px-3 py-2 text-gray-900" />
-                      <select value={event.category} onChange={(e) => updateEvent(event.id, { category: e.target.value })} className="rounded border bg-white px-3 py-2 text-gray-900">{Object.keys(CATEGORY_COLORS).map((category) => <option key={category}>{category}</option>)}</select>
+                      <select value={event.category} onChange={(e) => updateEvent(event.id, { category: e.target.value })} className="rounded border bg-white px-3 py-2 text-gray-900">{eventCategories.map((category) => <option key={category}>{category}</option>)}</select>
                     </div>
                   <button
                     onClick={() => deleteEvent(event.id)}
@@ -392,7 +428,7 @@ export const Calendar = () => {
                 onChange={(e) => setEventForm({ ...eventForm, category: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {Object.keys(CATEGORY_COLORS).map((cat) => (
+                {eventCategories.map((cat) => (
                   <option key={cat} value={cat}>
                     {cat}
                   </option>
