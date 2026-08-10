@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Bell, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { enablePush, syncPushAlarms, type PushAlarm } from '../push';
 
 interface Task {
   id: string;
@@ -99,6 +100,24 @@ export const Calendar = () => {
     return () => window.clearInterval(timer);
   }, [events, tasks, ro]);
 
+  useEffect(() => {
+    const alarms: PushAlarm[] = [
+      ...tasks.flatMap((task) => {
+        const reminder = task.reminderMinutes ?? 15;
+        const start = task.startAt || (task.dueDate ? `${task.dueDate}T09:00` : '');
+        if (!start || reminder < 0) return [];
+        return [{ id: `task:${task.id}`, title: task.name, body: ro ? 'Taskul începe acum.' : 'Task starts now.', url: '/', scheduledAt: new Date(new Date(start).getTime() - reminder * 60000).toISOString() }];
+      }),
+      ...events.flatMap((event) => {
+        const reminder = event.reminderMinutes ?? 15;
+        if (!event.date || reminder < 0) return [];
+        const start = `${event.date}T${event.startTime || '09:00'}`;
+        return [{ id: `event:${event.id}`, title: event.name, body: ro ? 'Evenimentul începe acum.' : 'Event starts now.', url: '/', scheduledAt: new Date(new Date(start).getTime() - reminder * 60000).toISOString() }];
+      }),
+    ].filter((alarm) => new Date(alarm.scheduledAt).getTime() > Date.now() - 60000);
+    void syncPushAlarms(alarms).catch(() => undefined);
+  }, [events, tasks, ro]);
+
   const dateKey = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -166,8 +185,40 @@ export const Calendar = () => {
     setNewCalendar('');
   };
 
+  const updateCalendar = (id: string, patch: Partial<UserCalendar>) =>
+    setCalendars((current) => current.map((calendar) => calendar.id === id ? { ...calendar, ...patch } : calendar));
+
+  const deleteCalendar = (id: string) => {
+    if (calendars.length === 1) return window.alert(ro ? 'Trebuie să rămână cel puțin un calendar.' : 'At least one calendar must remain.');
+    if (!window.confirm(ro ? 'Ștergi calendarul? Taskurile și evenimentele vor fi mutate.' : 'Delete calendar? Its tasks and events will be moved.')) return;
+    const replacement = calendars.find((calendar) => calendar.id !== id)!;
+    setTasks((current) => current.map((task) => task.calendarId === id ? { ...task, calendarId: replacement.id } : task));
+    setEvents((current) => current.map((event) => event.calendarId === id ? { ...event, calendarId: replacement.id } : event));
+    setCalendars((current) => current.filter((calendar) => calendar.id !== id));
+    if (calendarFilter === id) setCalendarFilter('all');
+    if (form.calendarId === id) setForm((current) => ({ ...current, calendarId: replacement.id }));
+  };
+
   const requestAlarms = async () => {
-    if ('Notification' in window) await Notification.requestPermission();
+    try {
+      await enablePush();
+      const alarms: PushAlarm[] = [
+        ...tasks.flatMap((task) => {
+          const reminder = task.reminderMinutes ?? 15;
+          const start = task.startAt || (task.dueDate ? `${task.dueDate}T09:00` : '');
+          return start && reminder >= 0 ? [{ id: `task:${task.id}`, title: task.name, body: ro ? 'Taskul începe acum.' : 'Task starts now.', url: '/', scheduledAt: new Date(new Date(start).getTime() - reminder * 60000).toISOString() }] : [];
+        }),
+        ...events.flatMap((event) => {
+          const reminder = event.reminderMinutes ?? 15;
+          const start = event.date ? `${event.date}T${event.startTime || '09:00'}` : '';
+          return start && reminder >= 0 ? [{ id: `event:${event.id}`, title: event.name, body: ro ? 'Evenimentul începe acum.' : 'Event starts now.', url: '/', scheduledAt: new Date(new Date(start).getTime() - reminder * 60000).toISOString() }] : [];
+        }),
+      ];
+      await syncPushAlarms(alarms);
+      window.alert(ro ? 'Alarmele push sunt active.' : 'Push reminders are enabled.');
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : (ro ? 'Alarmele nu au putut fi activate.' : 'Could not enable reminders.'));
+    }
   };
 
   const selectedTask = selectedEntry?.kind === 'task' ? tasks.find((task) => task.id === selectedEntry.id) : null;
@@ -185,6 +236,7 @@ export const Calendar = () => {
             {calendars.map((calendar) => <button key={calendar.id} onClick={() => setCalendarFilter(calendar.id)} className={`whitespace-nowrap rounded-full border px-3 py-2 ${calendarFilter === calendar.id ? 'text-white' : 'bg-white'}`} style={calendarFilter === calendar.id ? { backgroundColor: calendar.color } : { borderColor: calendar.color }}>{calendar.name}</button>)}
           </div>
           <div className="flex gap-2"><input value={newCalendar} onChange={(e) => setNewCalendar(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addCalendar()} placeholder={ro ? 'Calendar nou' : 'New calendar'} className="min-w-0 flex-1 rounded-lg border px-3 py-2" /><button onClick={addCalendar} className="rounded-lg bg-blue-600 px-4 text-white"><Plus size={18} /></button></div>
+          <div className="space-y-2">{calendars.map((calendar) => <div key={calendar.id} className="flex items-center gap-2 rounded-lg bg-gray-50 p-2"><input type="color" value={calendar.color} onChange={(e) => updateCalendar(calendar.id, { color: e.target.value })} className="h-10 w-12 rounded border" /><input value={calendar.name} onChange={(e) => updateCalendar(calendar.id, { name: e.target.value })} className="min-w-0 flex-1 rounded-lg border px-3 py-2" /><button onClick={() => deleteCalendar(calendar.id)} className="rounded-lg p-2 text-red-600"><Trash2 size={18} /></button></div>)}</div>
         </div>
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-2xl font-bold">{currentDate.toLocaleDateString(ro ? 'ro-RO' : 'en-GB', { month: 'long', year: 'numeric', ...(viewMode === 'day' ? { day: 'numeric' } : {}) })}</h2>
@@ -222,6 +274,7 @@ export const Calendar = () => {
                 <input value={selectedTask.name} onChange={(e) => setTasks((current) => current.map((task) => task.id === selectedTask.id ? { ...task, name: e.target.value } : task))} className="w-full rounded-lg border px-3 py-3 font-semibold" />
                 <label className="block text-sm">{ro ? 'De la' : 'From'}<input type="datetime-local" value={selectedTask.startAt || ''} onChange={(e) => setTasks((current) => current.map((task) => task.id === selectedTask.id ? { ...task, startAt: e.target.value, dueDate: e.target.value.slice(0, 10) } : task))} className="mt-1 w-full rounded-lg border px-3 py-3" /></label>
                 <label className="block text-sm">{ro ? 'Până la' : 'To'}<input type="datetime-local" value={selectedTask.endAt || ''} onChange={(e) => setTasks((current) => current.map((task) => task.id === selectedTask.id ? { ...task, endAt: e.target.value } : task))} className="mt-1 w-full rounded-lg border px-3 py-3" /></label>
+                <label className="block text-sm">Calendar<select value={selectedTask.calendarId || calendars[0]?.id || ''} onChange={(e) => setTasks((current) => current.map((task) => task.id === selectedTask.id ? { ...task, calendarId: e.target.value } : task))} className="mt-1 w-full rounded-lg border px-3 py-3">{calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select></label>
                 <ReminderSelect value={selectedTask.reminderMinutes ?? 15} ro={ro} onChange={(value) => setTasks((current) => current.map((task) => task.id === selectedTask.id ? { ...task, reminderMinutes: value } : task))} />
                 <button onClick={() => { if (window.confirm(ro ? 'Ștergi taskul?' : 'Delete task?')) { setTasks((current) => current.filter((task) => task.id !== selectedTask.id)); setSelectedEntry(null); } }} className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 py-3 text-red-600"><Trash2 size={18} />{ro ? 'Șterge' : 'Delete'}</button>
               </>
@@ -230,6 +283,7 @@ export const Calendar = () => {
                 <input value={selectedEvent.name} onChange={(e) => setEvents((current) => current.map((event) => event.id === selectedEvent.id ? { ...event, name: e.target.value } : event))} className="w-full rounded-lg border px-3 py-3 font-semibold" />
                 <label className="block text-sm">{ro ? 'Data' : 'Date'}<input type="date" value={selectedEvent.date} onChange={(e) => setEvents((current) => current.map((event) => event.id === selectedEvent.id ? { ...event, date: e.target.value } : event))} className="mt-1 w-full rounded-lg border px-3 py-3" /></label>
                 <div className="grid grid-cols-2 gap-3"><label className="text-sm">{ro ? 'De la' : 'From'}<input type="time" value={selectedEvent.startTime || '09:00'} onChange={(e) => setEvents((current) => current.map((event) => event.id === selectedEvent.id ? { ...event, startTime: e.target.value } : event))} className="mt-1 w-full rounded-lg border px-3 py-3" /></label><label className="text-sm">{ro ? 'Până la' : 'To'}<input type="time" value={selectedEvent.endTime || '10:00'} onChange={(e) => setEvents((current) => current.map((event) => event.id === selectedEvent.id ? { ...event, endTime: e.target.value } : event))} className="mt-1 w-full rounded-lg border px-3 py-3" /></label></div>
+                <label className="block text-sm">Calendar<select value={selectedEvent.calendarId || calendars[0]?.id || ''} onChange={(e) => setEvents((current) => current.map((event) => event.id === selectedEvent.id ? { ...event, calendarId: e.target.value } : event))} className="mt-1 w-full rounded-lg border px-3 py-3">{calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select></label>
                 <ReminderSelect value={selectedEvent.reminderMinutes ?? 15} ro={ro} onChange={(value) => setEvents((current) => current.map((event) => event.id === selectedEvent.id ? { ...event, reminderMinutes: value } : event))} />
                 <button onClick={() => { if (window.confirm(ro ? 'Ștergi evenimentul?' : 'Delete event?')) { setEvents((current) => current.filter((event) => event.id !== selectedEvent.id)); setSelectedEntry(null); } }} className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 py-3 text-red-600"><Trash2 size={18} />{ro ? 'Șterge' : 'Delete'}</button>
               </>
@@ -271,6 +325,7 @@ const ReminderSelect = ({ value, ro, onChange }: { value: number; ro: boolean; o
 export const Events = () => {
   const { t, i18n } = useTranslation();
   const ro = i18n.language.startsWith('ro');
+  const [calendars] = useState<UserCalendar[]>(() => { try { const raw = localStorage.getItem('userCalendars'); const parsed = raw ? JSON.parse(raw) : []; return Array.isArray(parsed) && parsed.length ? parsed : [{ id: 'personal', name: 'Personal', color: '#2563eb' }]; } catch { return [{ id: 'personal', name: 'Personal', color: '#2563eb' }]; } });
   const [events, setEvents] = useState<CalendarEvent[]>(() => {
     try {
       const saved = localStorage.getItem('calendarEvents');
@@ -292,7 +347,7 @@ export const Events = () => {
     }
   });
   const [newCategory, setNewCategory] = useState('');
-  const [form, setForm] = useState({ name: '', date: '', startTime: '09:00', endTime: '10:00', category: 'Personal' });
+  const [form, setForm] = useState({ name: '', date: '', startTime: '09:00', endTime: '10:00', category: 'Personal', calendarId: calendars[0]?.id || 'personal', reminderMinutes: 15 });
 
   useEffect(() => {
     localStorage.setItem('calendarEvents', JSON.stringify(events));
@@ -321,8 +376,10 @@ export const Events = () => {
       color: CATEGORY_COLORS[form.category as keyof typeof CATEGORY_COLORS] || 'bg-gray-100',
       startTime: form.startTime,
       endTime: form.endTime,
+      calendarId: form.calendarId,
+      reminderMinutes: form.reminderMinutes,
     }]);
-    setForm({ name: '', date: '', startTime: '09:00', endTime: '10:00', category: form.category });
+    setForm({ name: '', date: '', startTime: '09:00', endTime: '10:00', category: form.category, calendarId: form.calendarId, reminderMinutes: form.reminderMinutes });
   };
 
   const updateEvent = (id: string, patch: Partial<CalendarEvent>) =>
@@ -343,6 +400,8 @@ export const Events = () => {
           <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="rounded-lg border px-3 py-3" />
           <div className="grid grid-cols-2 gap-2"><input type="time" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="rounded-lg border px-3 py-3" /><input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="rounded-lg border px-3 py-3" /></div>
           <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="rounded-lg border px-3 py-3">{categories.map((category) => <option key={category}>{category}</option>)}</select>
+          <select value={form.calendarId} onChange={(e) => setForm({ ...form, calendarId: e.target.value })} className="rounded-lg border px-3 py-3">{calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select>
+          <ReminderSelect value={form.reminderMinutes} ro={ro} onChange={(value) => setForm({ ...form, reminderMinutes: value })} />
         </div>
         <button onClick={addEvent} className="w-full rounded-lg bg-blue-600 px-4 py-3 text-white">{ro ? 'Adaugă eveniment' : 'Add event'}</button>
       </section>
@@ -360,6 +419,8 @@ export const Events = () => {
               <input type="date" value={event.date} onChange={(e) => updateEvent(event.id, { date: e.target.value })} className="rounded border px-3 py-2" />
               <div className="grid grid-cols-2 gap-2"><input type="time" value={event.startTime || '09:00'} onChange={(e) => updateEvent(event.id, { startTime: e.target.value })} className="rounded border px-3 py-2" /><input type="time" value={event.endTime || '10:00'} onChange={(e) => updateEvent(event.id, { endTime: e.target.value })} className="rounded border px-3 py-2" /></div>
               <select value={event.category} onChange={(e) => updateEvent(event.id, { category: e.target.value })} className="rounded border px-3 py-2">{categories.map((category) => <option key={category}>{category}</option>)}</select>
+              <select value={event.calendarId || calendars[0]?.id || ''} onChange={(e) => updateEvent(event.id, { calendarId: e.target.value })} className="rounded border px-3 py-2">{calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select>
+              <ReminderSelect value={event.reminderMinutes ?? 15} ro={ro} onChange={(value) => updateEvent(event.id, { reminderMinutes: value })} />
               <button onClick={() => deleteEvent(event.id)} className="flex items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-red-600"><Trash2 size={18} />{t('delete')}</button>
             </div>
           </div>
@@ -369,5 +430,3 @@ export const Events = () => {
     </div>
   );
 };
-
-
