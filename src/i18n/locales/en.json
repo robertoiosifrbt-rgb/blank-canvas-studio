@@ -37,5 +37,12 @@
   "edit": "Edit",
   "description": "Description",
   "all_tasks": "All Tasks",
-  "important": "Important"
+  "important": "Important",
+  "groups": "Groups",
+  "add_group": "Add group",
+  "group_name": "Group name",
+  "root_group": "Top level",
+  "all_groups": "All groups",
+  "group": "Group",
+  "no_group": "No group"
 }
