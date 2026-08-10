@@ -386,7 +386,7 @@ export const Tasks = () => {
           >
             {t('all_groups')}
           </button>
-          <GroupTree groups={groups} parentId={null} selectedGroup={selectedGroup} onSelect={setSelectedGroup} depth={0} />
+          <GroupTree groups={groups} tasks={tasks} parentId={null} selectedGroup={selectedGroup} onSelect={setSelectedGroup} depth={0} />
         </div>
       </div>
 
@@ -639,33 +639,55 @@ export const Tasks = () => {
 
 const GroupTree = ({
   groups,
+  tasks,
   parentId,
   selectedGroup,
   onSelect,
   depth,
 }: {
   groups: Group[];
+  tasks: Task[];
   parentId: string | null;
   selectedGroup: string;
   onSelect: (id: string) => void;
   depth: number;
-}) => (
+}) => {
+  const groupAndDescendants = (id: string): Set<string> => {
+    const ids = new Set<string>([id]);
+    groups.forEach((candidate) => {
+      if (candidate.parentId && ids.has(candidate.parentId)) ids.add(candidate.id);
+    });
+    return ids;
+  };
+
+  return (
   <>
     {groups
       .filter((group) => group.parentId === parentId)
       .map((group) => (
         <div key={group.id}>
-          <button
+          {(() => {
+            const ids = groupAndDescendants(group.id);
+            const groupTasks = tasks.filter((task) => task.groupId && ids.has(task.groupId));
+            const done = groupTasks.filter((task) => task.completed).length;
+            const percent = groupTasks.length ? Math.round((done / groupTasks.length) * 100) : 0;
+            return <button
             onClick={() => onSelect(group.id)}
-            className={`w-full text-left py-2 pr-3 rounded-lg flex items-center gap-2 ${
+            className={`w-full text-left py-2 pr-3 rounded-lg ${
               selectedGroup === group.id ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
             }`}
             style={{ paddingLeft: `${12 + depth * 20}px` }}
           >
-            <Folder size={17} /> {group.name}
-          </button>
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex items-center gap-2"><Folder size={17} /> {group.name}</span>
+              <span className="text-xs font-semibold">{percent}%</span>
+            </div>
+            <ProgressBar value={percent} compact />
+          </button>;
+          })()}
           <GroupTree
             groups={groups}
+            tasks={tasks}
             parentId={group.id}
             selectedGroup={selectedGroup}
             onSelect={onSelect}
@@ -674,6 +696,19 @@ const GroupTree = ({
         </div>
       ))}
   </>
+  );
+};
+
+const ProgressBar = ({ value, compact = false }: { value: number; compact?: boolean }) => (
+  <div
+    className={`${compact ? 'h-1.5 mt-1' : 'h-2 mt-2'} w-full overflow-hidden rounded-full bg-gray-200`}
+    role="progressbar"
+    aria-valuemin={0}
+    aria-valuemax={100}
+    aria-valuenow={value}
+  >
+    <div className="h-full rounded-full bg-blue-500 transition-all" style={{ width: `${value}%` }} />
+  </div>
 );
 
 interface TaskItemProps {
@@ -706,6 +741,10 @@ const TaskItem = ({
   t,
 }: TaskItemProps) => {
   const [newSubtask, setNewSubtask] = useState('');
+  const completedSubtasks = task.subtasks.filter((subtask) => subtask.completed).length;
+  const taskProgress = task.subtasks.length
+    ? Math.round((completedSubtasks / task.subtasks.length) * 100)
+    : task.completed ? 100 : 0;
 
   return (
     <div
@@ -750,11 +789,20 @@ const TaskItem = ({
             </p>
           )}
 
+          <div className="mt-2">
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>{completedSubtasks}/{task.subtasks.length} {t('subtasks').toLowerCase()}</span>
+              <span>{taskProgress}%</span>
+            </div>
+            <ProgressBar value={taskProgress} />
+          </div>
+
           {task.subtasks.length > 0 && (
             <div className="mt-3 space-y-1">
               <p className="text-sm font-medium text-gray-700">{t('subtasks')}</p>
               {task.subtasks.map((subtask) => (
-                <div key={subtask.id} className="flex items-center gap-2 text-sm ml-4">
+                <div key={subtask.id} className="ml-4 py-1">
+                  <div className="flex items-center gap-2 text-sm">
                   <button
                     onClick={() => onToggleSubtask(subtask.id)}
                     className={subtask.completed ? 'text-green-500' : 'text-gray-400'}
@@ -770,6 +818,8 @@ const TaskItem = ({
                   >
                     <Trash2 size={14} />
                   </button>
+                  </div>
+                  <ProgressBar value={subtask.completed ? 100 : 0} compact />
                 </div>
               ))}
             </div>
