@@ -15,6 +15,22 @@ const callStateApi = async (body: unknown) => {
   return result;
 };
 
+const TEST_EVENT_ID = 'voice-test-event-2026-08-11';
+
+const removeTestEvent = () => {
+  try {
+    const raw = localStorage.getItem('calendarEvents');
+    const events = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(events)) return false;
+    const cleaned = events.filter((event) => event?.id !== TEST_EVENT_ID && event?.name !== 'Ping random de test 🔔');
+    if (cleaned.length === events.length) return false;
+    localStorage.setItem('calendarEvents', JSON.stringify(cleaned));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const snapshot = () => Object.fromEntries(STORAGE_KEYS.map((key) => [key, localStorage.getItem(key)]));
 
 export const bootstrapCloudState = async () => {
@@ -26,6 +42,9 @@ export const bootstrapCloudState = async () => {
       if (typeof value === 'string') localStorage.setItem(key, value);
     });
   } else {
+    await callStateApi({ action: 'save', payload: snapshot() });
+  }
+  if (removeTestEvent()) {
     await callStateApi({ action: 'save', payload: snapshot() });
   }
 };
