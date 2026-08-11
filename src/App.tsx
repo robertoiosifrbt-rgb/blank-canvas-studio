@@ -4,6 +4,7 @@ import { Calendar as CalendarIcon, CheckSquare, ListChecks, Menu, X } from 'luci
 import { Calendar, Events } from './components/Calendar';
 import { Tasks } from './components/Tasks';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
+import { bootstrapCloudState } from './cloudState';
 
 type View = 'calendar' | 'tasks' | 'events';
 
@@ -13,6 +14,11 @@ function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+  const [dataReady, setDataReady] = useState(false);
+
+  useEffect(() => {
+    void bootstrapCloudState().catch(() => undefined).finally(() => setDataReady(true));
+  }, []);
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
@@ -152,9 +158,10 @@ function App() {
 
           {/* Main content area */}
           <div className="lg:col-span-3">
-            {currentView === 'tasks' && <Tasks />}
-            {currentView === 'calendar' && <Calendar />}
-            {currentView === 'events' && <Events />}
+            {!dataReady && <div className="rounded-xl bg-white p-8 text-center">Se încarcă datele…</div>}
+            {dataReady && currentView === 'tasks' && <Tasks />}
+            {dataReady && currentView === 'calendar' && <Calendar />}
+            {dataReady && currentView === 'events' && <Events />}
           </div>
         </div>
       </div>
