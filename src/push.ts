@@ -40,6 +40,10 @@ const callPushApi = async (body: unknown) => {
 };
 
 export const enablePush = async () => {
+  const fail = (step: string, error: unknown): never => {
+    const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    throw new Error(`Push a eșuat la pasul „${step}”. ${detail}`);
+  };
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
   if (isIOS && !isStandalone) {
@@ -51,24 +55,30 @@ export const enablePush = async () => {
   let permission: NotificationPermission;
   try {
     permission = await Notification.requestPermission();
-  } catch {
-    throw new Error('iPhone-ul nu a putut înregistra aplicația pentru notificări. Șterge iconița aplicației, instaleaz-o din nou cu Share → Add to Home Screen și încearcă iar.');
+  } catch (error) {
+    fail('permisiune iPhone', error);
   }
-  if (permission !== 'granted') throw new Error('Notification permission was not granted');
-  const registration = await navigator.serviceWorker.register('/sw.js');
-  await registration.update();
-  const readyRegistration = await navigator.serviceWorker.ready;
-  const existing = await readyRegistration.pushManager.getSubscription();
+  if (permission !== 'granted') throw new Error(`Permisiunea pentru notificări este „${permission}”. Verifică Settings → Notifications → Tasks.`);
+  let readyRegistration: ServiceWorkerRegistration;
+  try {
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    await registration.update();
+    readyRegistration = await navigator.serviceWorker.ready;
+  } catch (error) {
+    fail('service worker', error);
+  }
+  let existing: PushSubscription | null;
+  try { existing = await readyRegistration.pushManager.getSubscription(); } catch (error) { fail('citire abonament', error); }
   let subscription = existing;
   try {
     subscription ??= await readyRegistration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: vapidApplicationServerKey(),
     });
-  } catch {
-    throw new Error('Notificările nu au putut fi activate. Verifică permisiunea Notifications din Settings și încearcă din nou.');
+  } catch (error) {
+    fail('abonare Apple Push', error);
   }
-  await callPushApi({ action: 'subscribe', subscription: subscription.toJSON() });
+  try { await callPushApi({ action: 'subscribe', subscription: subscription.toJSON() }); } catch (error) { fail('salvare server', error); }
   return subscription;
 };
 
