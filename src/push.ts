@@ -43,7 +43,12 @@ export const enablePush = async () => {
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
     throw new Error('Notificările push nu sunt disponibile în acest browser.');
   }
-  const permission = await Notification.requestPermission();
+  let permission: NotificationPermission;
+  try {
+    permission = await Notification.requestPermission();
+  } catch {
+    throw new Error('iPhone-ul nu a putut înregistra aplicația pentru notificări. Șterge iconița aplicației, instaleaz-o din nou cu Share → Add to Home Screen și încearcă iar.');
+  }
   if (permission !== 'granted') throw new Error('Notification permission was not granted');
   const registration = await navigator.serviceWorker.register('/sw.js');
   await navigator.serviceWorker.ready;
