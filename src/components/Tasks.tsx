@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, CalendarDays, CheckCircle2, ChevronRight, Circle, Folder, FolderPlus, MessageSquare, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ACHU_BACKLOG_GROUPS, ACHU_BACKLOG_TASKS } from '../data/achuBacklog';
+import { scheduleCloudBackup } from '../cloudState';
+import { syncAllStoredAlarms } from '../push';
 
 type Priority = 'high' | 'medium' | 'low';
 
@@ -81,13 +83,16 @@ const normalizeItem = (value: unknown): Item | null => {
 const loadItems = (): Item[] => {
   try {
     const raw = localStorage.getItem('tasks');
-    if (!raw) return ACHU_BACKLOG_TASKS as unknown as Item[];
+    const importDone = localStorage.getItem('achuTasksImportedV1') === '1';
+    if (!raw) { localStorage.setItem('achuTasksImportedV1', '1'); return ACHU_BACKLOG_TASKS as unknown as Item[]; }
     const parsed: unknown = JSON.parse(raw);
     const existing = Array.isArray(parsed)
       ? parsed.map(normalizeItem).filter((item): item is Item => item !== null)
       : [];
+    if (importDone) return existing;
     const ids = new Set(existing.map((item) => item.id));
     const imported = (ACHU_BACKLOG_TASKS as unknown as Item[]).filter((item) => !ids.has(item.id));
+    localStorage.setItem('achuTasksImportedV1', '1');
     return [...existing, ...imported];
   } catch {
     return ACHU_BACKLOG_TASKS as unknown as Item[];
@@ -97,7 +102,8 @@ const loadItems = (): Item[] => {
 const loadGroups = (): Group[] => {
   try {
     const raw = localStorage.getItem('taskGroups');
-    if (!raw) return [{ id: 'achu-root', name: 'ACHU', parentId: null }, ...(ACHU_BACKLOG_GROUPS as unknown as Group[]).map((group) => ({ ...group, parentId: 'achu-root' }))];
+    const importDone = localStorage.getItem('achuGroupsImportedV1') === '1';
+    if (!raw) { localStorage.setItem('achuGroupsImportedV1', '1'); return [{ id: 'achu-root', name: 'ACHU', parentId: null }, ...(ACHU_BACKLOG_GROUPS as unknown as Group[]).map((group) => ({ ...group, parentId: 'achu-root' }))]; }
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     const existing = parsed
@@ -109,15 +115,18 @@ const loadGroups = (): Group[] => {
         parentId: typeof value.parentId === 'string' ? value.parentId : null,
       }))
       .filter((group) => group.name);
+    if (importDone) return existing;
     const achuRoot = existing.find((group) => group.name.trim().toLowerCase() === 'achu') || { id: 'achu-root', name: 'ACHU', parentId: null };
     const withoutDuplicateRoot = existing.filter((group) => group.id !== 'achu-root' || group.id === achuRoot.id);
     const ids = new Set(withoutDuplicateRoot.map((group) => group.id));
     const imported = (ACHU_BACKLOG_GROUPS as unknown as Group[]).map((group) => ({ ...group, parentId: achuRoot.id }));
-    return [
+    const result = [
       ...withoutDuplicateRoot.map((group) => group.id.startsWith('achu-group-') ? { ...group, parentId: achuRoot.id } : group),
-      ...(!ids.has(achuRoot.id) ? [achuRoot] : []),
-      ...imported.filter((group) => !ids.has(group.id)),
+      ...(!ids.has(achuRoot.id) && !importDone ? [achuRoot] : []),
+      ...(!importDone ? imported.filter((group) => !ids.has(group.id)) : []),
     ];
+    if (!importDone) localStorage.setItem('achuGroupsImportedV1', '1');
+    return result;
   } catch {
     return [{ id: 'achu-root', name: 'ACHU', parentId: null }, ...(ACHU_BACKLOG_GROUPS as unknown as Group[]).map((group) => ({ ...group, parentId: 'achu-root' }))];
   }
@@ -180,11 +189,11 @@ export const Tasks = () => {
   const [groupForm, setGroupForm] = useState({ name: '', parentId: '' });
 
   useEffect(() => {
-    try { localStorage.setItem('tasks', JSON.stringify(tasks)); } catch { /* browser storage unavailable */ }
+    try { localStorage.setItem('tasks', JSON.stringify(tasks)); scheduleCloudBackup(); void syncAllStoredAlarms().catch(() => undefined); } catch { /* browser storage unavailable */ }
   }, [tasks]);
 
   useEffect(() => {
-    try { localStorage.setItem('taskGroups', JSON.stringify(groups)); } catch { /* browser storage unavailable */ }
+    try { localStorage.setItem('taskGroups', JSON.stringify(groups)); scheduleCloudBackup(); } catch { /* browser storage unavailable */ }
   }, [groups]);
 
   const allItems = useMemo(() => flattenItems(tasks), [tasks]);
@@ -215,6 +224,8 @@ export const Tasks = () => {
   const addTask = () => {
     const name = taskForm.name.trim();
     if (!name) return;
+    if (!taskForm.startAt || !taskForm.endAt) return window.alert(ro ? 'Alege data și orele De la – Până la.' : 'Choose the start and end date/time.');
+    if (new Date(taskForm.endAt) <= new Date(taskForm.startAt)) return window.alert(ro ? 'Data finală trebuie să fie după început.' : 'End must be after start.');
     setTasks((current) => [{
       id: crypto.randomUUID(),
       name,
@@ -378,9 +389,12 @@ const TaskRow = ({ item, depth, onOpen, onToggle, path = [] }: { item: Item; dep
 const GroupRows = ({ groups, items, parentId, depth, selected, onSelect, onRename, onDelete }: { groups: Group[]; items: Item[]; parentId: string | null; depth: number; selected: string; onSelect: (id: string) => void; onRename: (id: string, name: string) => void; onDelete: (id: string) => void }) => (
   <>
     {groups.filter((group) => group.parentId === parentId).map((group) => {
-      const direct = items.filter((item) => item.groupId === group.id);
-      const done = direct.filter((item) => item.completed).length;
-      const percent = direct.length ? Math.round((done / direct.length) * 100) : 0;
+      const descendantIds = new Set([group.id]);
+      let changed = true;
+      while (changed) { changed = false; groups.forEach((candidate) => { if (candidate.parentId && descendantIds.has(candidate.parentId) && !descendantIds.has(candidate.id)) { descendantIds.add(candidate.id); changed = true; } }); }
+      const relevant = items.filter((item) => item.groupId && descendantIds.has(item.groupId));
+      const done = relevant.filter((item) => item.completed).length;
+      const percent = relevant.length ? Math.round((done / relevant.length) * 100) : 0;
       return <div key={group.id}><div className={`w-full rounded-lg py-2 pr-3 ${selected === group.id ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'}`} style={{ paddingLeft: 12 + depth * 20 }}><div className="flex items-center gap-2"><button onClick={() => onSelect(group.id)} className="text-gray-500"><Folder size={17} /></button><input value={group.name} onChange={(event) => onRename(group.id, event.target.value)} onFocus={() => onSelect(group.id)} className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 font-medium focus:border-blue-300 focus:bg-white" /><span className="text-xs font-semibold">{percent}%</span><button onClick={() => onDelete(group.id)} className="text-red-500"><Trash2 size={17} /></button></div><ProgressBar value={percent} compact /></div><GroupRows groups={groups} items={items} parentId={group.id} depth={depth + 1} selected={selected} onSelect={onSelect} onRename={onRename} onDelete={onDelete} /></div>;
     })}
   </>
