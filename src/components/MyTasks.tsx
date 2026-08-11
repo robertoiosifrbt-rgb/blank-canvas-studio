@@ -263,19 +263,16 @@ export const MyTasks = () => {
     const today = new Date();
     const nextWeek = new Date(today);
     nextWeek.setDate(today.getDate() + 7);
-    const recentCutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const todayKey = toKey(today);
     const nextWeekKey = toKey(nextWeek);
     const due = (task: Item) => task.startAt?.slice(0, 10) || task.dueDate || '';
-    const isRecent = (task: Item) => !due(task) && (!task.createdAt || Date.parse(task.createdAt) >= recentCutoff);
     const customIds = new Set(customGroups.map((group) => group.id));
     const builtInTasks = visibleTasks.filter((task) => !task.groupId || !customIds.has(task.groupId));
     return [
-      { id: 'recent', name: ro ? 'Alocate recent' : 'Recently assigned', tasks: builtInTasks.filter(isRecent) },
       { id: 'overdue', name: ro ? 'Restante' : 'Overdue', tasks: builtInTasks.filter((task) => due(task) && due(task) < todayKey) },
       { id: 'today', name: ro ? 'De făcut astăzi' : 'Do today', tasks: builtInTasks.filter((task) => due(task) === todayKey) },
       { id: 'week', name: ro ? 'De făcut săptămâna viitoare' : 'Do next week', tasks: builtInTasks.filter((task) => due(task) > todayKey && due(task) <= nextWeekKey) },
-      { id: 'later', name: ro ? 'De făcut mai târziu' : 'Do later', tasks: builtInTasks.filter((task) => due(task) > nextWeekKey || (!due(task) && !isRecent(task))) },
+      { id: 'later', name: ro ? 'De făcut mai târziu' : 'Do later', tasks: builtInTasks.filter((task) => due(task) > nextWeekKey || !due(task)) },
       ...customGroups.map((group) => {
         const ids = groupDescendants(group.id);
         return { id: `custom:${group.id}`, name: group.name, tasks: visibleTasks.filter((task) => task.groupId && ids.has(task.groupId)) };
