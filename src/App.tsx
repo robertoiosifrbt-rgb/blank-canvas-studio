@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Calendar as CalendarIcon, CheckSquare, ListChecks, Menu, X } from 'lucide-react';
 import { Calendar, Events } from './components/Calendar';
@@ -16,10 +16,15 @@ function App() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
   const [dataReady, setDataReady] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     void bootstrapCloudState().catch(() => undefined).finally(() => setDataReady(true));
   }, []);
+
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [currentView]);
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
@@ -130,9 +135,9 @@ function App() {
       </header>
 
       {/* Main content */}
-      <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain">
+      <main ref={mainRef} className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain">
         <div className="mx-auto w-full min-w-0 max-w-7xl px-0 py-0 sm:px-6 sm:py-8 lg:px-8">
-        <div className="grid min-w-0 grid-cols-1 gap-8 lg:grid-cols-4">
+        <div className="block min-w-0 lg:grid lg:grid-cols-4 lg:gap-8">
           {/* Sidebar navigation */}
           <div className="hidden lg:block">
             <nav className="space-y-2 sticky top-24">
