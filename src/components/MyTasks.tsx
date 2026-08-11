@@ -190,12 +190,9 @@ export const MyTasks = () => {
   const [tasks, setTasks] = useState<Item[]>(() => loadItems().map(reconcileCompletion));
   const [groups, setGroups] = useState<Group[]>(loadGroups);
   const [calendars] = useState<Array<{ id: string; name: string }>>(() => { try { const raw = localStorage.getItem('userCalendars'); const parsed = raw ? JSON.parse(raw) : []; return Array.isArray(parsed) && parsed.length ? parsed : [{ id: 'personal', name: 'Personal' }]; } catch { return [{ id: 'personal', name: 'Personal' }]; } });
-  const [selectedGroup, setSelectedGroup] = useState('all');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ recent: false, overdue: true, today: true, week: true, later: true });
   const [selection, setSelection] = useState<Selection | null>(null);
-  const [showTaskForm, setShowTaskForm] = useState(false);
   const [showGroupForm, setShowGroupForm] = useState(false);
-  const [taskForm, setTaskForm] = useState({ name: '', description: '', startAt: '', endAt: '', priority: 'medium' as Priority, groupId: '', calendarId: calendars[0]?.id || 'personal' });
   const [groupForm, setGroupForm] = useState({ name: '', parentId: '' });
 
   useEffect(() => {
@@ -205,8 +202,6 @@ export const MyTasks = () => {
   useEffect(() => {
     try { localStorage.setItem('taskGroups', JSON.stringify(groups)); scheduleCloudBackup(); } catch { /* browser storage unavailable */ }
   }, [groups]);
-
-  const allItems = useMemo(() => flattenItems(tasks).filter((item) => !item.children.length), [tasks]);
 
   const customGroups = useMemo(() => {
     const achuIds = new Set(
@@ -227,12 +222,6 @@ export const MyTasks = () => {
     return groups.filter((group) => !achuIds.has(group.id));
   }, [groups]);
 
-  useEffect(() => {
-    if (selectedGroup !== 'all' && !customGroups.some((group) => group.id === selectedGroup)) {
-      setSelectedGroup('all');
-    }
-  }, [customGroups, selectedGroup]);
-
 
   const groupDescendants = (groupId: string) => {
     const ids = new Set([groupId]);
@@ -249,11 +238,7 @@ export const MyTasks = () => {
     return ids;
   };
 
-  const selectedGroupData = customGroups.find((group) => group.id === selectedGroup);
-  const selectedHasChildren = customGroups.some((group) => group.parentId === selectedGroup);
-  const visibleTasks = selectedGroup === 'all'
-    ? tasks
-    : tasks.filter((task) => task.groupId && groupDescendants(selectedGroup).has(task.groupId));
+  const visibleTasks = tasks;
 
   const taskSections = useMemo(() => {
     const toKey = (date: Date) => {
@@ -270,62 +255,28 @@ export const MyTasks = () => {
     const nextWeekKey = toKey(nextWeek);
     const due = (task: Item) => task.startAt?.slice(0, 10) || task.dueDate || '';
     const isRecent = (task: Item) => !due(task) && (!task.createdAt || Date.parse(task.createdAt) >= recentCutoff);
+    const customIds = new Set(customGroups.map((group) => group.id));
+    const builtInTasks = visibleTasks.filter((task) => !task.groupId || !customIds.has(task.groupId));
     return [
-      { id: 'recent', name: ro ? 'Alocate recent' : 'Recently assigned', tasks: visibleTasks.filter(isRecent) },
-      { id: 'overdue', name: ro ? 'Restante' : 'Overdue', tasks: visibleTasks.filter((task) => due(task) && due(task) < todayKey) },
-      { id: 'today', name: ro ? 'De făcut astăzi' : 'Do today', tasks: visibleTasks.filter((task) => due(task) === todayKey) },
-      { id: 'week', name: ro ? 'De făcut săptămâna viitoare' : 'Do next week', tasks: visibleTasks.filter((task) => due(task) > todayKey && due(task) <= nextWeekKey) },
-      { id: 'later', name: ro ? 'De făcut mai târziu' : 'Do later', tasks: visibleTasks.filter((task) => due(task) > nextWeekKey || (!due(task) && !isRecent(task))) },
+      { id: 'recent', name: ro ? 'Alocate recent' : 'Recently assigned', tasks: builtInTasks.filter(isRecent) },
+      { id: 'overdue', name: ro ? 'Restante' : 'Overdue', tasks: builtInTasks.filter((task) => due(task) && due(task) < todayKey) },
+      { id: 'today', name: ro ? 'De făcut astăzi' : 'Do today', tasks: builtInTasks.filter((task) => due(task) === todayKey) },
+      { id: 'week', name: ro ? 'De făcut săptămâna viitoare' : 'Do next week', tasks: builtInTasks.filter((task) => due(task) > todayKey && due(task) <= nextWeekKey) },
+      { id: 'later', name: ro ? 'De făcut mai târziu' : 'Do later', tasks: builtInTasks.filter((task) => due(task) > nextWeekKey || (!due(task) && !isRecent(task))) },
+      ...customGroups.map((group) => {
+        const ids = groupDescendants(group.id);
+        return { id: `custom:${group.id}`, name: group.name, tasks: visibleTasks.filter((task) => task.groupId && ids.has(task.groupId)) };
+      }),
     ];
-  }, [visibleTasks, ro]);
-
-  const addTask = () => {
-    const name = taskForm.name.trim();
-    if (!name) return;
-    if (!taskForm.startAt || !taskForm.endAt) return window.alert(ro ? 'Alege data și orele De la – Până la.' : 'Choose the start and end date/time.');
-    if (new Date(taskForm.endAt) <= new Date(taskForm.startAt)) return window.alert(ro ? 'Data finală trebuie să fie după început.' : 'End must be after start.');
-    setTasks((current) => [{
-      id: crypto.randomUUID(),
-      name,
-      description: taskForm.description.trim(),
-      dueDate: taskForm.startAt.slice(0, 10),
-      startAt: taskForm.startAt,
-      endAt: taskForm.endAt,
-      completed: false,
-      priority: taskForm.priority,
-      groupId: taskForm.groupId || null,
-      calendarId: taskForm.calendarId,
-      reminderMinutes: 15,
-      children: [],
-      comments: [],
-    }, ...current]);
-    setTaskForm({ name: '', description: '', startAt: '', endAt: '', priority: 'medium', groupId: '', calendarId: taskForm.calendarId });
-    setShowTaskForm(false);
-  };
+  }, [visibleTasks, customGroups, groups, ro]);
 
   const addGroup = () => {
     const name = groupForm.name.trim();
     if (!name) return;
     const group = { id: crypto.randomUUID(), name, parentId: groupForm.parentId || null };
     setGroups((current) => [...current, group]);
-    setSelectedGroup(group.id);
     setGroupForm({ name: '', parentId: '' });
     setShowGroupForm(false);
-  };
-
-  const renameGroup = (id: string, name: string) => {
-    setGroups((current) => current.map((group) => group.id === id ? { ...group, name } : group));
-  };
-
-  const deleteGroup = (id: string) => {
-    const group = groups.find((candidate) => candidate.id === id);
-    if (!group || !window.confirm(ro ? 'Ștergi grupul? Taskurile și subgrupurile vor urca un nivel.' : 'Delete this group? Tasks and subgroups will move up one level.')) return;
-    setGroups((current) => current
-      .filter((candidate) => candidate.id !== id)
-      .map((candidate) => candidate.parentId === id ? { ...candidate, parentId: group.parentId } : candidate)
-    );
-    setTasks((current) => moveItemsFromGroup(current, id, group.parentId));
-    if (selectedGroup === id) setSelectedGroup(group.parentId || 'all');
   };
 
   const updateSelection = (updater: (item: Item) => Item) => {
@@ -362,27 +313,7 @@ export const MyTasks = () => {
     <div className="space-y-0 bg-white sm:space-y-5">
       <div className="flex min-h-24 items-center justify-between gap-3 border-b border-gray-200 px-5 sm:min-h-0 sm:border-0 sm:px-0">
         <h2 className="text-4xl font-bold tracking-tight">{ro ? 'Sarcinile mele' : 'My tasks'}</h2>
-        <button onClick={() => setShowTaskForm((value) => !value)} className="hidden">
-          <Plus size={26} /> <span className="hidden sm:inline">{t('add_task')}</span>
-        </button>
       </div>
-
-      {showTaskForm && (
-        <section className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
-          <input value={taskForm.name} onChange={(e) => setTaskForm({ ...taskForm, name: e.target.value })} placeholder={t('task_name')} className="w-full rounded-lg border px-3 py-3" />
-          <textarea value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} placeholder={t('description')} className="min-h-24 w-full rounded-lg border px-3 py-3" />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="text-sm text-gray-600">{ro ? 'De la' : 'From'}<input type="datetime-local" value={taskForm.startAt} onChange={(e) => setTaskForm({ ...taskForm, startAt: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3" /></label>
-            <label className="text-sm text-gray-600">{ro ? 'Până la' : 'To'}<input type="datetime-local" value={taskForm.endAt} onChange={(e) => setTaskForm({ ...taskForm, endAt: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3" /></label>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="text-sm text-gray-600">{t('priority')}<select value={taskForm.priority} onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value as Priority })} className="mt-1 w-full rounded-lg border px-3 py-3"><option value="low">{t('low')}</option><option value="medium">{t('medium')}</option><option value="high">{t('high')}</option></select></label>
-          </div>
-          <label className="block text-sm text-gray-600">{ro ? 'Grup' : 'Group'}<select value={taskForm.groupId} onChange={(e) => setTaskForm({ ...taskForm, groupId: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3"><option value="">{ro ? 'Fără grup' : 'No group'}</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
-          <label className="block text-sm text-gray-600">Calendar<select value={taskForm.calendarId} onChange={(e) => setTaskForm({ ...taskForm, calendarId: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3">{calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select></label>
-          <div className="grid grid-cols-2 gap-3"><button onClick={addTask} className="rounded-lg bg-blue-600 py-3 text-white">{t('save')}</button><button onClick={() => setShowTaskForm(false)} className="rounded-lg bg-gray-200 py-3">{t('cancel')}</button></div>
-        </section>
-      )}
 
       <section className="border-y border-gray-200 bg-white sm:rounded-xl sm:border sm:shadow-sm">
         {taskSections.map((section) => {
@@ -415,15 +346,9 @@ export const MyTasks = () => {
             </div>
           );
         })}
-      </section>
-
-      <section className="space-y-0 border-b-[6px] border-gray-50 bg-white sm:space-y-3 sm:rounded-xl sm:border-0 sm:p-4 sm:shadow-sm">
-        <div className="flex min-h-20 items-center justify-between border-b border-gray-100 px-5 sm:min-h-0 sm:border-0 sm:px-0"><h3 className="flex items-center gap-3 text-xl font-semibold"><Folder size={21} />{ro ? 'Secțiuni personalizate' : 'Custom sections'}</h3><button onClick={() => setShowGroupForm((value) => !value)} className="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 font-medium text-gray-800"><FolderPlus size={18} />{ro ? 'Adaugă' : 'Add'}</button></div>
-        {showGroupForm && <div className="grid grid-cols-1 gap-2 p-4 sm:grid-cols-3 sm:p-0"><input value={groupForm.name} onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })} placeholder={ro ? 'Nume grup' : 'Group name'} className="rounded-lg border px-3 py-2" /><select value={groupForm.parentId} onChange={(e) => setGroupForm({ ...groupForm, parentId: e.target.value })} className="rounded-lg border px-3 py-2"><option value="">{ro ? 'Nivel principal' : 'Top level'}</option>{customGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select><button onClick={addGroup} className="rounded-lg bg-blue-600 px-3 py-2 text-white">{t('save')}</button></div>}
-        {selectedGroup !== 'all' && <button onClick={() => setSelectedGroup(selectedGroupData?.parentId || 'all')} className="mx-5 my-3 rounded-lg bg-gray-100 px-3 py-2 text-left font-medium sm:mx-0">← {ro ? 'Înapoi' : 'Back'}</button>}
-        <div className="p-3 sm:p-0">
-          {selectedGroup === 'all' && <GroupRows groups={customGroups} items={allItems} parentId={null} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />}
-          {selectedGroup !== 'all' && selectedHasChildren && <GroupRows groups={customGroups} items={allItems} parentId={selectedGroup} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />}
+        <div className="border-t border-gray-100 px-5 py-4">
+          <button onClick={() => setShowGroupForm((value) => !value)} className="flex items-center gap-2 font-medium text-blue-600"><FolderPlus size={18} />{ro ? 'Adaugă secțiune' : 'Add section'}</button>
+          {showGroupForm && <div className="mt-3 flex gap-2"><input value={groupForm.name} onChange={(event) => setGroupForm({ ...groupForm, name: event.target.value, parentId: '' })} placeholder={ro ? 'Numele secțiunii' : 'Section name'} className="min-w-0 flex-1 rounded-lg border px-3 py-2" /><button onClick={addGroup} className="rounded-lg bg-blue-600 px-4 py-2 text-white">{t('save')}</button></div>}
         </div>
       </section>
 
@@ -462,20 +387,6 @@ const TaskRow = ({ item, depth, onOpen, onToggle, path = [] }: { item: Item; dep
     </div>
   </div>;
 };
-
-const GroupRows = ({ groups, items, parentId, depth, selected, onSelect, onRename, onDelete }: { groups: Group[]; items: Item[]; parentId: string | null; depth: number; selected: string; onSelect: (id: string) => void; onRename: (id: string, name: string) => void; onDelete: (id: string) => void }) => (
-  <>
-    {groups.filter((group) => group.parentId === parentId).map((group) => {
-      const descendantIds = new Set([group.id]);
-      let changed = true;
-      while (changed) { changed = false; groups.forEach((candidate) => { if (candidate.parentId && descendantIds.has(candidate.parentId) && !descendantIds.has(candidate.id)) { descendantIds.add(candidate.id); changed = true; } }); }
-      const relevant = items.filter((item) => item.groupId && descendantIds.has(item.groupId));
-      const done = relevant.filter((item) => item.completed).length;
-      const percent = relevant.length ? Math.round((done / relevant.length) * 100) : 0;
-      return <div key={group.id}><div className={`w-full rounded-lg py-2 pr-3 ${selected === group.id ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'}`} style={{ paddingLeft: 12 + depth * 20 }}><div className="flex items-center gap-2"><button onClick={() => onSelect(group.id)} className="text-gray-500"><Folder size={17} /></button><input value={group.name} onChange={(event) => onRename(group.id, event.target.value)} onFocus={() => onSelect(group.id)} className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 font-medium focus:border-blue-300 focus:bg-white" /><span className="text-xs font-semibold">{percent}%</span><button onClick={() => onDelete(group.id)} className="text-red-500"><Trash2 size={17} /></button></div><ProgressBar value={percent} compact /></div><GroupRows groups={groups} items={items} parentId={group.id} depth={depth + 1} selected={selected} onSelect={onSelect} onRename={onRename} onDelete={onDelete} /></div>;
-    })}
-  </>
-);
 
 const ItemDetail = ({ item, groups, calendars, ro, onClose, onDelete, onBack, onOpenChild, onChange, onAddChild, onToggleChild, onDeleteChild, onAddComment, onEditComment, onDeleteComment }: {
   item: Item; groups: Group[]; calendars: Array<{ id: string; name: string }>; ro: boolean; onClose: () => void; onDelete: () => void; onBack: () => void; onOpenChild: (id: string) => void; onChange: (patch: Partial<Item>) => void; onAddChild: (name: string) => void; onToggleChild: (id: string) => void; onDeleteChild: (id: string) => void; onAddComment: (text: string) => void; onEditComment: (id: string, text: string) => void; onDeleteComment: (id: string) => void;
