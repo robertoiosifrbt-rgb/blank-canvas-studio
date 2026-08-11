@@ -432,7 +432,6 @@ const TaskRow = ({ item, depth, onOpen, onToggle, path = [] }: { item: Item; dep
         <button onClick={() => onOpen(path)} className="text-gray-400"><ChevronRight /></button>
       </div>
     </div>
-    {item.children.map((child) => <TaskRow key={child.id} item={child} depth={depth + 1} path={[...path, child.id]} onOpen={onOpen} onToggle={onToggle} />)}
   </div>;
 };
 
