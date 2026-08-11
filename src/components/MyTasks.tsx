@@ -352,7 +352,68 @@ export const MyTasks = () => {
     <div className="space-y-0 bg-white sm:space-y-5">
       <div className="flex min-h-24 items-center justify-between gap-3 border-b border-gray-200 px-5 sm:min-h-0 sm:border-0 sm:px-0">
         <h2 className="text-4xl font-bold tracking-tight">{ro ? 'Sarcinile mele' : 'My tasks'}</h2>
+        <button onClick={() => setShowTaskForm((value) => !value)} className="hidden">
+          <Plus size={26} /> <span className="hidden sm:inline">{t('add_task')}</span>
+        </button>
       </div>
+
+      {showTaskForm && (
+        <section className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
+          <input value={taskForm.name} onChange={(e) => setTaskForm({ ...taskForm, name: e.target.value })} placeholder={t('task_name')} className="w-full rounded-lg border px-3 py-3" />
+          <textarea value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} placeholder={t('description')} className="min-h-24 w-full rounded-lg border px-3 py-3" />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="text-sm text-gray-600">{ro ? 'De la' : 'From'}<input type="datetime-local" value={taskForm.startAt} onChange={(e) => setTaskForm({ ...taskForm, startAt: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3" /></label>
+            <label className="text-sm text-gray-600">{ro ? 'Până la' : 'To'}<input type="datetime-local" value={taskForm.endAt} onChange={(e) => setTaskForm({ ...taskForm, endAt: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3" /></label>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="text-sm text-gray-600">{t('priority')}<select value={taskForm.priority} onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value as Priority })} className="mt-1 w-full rounded-lg border px-3 py-3"><option value="low">{t('low')}</option><option value="medium">{t('medium')}</option><option value="high">{t('high')}</option></select></label>
+          </div>
+          <label className="block text-sm text-gray-600">{ro ? 'Grup' : 'Group'}<select value={taskForm.groupId} onChange={(e) => setTaskForm({ ...taskForm, groupId: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3"><option value="">{ro ? 'Fără grup' : 'No group'}</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
+          <label className="block text-sm text-gray-600">Calendar<select value={taskForm.calendarId} onChange={(e) => setTaskForm({ ...taskForm, calendarId: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3">{calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select></label>
+          <div className="grid grid-cols-2 gap-3"><button onClick={addTask} className="rounded-lg bg-blue-600 py-3 text-white">{t('save')}</button><button onClick={() => setShowTaskForm(false)} className="rounded-lg bg-gray-200 py-3">{t('cancel')}</button></div>
+        </section>
+      )}
+
+      <section className="border-y border-gray-200 bg-white sm:rounded-xl sm:border sm:shadow-sm">
+        {taskSections.map((section) => {
+          const expanded = expandedSections[section.id];
+          const done = section.tasks.filter((task) => task.completed).length;
+          const percent = section.tasks.length ? Math.round((done / section.tasks.length) * 100) : 0;
+          return (
+            <div key={section.id} className="border-b-[6px] border-gray-50 last:border-b-0">
+              <div className="flex min-h-20 items-center gap-3 px-5">
+                <button onClick={() => setExpandedSections((current) => ({ ...current, [section.id]: !expanded }))} className="text-gray-500">
+                  {expanded ? <ChevronDown size={24} /> : <ChevronRight size={24} />}
+                </button>
+                <button onClick={() => setExpandedSections((current) => ({ ...current, [section.id]: !expanded }))} className="min-w-0 flex-1 text-left text-xl font-semibold">
+                  {section.name}
+                </button>
+                <span className="text-lg text-gray-500">{section.tasks.length > 10 ? '10+' : section.tasks.length}</span>
+                <MoreHorizontal size={24} className="text-gray-500" />
+              </div>
+              {expanded && (
+                <div className="divide-y divide-gray-100 border-t border-gray-100">
+                  {section.tasks.map((task) => (
+                    <TaskRow key={task.id} item={task} depth={0} onOpen={(path) => setSelection({ taskId: task.id, path })} onToggle={(path) => setTasks((current) => current.map((row) => row.id === task.id ? updateAtPath(row, path, (item) => ({ ...item, completed: !item.completed })) : row))} />
+                  ))}
+                  {!section.tasks.length && <div className="px-5 py-5 text-sm text-gray-400">{t('no_tasks')}</div>}
+                  {!!section.tasks.length && <div className="px-5 py-3"><div className="mb-1 flex justify-between text-xs text-gray-500"><span>{done}/{section.tasks.length}</span><span>{percent}%</span></div><ProgressBar value={percent} compact /></div>}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </section>
+
+      <section className="hidden">
+        <div className="flex min-h-20 items-center justify-between border-b border-gray-100 px-5 sm:min-h-0 sm:border-0 sm:px-0"><h3 className="flex items-center gap-3 text-xl font-semibold"><Folder size={21} />{ro ? 'Secțiuni personalizate' : 'Custom sections'}</h3><button onClick={() => setShowGroupForm((value) => !value)} className="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 font-medium text-gray-800"><FolderPlus size={18} />{ro ? 'Adaugă' : 'Add'}</button></div>
+        {showGroupForm && <div className="grid grid-cols-1 gap-2 p-4 sm:grid-cols-3 sm:p-0"><input value={groupForm.name} onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })} placeholder={ro ? 'Nume grup' : 'Group name'} className="rounded-lg border px-3 py-2" /><select value={groupForm.parentId} onChange={(e) => setGroupForm({ ...groupForm, parentId: e.target.value })} className="rounded-lg border px-3 py-2"><option value="">{ro ? 'Nivel principal' : 'Top level'}</option>{customGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select><button onClick={addGroup} className="rounded-lg bg-blue-600 px-3 py-2 text-white">{t('save')}</button></div>}
+        {selectedGroup !== 'all' && <button onClick={() => setSelectedGroup(selectedGroupData?.parentId || 'all')} className="mx-5 my-3 rounded-lg bg-gray-100 px-3 py-2 text-left font-medium sm:mx-0">← {ro ? 'Înapoi' : 'Back'}</button>}
+        <div className="p-3 sm:p-0">
+          {selectedGroup === 'all' && <GroupRows groups={customGroups} items={allItems} parentId={null} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />}
+          {selectedGroup !== 'all' && selectedHasChildren && <GroupRows groups={customGroups} items={allItems} parentId={selectedGroup} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />}
+        </div>
+      </section>
 
       {selection && selectedItem && (
         <ItemDetail
