@@ -155,8 +155,19 @@ const updateAtPath = (item: Item, path: string[], updater: (item: Item) => Item)
 
 const countProgress = (item: Item) => {
   if (!item.children.length) return { done: item.completed ? 1 : 0, total: 1, percent: item.completed ? 100 : 0 };
-  const done = item.children.filter((child) => child.completed).length;
-  return { done, total: item.children.length, percent: Math.round((done / item.children.length) * 100) };
+  const childProgress = item.children.map(countProgress);
+  const done = childProgress.reduce((sum, progress) => sum + progress.done, 0);
+  const total = childProgress.reduce((sum, progress) => sum + progress.total, 0);
+  return { done, total, percent: total ? Math.round((done / total) * 100) : 0 };
+};
+
+const reconcileCompletion = (item: Item): Item => {
+  const children = item.children.map(reconcileCompletion);
+  return {
+    ...item,
+    children,
+    completed: children.length ? children.every((child) => child.completed) : item.completed,
+  };
 };
 
 const flattenItems = (items: Item[]): Item[] =>
@@ -178,7 +189,7 @@ const ProgressBar = ({ value, compact = false }: { value: number; compact?: bool
 export const Tasks = () => {
   const { t, i18n } = useTranslation();
   const ro = i18n.language.startsWith('ro');
-  const [tasks, setTasks] = useState<Item[]>(loadItems);
+  const [tasks, setTasks] = useState<Item[]>(() => loadItems().map(reconcileCompletion));
   const [groups, setGroups] = useState<Group[]>(loadGroups);
   const [calendars] = useState<Array<{ id: string; name: string }>>(() => { try { const raw = localStorage.getItem('userCalendars'); const parsed = raw ? JSON.parse(raw) : []; return Array.isArray(parsed) && parsed.length ? parsed : [{ id: 'personal', name: 'Personal' }]; } catch { return [{ id: 'personal', name: 'Personal' }]; } });
   const [selectedGroup, setSelectedGroup] = useState('all');
@@ -196,7 +207,7 @@ export const Tasks = () => {
     try { localStorage.setItem('taskGroups', JSON.stringify(groups)); scheduleCloudBackup(); } catch { /* browser storage unavailable */ }
   }, [groups]);
 
-  const allItems = useMemo(() => flattenItems(tasks), [tasks]);
+  const allItems = useMemo(() => flattenItems(tasks).filter((item) => !item.children.length), [tasks]);
   const completed = allItems.filter((item) => item.completed).length;
   const overall = allItems.length ? Math.round((completed / allItems.length) * 100) : 0;
 
@@ -273,7 +284,7 @@ export const Tasks = () => {
   const updateSelection = (updater: (item: Item) => Item) => {
     if (!selection) return;
     setTasks((current) => current.map((task) =>
-      task.id === selection.taskId ? updateAtPath(task, selection.path, updater) : task
+      task.id === selection.taskId ? reconcileCompletion(updateAtPath(task, selection.path, updater)) : task
     ));
   };
 
@@ -344,7 +355,7 @@ export const Tasks = () => {
 
       <section className="space-y-0 divide-y divide-gray-100 sm:space-y-2 sm:divide-y-0">
         {visibleTasks.map((task) => (
-          <TaskRow key={task.id} item={task} depth={0} onOpen={(path) => setSelection({ taskId: task.id, path })} onToggle={(path) => setTasks((current) => current.map((row) => row.id === task.id ? updateAtPath(row, path, (item) => ({ ...item, completed: !item.completed })) : row))} />
+          <TaskRow key={task.id} item={task} depth={0} onOpen={(path) => setSelection({ taskId: task.id, path })} onToggle={(path) => setTasks((current) => current.map((row) => row.id === task.id ? reconcileCompletion(updateAtPath(row, path, (item) => ({ ...item, completed: !item.completed }))) : row))} />
         ))}
         {!visibleTasks.length && selectedGroup !== 'all' && !selectedHasChildren && <div className="py-10 text-center text-gray-500">{t('no_tasks')}</div>}
       </section>
