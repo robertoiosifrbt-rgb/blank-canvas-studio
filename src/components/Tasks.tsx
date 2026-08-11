@@ -97,7 +97,7 @@ const loadItems = (): Item[] => {
 const loadGroups = (): Group[] => {
   try {
     const raw = localStorage.getItem('taskGroups');
-    if (!raw) return ACHU_BACKLOG_GROUPS as unknown as Group[];
+    if (!raw) return [{ id: 'achu-root', name: 'ACHU', parentId: null }, ...(ACHU_BACKLOG_GROUPS as unknown as Group[]).map((group) => ({ ...group, parentId: 'achu-root' }))];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     const existing = parsed
@@ -109,10 +109,17 @@ const loadGroups = (): Group[] => {
         parentId: typeof value.parentId === 'string' ? value.parentId : null,
       }))
       .filter((group) => group.name);
-    const ids = new Set(existing.map((group) => group.id));
-    return [...existing, ...(ACHU_BACKLOG_GROUPS as unknown as Group[]).filter((group) => !ids.has(group.id))];
+    const achuRoot = existing.find((group) => group.name.trim().toLowerCase() === 'achu') || { id: 'achu-root', name: 'ACHU', parentId: null };
+    const withoutDuplicateRoot = existing.filter((group) => group.id !== 'achu-root' || group.id === achuRoot.id);
+    const ids = new Set(withoutDuplicateRoot.map((group) => group.id));
+    const imported = (ACHU_BACKLOG_GROUPS as unknown as Group[]).map((group) => ({ ...group, parentId: achuRoot.id }));
+    return [
+      ...withoutDuplicateRoot.map((group) => group.id.startsWith('achu-group-') ? { ...group, parentId: achuRoot.id } : group),
+      ...(!ids.has(achuRoot.id) ? [achuRoot] : []),
+      ...imported.filter((group) => !ids.has(group.id)),
+    ];
   } catch {
-    return ACHU_BACKLOG_GROUPS as unknown as Group[];
+    return [{ id: 'achu-root', name: 'ACHU', parentId: null }, ...(ACHU_BACKLOG_GROUPS as unknown as Group[]).map((group) => ({ ...group, parentId: 'achu-root' }))];
   }
 };
 
@@ -199,8 +206,10 @@ export const Tasks = () => {
     return ids;
   };
 
-  const visibleTasks = selectedGroup === 'all'
-    ? tasks
+  const selectedGroupData = groups.find((group) => group.id === selectedGroup);
+  const selectedHasChildren = groups.some((group) => group.parentId === selectedGroup);
+  const visibleTasks = selectedGroup === 'all' || selectedHasChildren
+    ? []
     : tasks.filter((task) => task.groupId && groupDescendants(selectedGroup).has(task.groupId));
 
   const addTask = () => {
@@ -317,15 +326,16 @@ export const Tasks = () => {
       <section className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between"><h3 className="flex items-center gap-2 text-lg font-semibold"><Folder size={20} />{ro ? 'Grupuri' : 'Groups'}</h3><button onClick={() => setShowGroupForm((value) => !value)} className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-white"><FolderPlus size={18} />{ro ? 'Adaugă' : 'Add'}</button></div>
         {showGroupForm && <div className="grid grid-cols-1 gap-2 sm:grid-cols-3"><input value={groupForm.name} onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })} placeholder={ro ? 'Nume grup' : 'Group name'} className="rounded-lg border px-3 py-2" /><select value={groupForm.parentId} onChange={(e) => setGroupForm({ ...groupForm, parentId: e.target.value })} className="rounded-lg border px-3 py-2"><option value="">{ro ? 'Nivel principal' : 'Top level'}</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select><button onClick={addGroup} className="rounded-lg bg-blue-600 px-3 py-2 text-white">{t('save')}</button></div>}
-        <button onClick={() => setSelectedGroup('all')} className={`w-full rounded-lg px-3 py-2 text-left ${selectedGroup === 'all' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'}`}>{ro ? 'Toate grupurile' : 'All groups'}</button>
-        <GroupRows groups={groups} items={allItems} parentId={null} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />
+        {selectedGroup !== 'all' && <button onClick={() => setSelectedGroup(selectedGroupData?.parentId || 'all')} className="w-full rounded-lg bg-gray-100 px-3 py-2 text-left font-medium">← {ro ? 'Înapoi' : 'Back'}</button>}
+        {selectedGroup === 'all' && <GroupRows groups={groups} items={allItems} parentId={null} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />}
+        {selectedGroup !== 'all' && selectedHasChildren && <GroupRows groups={groups} items={allItems} parentId={selectedGroup} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />}
       </section>
 
       <section className="space-y-2">
         {visibleTasks.map((task) => (
           <TaskRow key={task.id} item={task} depth={0} onOpen={(path) => setSelection({ taskId: task.id, path })} onToggle={(path) => setTasks((current) => current.map((row) => row.id === task.id ? updateAtPath(row, path, (item) => ({ ...item, completed: !item.completed })) : row))} />
         ))}
-        {!visibleTasks.length && <div className="py-10 text-center text-gray-500">{t('no_tasks')}</div>}
+        {!visibleTasks.length && selectedGroup !== 'all' && !selectedHasChildren && <div className="py-10 text-center text-gray-500">{t('no_tasks')}</div>}
       </section>
 
       {selection && selectedItem && (
