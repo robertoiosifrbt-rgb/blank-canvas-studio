@@ -25,11 +25,12 @@ self.addEventListener('message', (event) => {
 self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = {}; }
+  const notificationUrl = !data.url || data.url === '/' ? asset() : data.url;
   event.waitUntil(self.registration.showNotification(data.title || 'Tasks & Calendar', {
     body: data.body || '',
     icon: asset('icon.svg'),
     badge: asset('icon.svg'),
-    data: { url: data.url || asset() },
+    data: { url: notificationUrl },
   }));
 });
 
