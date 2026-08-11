@@ -26,7 +26,7 @@ function App() {
     let refreshing = false;
     const onControllerChange = () => { if (!refreshing) { refreshing = true; window.location.reload(); } };
     navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
-    void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).then((registration) => {
+    void navigator.serviceWorker.register(new URL('sw.js', document.baseURI).href).then((registration) => {
       const showUpdate = (worker: ServiceWorker | null) => { if (worker) { setWaitingWorker(worker); setUpdateAvailable(true); } };
       showUpdate(registration.waiting);
       registration.addEventListener('updatefound', () => {
