@@ -52,14 +52,14 @@ export const enablePush = async () => {
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
     throw new Error('Notificările push nu sunt disponibile în acest browser.');
   }
-  let permission: NotificationPermission;
+  let permission: NotificationPermission = 'default';
   try {
     permission = await Notification.requestPermission();
   } catch (error) {
     fail('permisiune iPhone', error);
   }
   if (permission !== 'granted') throw new Error(`Permisiunea pentru notificări este „${permission}”. Verifică Settings → Notifications → Tasks.`);
-  let readyRegistration: ServiceWorkerRegistration;
+  let readyRegistration: ServiceWorkerRegistration | null = null;
   try {
     const registration = await navigator.serviceWorker.register('/sw.js');
     await registration.update();
@@ -67,7 +67,8 @@ export const enablePush = async () => {
   } catch (error) {
     fail('service worker', error);
   }
-  let existing: PushSubscription | null;
+  if (!readyRegistration) throw new Error('Service worker-ul nu este activ.');
+  let existing: PushSubscription | null = null;
   try { existing = await readyRegistration.pushManager.getSubscription(); } catch (error) { fail('citire abonament', error); }
   let subscription = existing;
   try {
@@ -78,6 +79,7 @@ export const enablePush = async () => {
   } catch (error) {
     fail('abonare Apple Push', error);
   }
+  if (!subscription) throw new Error('Apple Push nu a returnat un abonament.');
   try { await callPushApi({ action: 'subscribe', subscription: subscription.toJSON() }); } catch (error) { fail('salvare server', error); }
   return subscription;
 };
