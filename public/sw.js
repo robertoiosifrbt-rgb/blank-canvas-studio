@@ -1,3 +1,7 @@
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
 self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = {}; }
@@ -18,4 +22,3 @@ self.addEventListener('notificationclick', (event) => {
     return clients.openWindow(target);
   }));
 });
-
