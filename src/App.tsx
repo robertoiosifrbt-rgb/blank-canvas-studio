@@ -46,7 +46,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-white pb-20 md:pb-0">
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-white">
       {updateAvailable && <div className="sticky top-0 z-[200] flex items-center justify-between gap-3 bg-blue-700 px-4 py-3 text-white"><span>Versiune nouă disponibilă</span><button onClick={installUpdate} className="rounded-lg bg-white px-4 py-2 font-semibold text-blue-700">Actualizează</button></div>}
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -130,7 +130,8 @@ function App() {
       </header>
 
       {/* Main content */}
-      <div className="max-w-7xl mx-auto px-0 sm:px-6 lg:px-8 py-0 sm:py-8">
+      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+        <div className="max-w-7xl mx-auto px-0 sm:px-6 lg:px-8 py-0 sm:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar navigation */}
           <div className="hidden lg:block">
@@ -191,9 +192,10 @@ function App() {
             {dataReady && currentView === 'events' && <Events />}
           </div>
         </div>
-      </div>
+        </div>
+      </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-[80] grid h-20 grid-cols-4 border-t border-gray-200 bg-white md:hidden">
+      <nav className="mobile-bottom-nav z-[80] grid shrink-0 grid-cols-4 border-t border-gray-200 bg-white md:hidden">
         <button onClick={() => setCurrentView('tasks')} className={`flex flex-col items-center justify-center gap-1 text-xs font-medium ${currentView === 'tasks' ? 'text-gray-950' : 'text-gray-500'}`}>
           <CheckSquare size={24} className={currentView === 'tasks' ? 'fill-gray-950 text-gray-950' : ''} />
           {t('tasks')}
