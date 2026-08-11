@@ -35,18 +35,28 @@ const callPushApi = async (body: unknown) => {
 };
 
 export const enablePush = async () => {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  if (isIOS && !isStandalone) {
+    throw new Error('Pe iPhone, notificările funcționează doar din aplicația instalată. Apasă Share → Add to Home Screen, apoi deschide aplicația de pe ecranul principal.');
+  }
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-    throw new Error('Push notifications are not supported on this device');
+    throw new Error('Notificările push nu sunt disponibile în acest browser.');
   }
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') throw new Error('Notification permission was not granted');
   const registration = await navigator.serviceWorker.register('/sw.js');
   await navigator.serviceWorker.ready;
   const existing = await registration.pushManager.getSubscription();
-  const subscription = existing ?? await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-  });
+  let subscription = existing;
+  try {
+    subscription ??= await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+  } catch {
+    throw new Error('Notificările nu au putut fi activate. Verifică permisiunea Notifications din Settings și încearcă din nou.');
+  }
   await callPushApi({ action: 'subscribe', subscription: subscription.toJSON() });
   return subscription;
 };
@@ -59,4 +69,3 @@ export const syncPushAlarms = async (alarms: PushAlarm[]) => {
   await callPushApi({ action: 'sync', endpoint: subscription.endpoint, alarms });
   return true;
 };
-
