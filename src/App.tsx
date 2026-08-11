@@ -1,32 +1,38 @@
 import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Calendar as CalendarIcon, CheckSquare, ListChecks, Menu, X } from 'lucide-react';
-import { Calendar, Events } from './components/Calendar';
-import { Tasks } from './components/Tasks';
-import { LanguageSwitcher } from './components/LanguageSwitcher';
+import { CalendarDays, CheckCircle2 } from 'lucide-react';
+import { Calendar } from './components/Calendar';
+import { MobileTasks } from './components/MobileTasks';
 import { bootstrapCloudState } from './cloudState';
 
-type View = 'calendar' | 'tasks' | 'events';
+type View = 'tasks' | 'calendar';
 
 function App() {
-  const { t } = useTranslation();
-  const [currentView, setCurrentView] = useState<View>('tasks');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [view, setView] = useState<View>('tasks');
+  const [ready, setReady] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
-  const [dataReady, setDataReady] = useState(false);
 
   useEffect(() => {
-    void bootstrapCloudState().catch(() => undefined).finally(() => setDataReady(true));
+    void bootstrapCloudState().catch(() => undefined).finally(() => setReady(true));
   }, []);
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
     let refreshing = false;
-    const onControllerChange = () => { if (!refreshing) { refreshing = true; window.location.reload(); } };
+    const onControllerChange = () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    };
     navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
     void navigator.serviceWorker.register('/sw.js').then((registration) => {
-      const showUpdate = (worker: ServiceWorker | null) => { if (worker) { setWaitingWorker(worker); setUpdateAvailable(true); } };
+      const showUpdate = (worker: ServiceWorker | null) => {
+        if (worker) {
+          setWaitingWorker(worker);
+          setUpdateAvailable(true);
+        }
+      };
       showUpdate(registration.waiting);
       registration.addEventListener('updatefound', () => {
         const worker = registration.installing;
@@ -44,127 +50,31 @@ function App() {
     else window.location.reload();
   };
 
+  if (!ready) return <div className="grid min-h-[100dvh] place-items-center bg-white text-gray-500">Loading…</div>;
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {updateAvailable && <div className="sticky top-0 z-[200] flex items-center justify-between gap-3 bg-blue-700 px-4 py-3 text-white"><span>Versiune nouă disponibilă</span><button onClick={installUpdate} className="rounded-lg bg-white px-4 py-2 font-semibold text-blue-700">Actualizează</button></div>}
-      {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-blue-600">{t('app_title')}</h1>
-            <div className="hidden md:flex items-center gap-4">
-              <LanguageSwitcher />
-            </div>
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 hover:bg-gray-100 rounded-lg"
-            >
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
-
-          {/* Mobile menu */}
-          {mobileMenuOpen && (
-            <div className="md:hidden mt-4 pt-4 border-t space-y-3">
-              <button
-                onClick={() => {
-                  setCurrentView('tasks');
-                  setMobileMenuOpen(false);
-                }}
-                className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg transition ${
-                  currentView === 'tasks'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 hover:bg-gray-200'
-                }`}
-              >
-                <CheckSquare size={20} />
-                {t('tasks')}
-              </button>
-              <button
-                onClick={() => {
-                  setCurrentView('calendar');
-                  setMobileMenuOpen(false);
-                }}
-                className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg transition ${
-                  currentView === 'calendar'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 hover:bg-gray-200'
-                }`}
-              >
-                <CalendarIcon size={20} />
-                {t('calendar')}
-              </button>
-              <button
-                onClick={() => {
-                  setCurrentView('events');
-                  setMobileMenuOpen(false);
-                }}
-                className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg transition ${
-                  currentView === 'events'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 hover:bg-gray-200'
-                }`}
-              >
-                <ListChecks size={20} />
-                {t('tasks') === 'Sarcini' ? 'Evenimente' : 'Events'}
-              </button>
-              <LanguageSwitcher />
-            </div>
-          )}
+    <div className="min-h-[100dvh] bg-[#f4f4f5]">
+      {updateAvailable && (
+        <div className="fixed inset-x-0 top-0 z-[100] flex items-center justify-between bg-[#4c6fff] px-4 py-3 text-white">
+          <span>New version available</span>
+          <button onClick={installUpdate} className="rounded-lg bg-white px-4 py-2 font-semibold text-[#4c6fff]">Update</button>
         </div>
-      </header>
+      )}
 
-      {/* Main content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar navigation */}
-          <div className="hidden lg:block">
-            <nav className="space-y-2 sticky top-24">
-              <button
-                onClick={() => setCurrentView('tasks')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition font-medium ${
-                  currentView === 'tasks'
-                    ? 'bg-blue-500 text-white shadow-md'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <CheckSquare size={20} />
-                {t('tasks')}
-              </button>
-              <button
-                onClick={() => setCurrentView('calendar')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition font-medium ${
-                  currentView === 'calendar'
-                    ? 'bg-blue-500 text-white shadow-md'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <CalendarIcon size={20} />
-                {t('calendar')}
-              </button>
-              <button
-                onClick={() => setCurrentView('events')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition font-medium ${
-                  currentView === 'events'
-                    ? 'bg-blue-500 text-white shadow-md'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <ListChecks size={20} />
-                {t('tasks') === 'Sarcini' ? 'Evenimente' : 'Events'}
-              </button>
-            </nav>
-          </div>
-
-          {/* Main content area */}
-          <div className="lg:col-span-3">
-            {!dataReady && <div className="rounded-xl bg-white p-8 text-center">Se încarcă datele…</div>}
-            {dataReady && currentView === 'tasks' && <Tasks />}
-            {dataReady && currentView === 'calendar' && <Calendar />}
-            {dataReady && currentView === 'events' && <Events />}
-          </div>
+      {view === 'tasks' ? (
+        <MobileTasks onOpenCalendar={() => setView('calendar')} />
+      ) : (
+        <div className="mx-auto min-h-[100dvh] max-w-3xl bg-[#f7f7f8] pb-24">
+          <header className="sticky top-0 z-20 border-b bg-white px-5 py-5">
+            <h1 className="text-3xl font-bold tracking-tight">Calendar</h1>
+          </header>
+          <main className="p-4"><Calendar /></main>
+          <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto flex h-[76px] max-w-3xl items-center justify-around border-t border-[#e5e5e5] bg-[#fbf9f9] px-3">
+            <button onClick={() => setView('tasks')} className="flex flex-col items-center gap-1 text-[#707174]"><CheckCircle2 size={24} /><span className="text-xs">My tasks</span></button>
+            <button className="flex flex-col items-center gap-1 font-semibold text-[#202124]"><CalendarDays size={24} fill="currentColor" /><span className="text-xs">Calendar</span></button>
+          </nav>
         </div>
-      </div>
+      )}
     </div>
   );
 }
