@@ -21,7 +21,7 @@ const vapidApplicationServerKey = () => {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 };
 
-const getDeviceToken = () => {
+export const getDeviceToken = () => {
   let token = localStorage.getItem('pushDeviceToken');
   if (!token) {
     token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
@@ -91,4 +91,23 @@ export const syncPushAlarms = async (alarms: PushAlarm[]) => {
   if (!subscription) return false;
   await callPushApi({ action: 'sync', endpoint: subscription.endpoint, alarms });
   return true;
+};
+
+export const syncAllStoredAlarms = async () => {
+  const tasks = JSON.parse(localStorage.getItem('tasks') || '[]') as Array<Record<string, unknown>>;
+  const events = JSON.parse(localStorage.getItem('calendarEvents') || '[]') as Array<Record<string, unknown>>;
+  const flatten = (items: Array<Record<string, unknown>>): Array<Record<string, unknown>> => items.flatMap((item) => [item, ...flatten(Array.isArray(item.children) ? item.children as Array<Record<string, unknown>> : [])]);
+  const alarms: PushAlarm[] = [
+    ...flatten(tasks).flatMap((task) => {
+      const reminder = typeof task.reminderMinutes === 'number' ? task.reminderMinutes : 15;
+      const start = typeof task.startAt === 'string' && task.startAt ? task.startAt : (typeof task.dueDate === 'string' && task.dueDate ? `${task.dueDate}T09:00` : '');
+      return start && reminder >= 0 ? [{ id: `task:${String(task.id)}`, title: String(task.name || 'Task'), body: 'Taskul începe acum.', url: '/', scheduledAt: new Date(new Date(start).getTime() - reminder * 60000).toISOString() }] : [];
+    }),
+    ...events.flatMap((event) => {
+      const reminder = typeof event.reminderMinutes === 'number' ? event.reminderMinutes : 15;
+      const start = typeof event.date === 'string' && event.date ? `${event.date}T${typeof event.startTime === 'string' ? event.startTime : '09:00'}` : '';
+      return start && reminder >= 0 ? [{ id: `event:${String(event.id)}`, title: String(event.name || 'Eveniment'), body: 'Evenimentul începe acum.', url: '/', scheduledAt: new Date(new Date(start).getTime() - reminder * 60000).toISOString() }] : [];
+    }),
+  ].filter((alarm) => !Number.isNaN(Date.parse(alarm.scheduledAt)) && Date.parse(alarm.scheduledAt) > Date.now() - 60000);
+  return syncPushAlarms(alarms);
 };
