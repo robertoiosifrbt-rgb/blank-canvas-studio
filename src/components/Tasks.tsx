@@ -301,15 +301,15 @@ export const Tasks = () => {
   const selectedItem = selectedTask && selection ? getAtPath(selectedTask, selection.path) : null;
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-2xl font-bold">{t('tasks')}</h2>
-        <button onClick={() => setShowTaskForm((value) => !value)} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white">
-          <Plus size={20} /> {t('add_task')}
+    <div className="space-y-0 bg-white sm:space-y-5">
+      <div className="flex min-h-24 items-center justify-between gap-3 border-b border-gray-200 px-5 sm:min-h-0 sm:border-0 sm:px-0">
+        <h2 className="text-4xl font-bold tracking-tight">{ro ? 'Sarcinile mele' : 'My tasks'}</h2>
+        <button onClick={() => setShowTaskForm((value) => !value)} className="fixed bottom-24 right-5 z-30 grid h-14 w-14 place-items-center rounded-2xl bg-red-500 text-white shadow-lg sm:static sm:flex sm:h-auto sm:w-auto sm:gap-2 sm:rounded-lg sm:bg-blue-600 sm:px-4 sm:py-2 sm:shadow-none">
+          <Plus size={26} /> <span className="hidden sm:inline">{t('add_task')}</span>
         </button>
       </div>
 
-      <section className="rounded-xl bg-white p-4 shadow-sm">
+      <section className="border-b border-gray-200 bg-white p-5 sm:rounded-xl sm:shadow-sm">
         <div className="mb-2 flex justify-between font-medium">
           <span>{completed} / {allItems.length} {t('completed').toLowerCase()}</span>
           <strong className="text-blue-600">{overall}%</strong>
@@ -334,15 +334,15 @@ export const Tasks = () => {
         </section>
       )}
 
-      <section className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
-        <div className="flex items-center justify-between"><h3 className="flex items-center gap-2 text-lg font-semibold"><Folder size={20} />{ro ? 'Grupuri' : 'Groups'}</h3><button onClick={() => setShowGroupForm((value) => !value)} className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-white"><FolderPlus size={18} />{ro ? 'Adaugă' : 'Add'}</button></div>
+      <section className="space-y-0 border-b-[6px] border-gray-50 bg-white sm:space-y-3 sm:rounded-xl sm:border-0 sm:p-4 sm:shadow-sm">
+        <div className="flex min-h-20 items-center justify-between border-b border-gray-100 px-5 sm:min-h-0 sm:border-0 sm:px-0"><h3 className="flex items-center gap-3 text-xl font-semibold"><Folder size={21} />{ro ? 'Secțiuni' : 'Sections'}</h3><button onClick={() => setShowGroupForm((value) => !value)} className="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 font-medium text-gray-800"><FolderPlus size={18} />{ro ? 'Secțiune nouă' : 'Custom section'}</button></div>
         {showGroupForm && <div className="grid grid-cols-1 gap-2 sm:grid-cols-3"><input value={groupForm.name} onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })} placeholder={ro ? 'Nume grup' : 'Group name'} className="rounded-lg border px-3 py-2" /><select value={groupForm.parentId} onChange={(e) => setGroupForm({ ...groupForm, parentId: e.target.value })} className="rounded-lg border px-3 py-2"><option value="">{ro ? 'Nivel principal' : 'Top level'}</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select><button onClick={addGroup} className="rounded-lg bg-blue-600 px-3 py-2 text-white">{t('save')}</button></div>}
         {selectedGroup !== 'all' && <button onClick={() => setSelectedGroup(selectedGroupData?.parentId || 'all')} className="w-full rounded-lg bg-gray-100 px-3 py-2 text-left font-medium">← {ro ? 'Înapoi' : 'Back'}</button>}
         {selectedGroup === 'all' && <GroupRows groups={groups} items={allItems} parentId={null} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />}
         {selectedGroup !== 'all' && selectedHasChildren && <GroupRows groups={groups} items={allItems} parentId={selectedGroup} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />}
       </section>
 
-      <section className="space-y-2">
+      <section className="space-y-0 divide-y divide-gray-100 sm:space-y-2 sm:divide-y-0">
         {visibleTasks.map((task) => (
           <TaskRow key={task.id} item={task} depth={0} onOpen={(path) => setSelection({ taskId: task.id, path })} onToggle={(path) => setTasks((current) => current.map((row) => row.id === task.id ? updateAtPath(row, path, (item) => ({ ...item, completed: !item.completed })) : row))} />
         ))}
@@ -375,7 +375,7 @@ export const Tasks = () => {
 const TaskRow = ({ item, depth, onOpen, onToggle, path = [] }: { item: Item; depth: number; onOpen: (path: string[]) => void; onToggle: (path: string[]) => void; path?: string[] }) => {
   const progress = countProgress(item);
   return <div>
-    <div className="rounded-xl bg-white p-3 shadow-sm" style={{ marginLeft: Math.min(depth * 14, 42) }}>
+    <div className="bg-white px-5 py-4 sm:rounded-xl sm:p-3 sm:shadow-sm" style={{ marginLeft: Math.min(depth * 14, 42) }}>
       <div className="flex items-center gap-3">
         <button onClick={() => onToggle(path)} className={item.completed ? 'text-green-600' : 'text-gray-400'}>{item.completed ? <CheckCircle2 /> : <Circle />}</button>
         <button onClick={() => onOpen(path)} className="min-w-0 flex-1 text-left"><div className={`truncate font-medium ${item.completed ? 'line-through text-gray-400' : ''}`}>{item.name}</div><div className="mt-2 flex items-center gap-2"><div className="flex-1"><ProgressBar value={progress.percent} compact /></div><span className="text-xs font-semibold text-gray-500">{progress.percent}%</span></div></button>
