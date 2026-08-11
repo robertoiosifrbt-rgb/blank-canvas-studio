@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, Circle, Folder, FolderPlus, MessageSquare, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
+import { ArrowLeft, CalendarDays, CheckCircle2, ChevronRight, Circle, Folder, FolderPlus, MessageSquare, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ACHU_BACKLOG_GROUPS, ACHU_BACKLOG_TASKS } from '../data/achuBacklog';
 import { scheduleCloudBackup } from '../cloudState';
@@ -182,7 +182,6 @@ export const Tasks = () => {
   const [groups, setGroups] = useState<Group[]>(loadGroups);
   const [calendars] = useState<Array<{ id: string; name: string }>>(() => { try { const raw = localStorage.getItem('userCalendars'); const parsed = raw ? JSON.parse(raw) : []; return Array.isArray(parsed) && parsed.length ? parsed : [{ id: 'personal', name: 'Personal' }]; } catch { return [{ id: 'personal', name: 'Personal' }]; } });
   const [selectedGroup, setSelectedGroup] = useState('all');
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ recent: false, today: true, week: true, later: true });
   const [selection, setSelection] = useState<Selection | null>(null);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [showGroupForm, setShowGroupForm] = useState(false);
@@ -218,30 +217,9 @@ export const Tasks = () => {
 
   const selectedGroupData = groups.find((group) => group.id === selectedGroup);
   const selectedHasChildren = groups.some((group) => group.parentId === selectedGroup);
-  const visibleTasks = selectedGroup === 'all'
-    ? tasks
+  const visibleTasks = selectedGroup === 'all' || selectedHasChildren
+    ? []
     : tasks.filter((task) => task.groupId && groupDescendants(selectedGroup).has(task.groupId));
-
-  const taskSections = useMemo(() => {
-    const toKey = (date: Date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-    const today = new Date();
-    const nextWeek = new Date(today);
-    nextWeek.setDate(today.getDate() + 7);
-    const todayKey = toKey(today);
-    const nextWeekKey = toKey(nextWeek);
-    const due = (task: Item) => task.startAt?.slice(0, 10) || task.dueDate || '';
-    return [
-      { id: 'recent', name: ro ? 'Alocate recent' : 'Recently assigned', tasks: visibleTasks.filter((task) => !due(task)) },
-      { id: 'today', name: ro ? 'De făcut astăzi' : 'Do today', tasks: visibleTasks.filter((task) => due(task) && due(task) <= todayKey) },
-      { id: 'week', name: ro ? 'De făcut săptămâna viitoare' : 'Do next week', tasks: visibleTasks.filter((task) => due(task) > todayKey && due(task) <= nextWeekKey) },
-      { id: 'later', name: ro ? 'De făcut mai târziu' : 'Do later', tasks: visibleTasks.filter((task) => due(task) > nextWeekKey) },
-    ];
-  }, [visibleTasks, ro]);
 
   const addTask = () => {
     const name = taskForm.name.trim();
@@ -356,45 +334,19 @@ export const Tasks = () => {
         </section>
       )}
 
-      <section className="border-y border-gray-200 bg-white sm:rounded-xl sm:border sm:shadow-sm">
-        {taskSections.map((section) => {
-          const expanded = expandedSections[section.id];
-          const done = section.tasks.filter((task) => task.completed).length;
-          const percent = section.tasks.length ? Math.round((done / section.tasks.length) * 100) : 0;
-          return (
-            <div key={section.id} className="border-b-[6px] border-gray-50 last:border-b-0">
-              <div className="flex min-h-20 items-center gap-3 px-5">
-                <button onClick={() => setExpandedSections((current) => ({ ...current, [section.id]: !expanded }))} className="text-gray-500">
-                  {expanded ? <ChevronDown size={24} /> : <ChevronRight size={24} />}
-                </button>
-                <button onClick={() => setExpandedSections((current) => ({ ...current, [section.id]: !expanded }))} className="min-w-0 flex-1 text-left text-xl font-semibold">
-                  {section.name}
-                </button>
-                <span className="text-lg text-gray-500">{section.tasks.length > 10 ? '10+' : section.tasks.length}</span>
-                <MoreHorizontal size={24} className="text-gray-500" />
-              </div>
-              {expanded && (
-                <div className="divide-y divide-gray-100 border-t border-gray-100">
-                  {section.tasks.map((task) => (
-                    <TaskRow key={task.id} item={task} depth={0} onOpen={(path) => setSelection({ taskId: task.id, path })} onToggle={(path) => setTasks((current) => current.map((row) => row.id === task.id ? updateAtPath(row, path, (item) => ({ ...item, completed: !item.completed })) : row))} />
-                  ))}
-                  {!section.tasks.length && <div className="px-5 py-5 text-sm text-gray-400">{t('no_tasks')}</div>}
-                  {!!section.tasks.length && <div className="px-5 py-3"><div className="mb-1 flex justify-between text-xs text-gray-500"><span>{done}/{section.tasks.length}</span><span>{percent}%</span></div><ProgressBar value={percent} compact /></div>}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      <section className="space-y-0 border-b-[6px] border-gray-50 bg-white sm:space-y-3 sm:rounded-xl sm:border-0 sm:p-4 sm:shadow-sm">
+        <div className="flex min-h-20 items-center justify-between border-b border-gray-100 px-5 sm:min-h-0 sm:border-0 sm:px-0"><h3 className="flex items-center gap-3 text-xl font-semibold"><Folder size={21} />{ro ? 'Secțiuni' : 'Sections'}</h3><button onClick={() => setShowGroupForm((value) => !value)} className="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 font-medium text-gray-800"><FolderPlus size={18} />{ro ? 'Secțiune nouă' : 'Custom section'}</button></div>
+        {showGroupForm && <div className="grid grid-cols-1 gap-2 sm:grid-cols-3"><input value={groupForm.name} onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })} placeholder={ro ? 'Nume grup' : 'Group name'} className="rounded-lg border px-3 py-2" /><select value={groupForm.parentId} onChange={(e) => setGroupForm({ ...groupForm, parentId: e.target.value })} className="rounded-lg border px-3 py-2"><option value="">{ro ? 'Nivel principal' : 'Top level'}</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select><button onClick={addGroup} className="rounded-lg bg-blue-600 px-3 py-2 text-white">{t('save')}</button></div>}
+        {selectedGroup !== 'all' && <button onClick={() => setSelectedGroup(selectedGroupData?.parentId || 'all')} className="w-full rounded-lg bg-gray-100 px-3 py-2 text-left font-medium">← {ro ? 'Înapoi' : 'Back'}</button>}
+        {selectedGroup === 'all' && <GroupRows groups={groups} items={allItems} parentId={null} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />}
+        {selectedGroup !== 'all' && selectedHasChildren && <GroupRows groups={groups} items={allItems} parentId={selectedGroup} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />}
       </section>
 
-      <section className="space-y-0 border-b-[6px] border-gray-50 bg-white sm:space-y-3 sm:rounded-xl sm:border-0 sm:p-4 sm:shadow-sm">
-        <div className="flex min-h-20 items-center justify-between border-b border-gray-100 px-5 sm:min-h-0 sm:border-0 sm:px-0"><h3 className="flex items-center gap-3 text-xl font-semibold"><Folder size={21} />{ro ? 'Secțiuni personalizate' : 'Custom sections'}</h3><button onClick={() => setShowGroupForm((value) => !value)} className="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 font-medium text-gray-800"><FolderPlus size={18} />{ro ? 'Adaugă' : 'Add'}</button></div>
-        {showGroupForm && <div className="grid grid-cols-1 gap-2 p-4 sm:grid-cols-3 sm:p-0"><input value={groupForm.name} onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })} placeholder={ro ? 'Nume grup' : 'Group name'} className="rounded-lg border px-3 py-2" /><select value={groupForm.parentId} onChange={(e) => setGroupForm({ ...groupForm, parentId: e.target.value })} className="rounded-lg border px-3 py-2"><option value="">{ro ? 'Nivel principal' : 'Top level'}</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select><button onClick={addGroup} className="rounded-lg bg-blue-600 px-3 py-2 text-white">{t('save')}</button></div>}
-        {selectedGroup !== 'all' && <button onClick={() => setSelectedGroup(selectedGroupData?.parentId || 'all')} className="mx-5 my-3 rounded-lg bg-gray-100 px-3 py-2 text-left font-medium sm:mx-0">← {ro ? 'Înapoi' : 'Back'}</button>}
-        <div className="p-3 sm:p-0">
-          {selectedGroup === 'all' && <GroupRows groups={groups} items={allItems} parentId={null} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />}
-          {selectedGroup !== 'all' && selectedHasChildren && <GroupRows groups={groups} items={allItems} parentId={selectedGroup} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />}
-        </div>
+      <section className="space-y-0 divide-y divide-gray-100 sm:space-y-2 sm:divide-y-0">
+        {visibleTasks.map((task) => (
+          <TaskRow key={task.id} item={task} depth={0} onOpen={(path) => setSelection({ taskId: task.id, path })} onToggle={(path) => setTasks((current) => current.map((row) => row.id === task.id ? updateAtPath(row, path, (item) => ({ ...item, completed: !item.completed })) : row))} />
+        ))}
+        {!visibleTasks.length && selectedGroup !== 'all' && !selectedHasChildren && <div className="py-10 text-center text-gray-500">{t('no_tasks')}</div>}
       </section>
 
       {selection && selectedItem && (
