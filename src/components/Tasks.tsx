@@ -153,7 +153,7 @@ const updateAtPath = (item: Item, path: string[], updater: (item: Item) => Item)
   };
 };
 
-const countProgress = (item: Item) => {
+const countProgress = (item: Item): { done: number; total: number; percent: number } => {
   if (!item.children.length) return { done: item.completed ? 1 : 0, total: 1, percent: item.completed ? 100 : 0 };
   const childProgress = item.children.map(countProgress);
   const done = childProgress.reduce((sum, progress) => sum + progress.done, 0);
