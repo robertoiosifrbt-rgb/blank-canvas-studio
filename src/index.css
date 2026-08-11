@@ -35,6 +35,8 @@ button {
   max-width: 100%;
 }
 
+input[type='date'],
+input[type='time'],
 input[type='datetime-local'] {
   display: block;
   width: 100%;
