@@ -15,6 +15,7 @@ interface Comment {
 
 interface Item {
   id: string;
+  createdAt?: string;
   name: string;
   description: string;
   dueDate: string;
@@ -63,6 +64,7 @@ const normalizeItem = (value: unknown): Item | null => {
       : [];
   return {
     id: typeof row.id === 'string' ? row.id : crypto.randomUUID(),
+    createdAt: typeof row.createdAt === 'string' ? row.createdAt : new Date().toISOString(),
     name,
     description: typeof row.description === 'string' ? row.description : '',
     dueDate: typeof row.dueDate === 'string' ? row.dueDate : '',
@@ -161,6 +163,15 @@ const countProgress = (item: Item): { done: number; total: number; percent: numb
   return { done, total, percent: total ? Math.round((done / total) * 100) : 0 };
 };
 
+const reconcileCompletion = (item: Item): Item => {
+  const children = item.children.map(reconcileCompletion);
+  return {
+    ...item,
+    children,
+    completed: children.length ? children.every((child) => child.completed) : item.completed,
+  };
+};
+
 const flattenItems = (items: Item[]): Item[] =>
   items.flatMap((item) => [item, ...flattenItems(item.children)]);
 
@@ -180,10 +191,10 @@ const ProgressBar = ({ value, compact = false }: { value: number; compact?: bool
 export const MyTasks = () => {
   const { t, i18n } = useTranslation();
   const ro = i18n.language.startsWith('ro');
-  const [tasks, setTasks] = useState<Item[]>(loadItems);
+  const [tasks, setTasks] = useState<Item[]>(() => loadItems().map(reconcileCompletion));
   const [groups, setGroups] = useState<Group[]>(loadGroups);
   const [calendars] = useState<Array<{ id: string; name: string }>>(() => { try { const raw = localStorage.getItem('userCalendars'); const parsed = raw ? JSON.parse(raw) : []; return Array.isArray(parsed) && parsed.length ? parsed : [{ id: 'personal', name: 'Personal' }]; } catch { return [{ id: 'personal', name: 'Personal' }]; } });
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ recent: false, today: true, week: true, later: true });
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ recent: false, overdue: true, today: true, week: true, later: true });
   const [selection, setSelection] = useState<Selection | null>(null);
 
   useEffect(() => {
@@ -206,21 +217,24 @@ export const MyTasks = () => {
     const today = new Date();
     const nextWeek = new Date(today);
     nextWeek.setDate(today.getDate() + 7);
+    const recentCutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const todayKey = toKey(today);
     const nextWeekKey = toKey(nextWeek);
     const due = (task: Item) => task.startAt?.slice(0, 10) || task.dueDate || '';
+    const isRecent = (task: Item) => !due(task) && (!task.createdAt || Date.parse(task.createdAt) >= recentCutoff);
     return [
-      { id: 'recent', name: ro ? 'Alocate recent' : 'Recently assigned', tasks: visibleTasks.filter((task) => !due(task)) },
-      { id: 'today', name: ro ? 'De făcut astăzi' : 'Do today', tasks: visibleTasks.filter((task) => due(task) && due(task) <= todayKey) },
+      { id: 'recent', name: ro ? 'Alocate recent' : 'Recently assigned', tasks: visibleTasks.filter(isRecent) },
+      { id: 'overdue', name: ro ? 'Restante' : 'Overdue', tasks: visibleTasks.filter((task) => due(task) && due(task) < todayKey) },
+      { id: 'today', name: ro ? 'De făcut astăzi' : 'Do today', tasks: visibleTasks.filter((task) => due(task) === todayKey) },
       { id: 'week', name: ro ? 'De făcut săptămâna viitoare' : 'Do next week', tasks: visibleTasks.filter((task) => due(task) > todayKey && due(task) <= nextWeekKey) },
-      { id: 'later', name: ro ? 'De făcut mai târziu' : 'Do later', tasks: visibleTasks.filter((task) => due(task) > nextWeekKey) },
+      { id: 'later', name: ro ? 'De făcut mai târziu' : 'Do later', tasks: visibleTasks.filter((task) => due(task) > nextWeekKey || (!due(task) && !isRecent(task))) },
     ];
   }, [visibleTasks, ro]);
 
   const updateSelection = (updater: (item: Item) => Item) => {
     if (!selection) return;
     setTasks((current) => current.map((task) =>
-      task.id === selection.taskId ? updateAtPath(task, selection.path, updater) : task
+      task.id === selection.taskId ? reconcileCompletion(updateAtPath(task, selection.path, updater)) : task
     ));
   };
 
@@ -234,10 +248,10 @@ export const MyTasks = () => {
       const targetId = selection.path[selection.path.length - 1];
       setTasks((current) => current.map((task) =>
         task.id === selection.taskId
-          ? updateAtPath(task, parentPath, (parent) => ({
+          ? reconcileCompletion(updateAtPath(task, parentPath, (parent) => ({
               ...parent,
               children: parent.children.filter((child) => child.id !== targetId),
-            }))
+            })))
           : task
       ));
     }
@@ -256,8 +270,10 @@ export const MyTasks = () => {
       <section className="border-y border-gray-200 bg-white sm:rounded-xl sm:border sm:shadow-sm">
         {taskSections.map((section) => {
           const expanded = expandedSections[section.id];
-          const done = section.tasks.filter((task) => task.completed).length;
-          const percent = section.tasks.length ? Math.round((done / section.tasks.length) * 100) : 0;
+          const progress = section.tasks.map(countProgress);
+          const done = progress.reduce((sum, item) => sum + item.done, 0);
+          const total = progress.reduce((sum, item) => sum + item.total, 0);
+          const percent = total ? Math.round((done / total) * 100) : 0;
           return (
             <div key={section.id} className="border-b-[6px] border-gray-50 last:border-b-0">
               <div className="flex min-h-20 items-center gap-3 px-5">
@@ -273,10 +289,10 @@ export const MyTasks = () => {
               {expanded && (
                 <div className="divide-y divide-gray-100 border-t border-gray-100">
                   {section.tasks.map((task) => (
-                    <TaskRow key={task.id} item={task} depth={0} onOpen={(path) => setSelection({ taskId: task.id, path })} onToggle={(path) => setTasks((current) => current.map((row) => row.id === task.id ? updateAtPath(row, path, (item) => ({ ...item, completed: !item.completed })) : row))} />
+                    <TaskRow key={task.id} item={task} depth={0} onOpen={(path) => setSelection({ taskId: task.id, path })} onToggle={(path) => setTasks((current) => current.map((row) => row.id === task.id ? reconcileCompletion(updateAtPath(row, path, (item) => ({ ...item, completed: !item.completed }))) : row))} />
                   ))}
                   {!section.tasks.length && <div className="px-5 py-5 text-sm text-gray-400">{t('no_tasks')}</div>}
-                  {!!section.tasks.length && <div className="px-5 py-3"><div className="mb-1 flex justify-between text-xs text-gray-500"><span>{done}/{section.tasks.length}</span><span>{percent}%</span></div><ProgressBar value={percent} compact /></div>}
+                  {!!section.tasks.length && <div className="px-5 py-3"><div className="mb-1 flex justify-between text-xs text-gray-500"><span>{done}/{total}</span><span>{percent}%</span></div><ProgressBar value={percent} compact /></div>}
                 </div>
               )}
             </div>
