@@ -235,13 +235,13 @@ export const Tasks = () => {
   const addTask = () => {
     const name = taskForm.name.trim();
     if (!name) return;
-    if (!taskForm.startAt || !taskForm.endAt) return window.alert(ro ? 'Alege data și orele De la – Până la.' : 'Choose the start and end date/time.');
-    if (new Date(taskForm.endAt) <= new Date(taskForm.startAt)) return window.alert(ro ? 'Data finală trebuie să fie după început.' : 'End must be after start.');
+    if ((taskForm.startAt && !taskForm.endAt) || (!taskForm.startAt && taskForm.endAt)) return window.alert(ro ? 'Completează ambele date sau lasă-le pe ambele goale.' : 'Complete both dates or leave both empty.');
+    if (taskForm.startAt && taskForm.endAt && new Date(taskForm.endAt) <= new Date(taskForm.startAt)) return window.alert(ro ? 'Data finală trebuie să fie după început.' : 'End must be after start.');
     setTasks((current) => [{
       id: crypto.randomUUID(),
       name,
       description: taskForm.description.trim(),
-      dueDate: taskForm.startAt.slice(0, 10),
+      dueDate: taskForm.startAt ? taskForm.startAt.slice(0, 10) : '',
       startAt: taskForm.startAt,
       endAt: taskForm.endAt,
       completed: false,
