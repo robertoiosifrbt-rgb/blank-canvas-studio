@@ -317,7 +317,7 @@ export const MyTasks = () => {
 
       <section className="border-y border-gray-200 bg-white sm:rounded-xl sm:border sm:shadow-sm">
         {taskSections.map((section) => {
-          const expanded = expandedSections[section.id];
+          const expanded = expandedSections[section.id] === true;
           const progress = section.tasks.map(countProgress);
           const done = progress.reduce((sum, item) => sum + item.done, 0);
           const total = progress.reduce((sum, item) => sum + item.total, 0);
