@@ -303,7 +303,7 @@ export const Tasks = () => {
   return (
     <div className="space-y-0 bg-white sm:space-y-5">
       <div className="flex min-h-24 items-center justify-between gap-3 border-b border-gray-200 px-5 sm:min-h-0 sm:border-0 sm:px-0">
-        <h2 className="text-4xl font-bold tracking-tight">{ro ? 'Sarcinile mele' : 'My tasks'}</h2>
+        <h2 className="text-4xl font-bold tracking-tight">{t('tasks')}</h2>
         <button onClick={() => setShowTaskForm((value) => !value)} className="fixed bottom-24 right-5 z-30 grid h-14 w-14 place-items-center rounded-2xl bg-red-500 text-white shadow-lg sm:static sm:flex sm:h-auto sm:w-auto sm:gap-2 sm:rounded-lg sm:bg-blue-600 sm:px-4 sm:py-2 sm:shadow-none">
           <Plus size={26} /> <span className="hidden sm:inline">{t('add_task')}</span>
         </button>
