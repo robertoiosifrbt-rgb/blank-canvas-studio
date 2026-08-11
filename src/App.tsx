@@ -135,7 +135,7 @@ function App() {
       </header>
 
       {/* Main content */}
-      <main ref={mainRef} className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain">
+      <main ref={mainRef} className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-none">
         <div className="mx-auto w-full min-w-0 max-w-7xl px-0 py-0 sm:px-6 sm:py-8 lg:px-8">
         <div className="block min-w-0 lg:grid lg:grid-cols-4 lg:gap-8">
           {/* Sidebar navigation */}
