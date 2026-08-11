@@ -45,7 +45,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white pb-20 md:pb-0">
       {updateAvailable && <div className="sticky top-0 z-[200] flex items-center justify-between gap-3 bg-blue-700 px-4 py-3 text-white"><span>Versiune nouă disponibilă</span><button onClick={installUpdate} className="rounded-lg bg-white px-4 py-2 font-semibold text-blue-700">Actualizează</button></div>}
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -115,7 +115,7 @@ function App() {
       </header>
 
       {/* Main content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-0 sm:px-6 lg:px-8 py-0 sm:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar navigation */}
           <div className="hidden lg:block">
@@ -165,6 +165,21 @@ function App() {
           </div>
         </div>
       </div>
+
+      <nav className="fixed inset-x-0 bottom-0 z-[80] grid h-20 grid-cols-3 border-t border-gray-200 bg-white md:hidden">
+        <button onClick={() => setCurrentView('tasks')} className={`flex flex-col items-center justify-center gap-1 text-xs font-medium ${currentView === 'tasks' ? 'text-gray-950' : 'text-gray-500'}`}>
+          <CheckSquare size={24} className={currentView === 'tasks' ? 'fill-gray-950 text-gray-950' : ''} />
+          {t('tasks')}
+        </button>
+        <button onClick={() => setCurrentView('calendar')} className={`flex flex-col items-center justify-center gap-1 text-xs font-medium ${currentView === 'calendar' ? 'text-gray-950' : 'text-gray-500'}`}>
+          <CalendarIcon size={24} className={currentView === 'calendar' ? 'fill-gray-950 text-gray-950' : ''} />
+          {t('calendar')}
+        </button>
+        <button onClick={() => setCurrentView('events')} className={`flex flex-col items-center justify-center gap-1 text-xs font-medium ${currentView === 'events' ? 'text-gray-950' : 'text-gray-500'}`}>
+          <ListChecks size={24} className={currentView === 'events' ? 'fill-gray-950 text-gray-950' : ''} />
+          {t('tasks') === 'Sarcini' ? 'Evenimente' : 'Events'}
+        </button>
+      </nav>
     </div>
   );
 }
