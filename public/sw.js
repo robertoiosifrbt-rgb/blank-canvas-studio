@@ -1,19 +1,21 @@
 const BASE_PATH = new URL(self.registration.scope).pathname;
 const asset = (path = '') => `${BASE_PATH}${path}`;
 
+const CACHE_NAME = 'tasks-calendar-v5';
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open('tasks-calendar-v4').then((cache) => cache.addAll([asset(), asset('manifest.webmanifest'), asset('icon.svg')])));
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll([asset(), asset('manifest.webmanifest'), asset('icon.svg')])));
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== 'tasks-calendar-v4').map((key) => caches.delete(key)))).then(() => self.clients.claim()));
+  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))).then(() => self.clients.claim()));
 });
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
   event.respondWith(fetch(event.request).then((response) => {
     const copy = response.clone();
-    caches.open('tasks-calendar-v4').then((cache) => cache.put(event.request, copy));
+    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
     return response;
   }).catch(() => caches.match(event.request).then((cached) => cached || caches.match(asset()))));
 });
