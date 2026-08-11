@@ -28,7 +28,7 @@ jobs:
           bun-version: latest
 
       - name: Install
-        run: bun install --frozen-lockfile
+        run: bun install
 
       - name: Prepare Pages manifest
         run: sed -i 's#"/#"/blank-canvas-studio/#g' public/manifest.webmanifest
