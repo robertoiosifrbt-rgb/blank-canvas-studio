@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Bell, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { enablePush, syncPushAlarms, type PushAlarm } from '../push';
+import { enablePush, syncAllStoredAlarms, syncPushAlarms, type PushAlarm } from '../push';
+import { scheduleCloudBackup } from '../cloudState';
 
 interface Task {
   id: string;
@@ -14,6 +15,7 @@ interface Task {
   endAt?: string;
   calendarId?: string;
   reminderMinutes?: number;
+  children?: Task[];
 }
 
 interface CalendarEvent {
@@ -33,6 +35,11 @@ interface UserCalendar {
   name: string;
   color: string;
 }
+
+const flattenTaskTree = (tasks: Task[]): Task[] => tasks.flatMap((task) => [task, ...flattenTaskTree(task.children || [])]);
+const updateTaskTree = (tasks: Task[], id: string, patch: Partial<Task>): Task[] => tasks.map((task) => ({ ...task, ...(task.id === id ? patch : {}), children: updateTaskTree(task.children || [], id, patch) }));
+const deleteTaskTree = (tasks: Task[], id: string): Task[] => tasks.filter((task) => task.id !== id).map((task) => ({ ...task, children: deleteTaskTree(task.children || [], id) }));
+const moveCalendarInTree = (tasks: Task[], from: string, to: string): Task[] => tasks.map((task) => ({ ...task, calendarId: task.calendarId === from ? to : task.calendarId, children: moveCalendarInTree(task.children || [], from, to) }));
 
 
 
@@ -73,16 +80,16 @@ export const Calendar = () => {
     try { const raw = localStorage.getItem('calendarEvents'); return raw ? JSON.parse(raw) : []; } catch { return []; }
   });
 
-  useEffect(() => { localStorage.setItem('tasks', JSON.stringify(tasks)); }, [tasks]);
-  useEffect(() => { localStorage.setItem('calendarEvents', JSON.stringify(events)); }, [events]);
-  useEffect(() => { localStorage.setItem('userCalendars', JSON.stringify(calendars)); }, [calendars]);
+  useEffect(() => { localStorage.setItem('tasks', JSON.stringify(tasks)); scheduleCloudBackup(); }, [tasks]);
+  useEffect(() => { localStorage.setItem('calendarEvents', JSON.stringify(events)); scheduleCloudBackup(); void syncAllStoredAlarms().catch(() => undefined); }, [events]);
+  useEffect(() => { localStorage.setItem('userCalendars', JSON.stringify(calendars)); scheduleCloudBackup(); }, [calendars]);
 
   useEffect(() => {
     const checkAlarms = () => {
       if (!('Notification' in window) || Notification.permission !== 'granted') return;
       const now = Date.now();
       const candidates = [
-        ...tasks.map((task) => ({ id: task.id, name: task.name, start: task.startAt || (task.dueDate ? `${task.dueDate}T09:00` : ''), reminder: task.reminderMinutes ?? 15 })),
+        ...flattenTaskTree(tasks).map((task) => ({ id: task.id, name: task.name, start: task.startAt || (task.dueDate ? `${task.dueDate}T09:00` : ''), reminder: task.reminderMinutes ?? 15 })),
         ...events.map((event) => ({ id: event.id, name: event.name, start: `${event.date}T${event.startTime || '09:00'}`, reminder: event.reminderMinutes ?? 15 })),
       ];
       candidates.forEach((item) => {
@@ -102,7 +109,7 @@ export const Calendar = () => {
 
   useEffect(() => {
     const alarms: PushAlarm[] = [
-      ...tasks.flatMap((task) => {
+      ...flattenTaskTree(tasks).flatMap((task) => {
         const reminder = task.reminderMinutes ?? 15;
         const start = task.startAt || (task.dueDate ? `${task.dueDate}T09:00` : '');
         if (!start || reminder < 0) return [];
@@ -127,11 +134,11 @@ export const Calendar = () => {
 
   const itemsForDate = (date: Date) => {
     const key = dateKey(date);
-    const taskItems = tasks.filter((task) => (task.startAt?.slice(0, 10) || task.dueDate) === key);
+    const taskItems = flattenTaskTree(tasks).filter((task) => (task.startAt?.slice(0, 10) || task.dueDate) === key);
     const eventItems = events.filter((event) => event.date === key);
     return [
-      ...taskItems.map((task) => ({ id: task.id, name: task.name, start: task.startAt?.slice(11, 16) || '09:00', end: task.endAt?.slice(11, 16) || '10:00', kind: 'task' as const, calendarId: task.calendarId || 'personal' })),
-      ...eventItems.map((event) => ({ id: event.id, name: event.name, start: event.startTime || '09:00', end: event.endTime || '10:00', kind: 'event' as const, calendarId: event.calendarId || 'personal' })),
+      ...taskItems.map((task) => ({ id: task.id, name: task.name, start: task.startAt?.slice(11, 16) || '09:00', end: task.endAt?.slice(11, 16) || '10:00', kind: 'task' as const, calendarId: task.calendarId || 'personal', color: calendars.find((calendar) => calendar.id === (task.calendarId || 'personal'))?.color || '#16a34a' })),
+      ...eventItems.map((event) => ({ id: event.id, name: event.name, start: event.startTime || '09:00', end: event.endTime || '10:00', kind: 'event' as const, calendarId: event.calendarId || 'personal', color: calendars.find((calendar) => calendar.id === (event.calendarId || 'personal'))?.color || '#2563eb' })),
     ].filter((item) => (kindFilter === 'all' || item.kind === kindFilter) && (calendarFilter === 'all' || item.calendarId === calendarFilter));
   };
 
@@ -144,6 +151,7 @@ export const Calendar = () => {
   const addFromDay = () => {
     const name = form.name.trim();
     if (!name) return;
+    if (form.endTime <= form.startTime) return window.alert(ro ? 'Ora de final trebuie să fie după ora de început.' : 'End time must be after start time.');
     const date = dateKey(currentDate);
     if (dayForm === 'event') {
       setEvents((current) => [...current, { id: crypto.randomUUID(), name, date, category: 'Personal', color: 'bg-blue-100', startTime: form.startTime, endTime: form.endTime, calendarId: form.calendarId, reminderMinutes: 15 }]);
@@ -192,7 +200,7 @@ export const Calendar = () => {
     if (calendars.length === 1) return window.alert(ro ? 'Trebuie să rămână cel puțin un calendar.' : 'At least one calendar must remain.');
     if (!window.confirm(ro ? 'Ștergi calendarul? Taskurile și evenimentele vor fi mutate.' : 'Delete calendar? Its tasks and events will be moved.')) return;
     const replacement = calendars.find((calendar) => calendar.id !== id)!;
-    setTasks((current) => current.map((task) => task.calendarId === id ? { ...task, calendarId: replacement.id } : task));
+    setTasks((current) => moveCalendarInTree(current, id, replacement.id));
     setEvents((current) => current.map((event) => event.calendarId === id ? { ...event, calendarId: replacement.id } : event));
     setCalendars((current) => current.filter((calendar) => calendar.id !== id));
     if (calendarFilter === id) setCalendarFilter('all');
@@ -203,7 +211,7 @@ export const Calendar = () => {
     try {
       await enablePush();
       const alarms: PushAlarm[] = [
-        ...tasks.flatMap((task) => {
+        ...flattenTaskTree(tasks).flatMap((task) => {
           const reminder = task.reminderMinutes ?? 15;
           const start = task.startAt || (task.dueDate ? `${task.dueDate}T09:00` : '');
           return start && reminder >= 0 ? [{ id: `task:${task.id}`, title: task.name, body: ro ? 'Taskul începe acum.' : 'Task starts now.', url: '/', scheduledAt: new Date(new Date(start).getTime() - reminder * 60000).toISOString() }] : [];
@@ -221,7 +229,7 @@ export const Calendar = () => {
     }
   };
 
-  const selectedTask = selectedEntry?.kind === 'task' ? tasks.find((task) => task.id === selectedEntry.id) : null;
+  const selectedTask = selectedEntry?.kind === 'task' ? flattenTaskTree(tasks).find((task) => task.id === selectedEntry.id) : null;
   const selectedEvent = selectedEntry?.kind === 'event' ? events.find((event) => event.id === selectedEntry.id) : null;
 
   return (
@@ -271,12 +279,12 @@ export const Calendar = () => {
             <div className="flex items-center justify-between"><h3 className="text-xl font-bold">{selectedTask ? (ro ? 'Task' : 'Task') : (ro ? 'Eveniment' : 'Event')}</h3><button onClick={() => setSelectedEntry(null)}><X /></button></div>
             {selectedTask ? (
               <>
-                <input value={selectedTask.name} onChange={(e) => setTasks((current) => current.map((task) => task.id === selectedTask.id ? { ...task, name: e.target.value } : task))} className="w-full rounded-lg border px-3 py-3 font-semibold" />
-                <label className="block text-sm">{ro ? 'De la' : 'From'}<input type="datetime-local" value={selectedTask.startAt || ''} onChange={(e) => setTasks((current) => current.map((task) => task.id === selectedTask.id ? { ...task, startAt: e.target.value, dueDate: e.target.value.slice(0, 10) } : task))} className="mt-1 w-full rounded-lg border px-3 py-3" /></label>
-                <label className="block text-sm">{ro ? 'Până la' : 'To'}<input type="datetime-local" value={selectedTask.endAt || ''} onChange={(e) => setTasks((current) => current.map((task) => task.id === selectedTask.id ? { ...task, endAt: e.target.value } : task))} className="mt-1 w-full rounded-lg border px-3 py-3" /></label>
-                <label className="block text-sm">Calendar<select value={selectedTask.calendarId || calendars[0]?.id || ''} onChange={(e) => setTasks((current) => current.map((task) => task.id === selectedTask.id ? { ...task, calendarId: e.target.value } : task))} className="mt-1 w-full rounded-lg border px-3 py-3">{calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select></label>
-                <ReminderSelect value={selectedTask.reminderMinutes ?? 15} ro={ro} onChange={(value) => setTasks((current) => current.map((task) => task.id === selectedTask.id ? { ...task, reminderMinutes: value } : task))} />
-                <button onClick={() => { if (window.confirm(ro ? 'Ștergi taskul?' : 'Delete task?')) { setTasks((current) => current.filter((task) => task.id !== selectedTask.id)); setSelectedEntry(null); } }} className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 py-3 text-red-600"><Trash2 size={18} />{ro ? 'Șterge' : 'Delete'}</button>
+                <input value={selectedTask.name} onChange={(e) => setTasks((current) => updateTaskTree(current, selectedTask.id, { name: e.target.value }))} className="w-full rounded-lg border px-3 py-3 font-semibold" />
+                <label className="block text-sm">{ro ? 'De la' : 'From'}<input type="datetime-local" value={selectedTask.startAt || ''} onChange={(e) => setTasks((current) => updateTaskTree(current, selectedTask.id, { startAt: e.target.value, dueDate: e.target.value.slice(0, 10) }))} className="mt-1 w-full rounded-lg border px-3 py-3" /></label>
+                <label className="block text-sm">{ro ? 'Până la' : 'To'}<input type="datetime-local" value={selectedTask.endAt || ''} onChange={(e) => setTasks((current) => updateTaskTree(current, selectedTask.id, { endAt: e.target.value }))} className="mt-1 w-full rounded-lg border px-3 py-3" /></label>
+                <label className="block text-sm">Calendar<select value={selectedTask.calendarId || calendars[0]?.id || ''} onChange={(e) => setTasks((current) => updateTaskTree(current, selectedTask.id, { calendarId: e.target.value }))} className="mt-1 w-full rounded-lg border px-3 py-3">{calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select></label>
+                <ReminderSelect value={selectedTask.reminderMinutes ?? 15} ro={ro} onChange={(value) => setTasks((current) => updateTaskTree(current, selectedTask.id, { reminderMinutes: value }))} />
+                <button onClick={() => { if (window.confirm(ro ? 'Ștergi taskul?' : 'Delete task?')) { setTasks((current) => deleteTaskTree(current, selectedTask.id)); setSelectedEntry(null); } }} className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 py-3 text-red-600"><Trash2 size={18} />{ro ? 'Șterge' : 'Delete'}</button>
               </>
             ) : selectedEvent && (
               <>
@@ -308,14 +316,14 @@ const MonthCalendar = ({ date, onDay, getCount }: { date: Date; onDay: (date: Da
   return <div><div className="mb-2 grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-500">{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((name) => <div key={name}>{name}</div>)}</div><div className="grid grid-cols-7 gap-1">{days.map((day) => { const count = getCount(day); return <button key={day.toISOString()} onClick={() => onDay(day)} className={`aspect-square rounded-lg p-1 text-sm ${day.getMonth() === month ? 'bg-gray-50' : 'bg-gray-100 text-gray-400'} hover:ring-2 hover:ring-blue-500`}><span>{day.getDate()}</span>{count > 0 && <div className="mx-auto mt-1 h-1.5 w-1.5 rounded-full bg-blue-600" />}</button>; })}</div></div>;
 };
 
-const TimeGrid = ({ days, itemsForDate, onDay, onItem }: { days: Date[]; itemsForDate: (date: Date) => Array<{ id: string; name: string; start: string; end: string; kind: 'task' | 'event'; calendarId: string }>; onDay: (date: Date) => void; onItem: (item: { kind: 'task' | 'event'; id: string }) => void }) => {
+const TimeGrid = ({ days, itemsForDate, onDay, onItem }: { days: Date[]; itemsForDate: (date: Date) => Array<{ id: string; name: string; start: string; end: string; kind: 'task' | 'event'; calendarId: string; color: string }>; onDay: (date: Date) => void; onItem: (item: { kind: 'task' | 'event'; id: string }) => void }) => {
   const hourHeight = 72;
   const totalHeight = hourHeight * 24;
   const minutes = (value: string) => {
     const [hour, minute] = value.split(':').map(Number);
     return hour * 60 + minute;
   };
-  return <div className="overflow-x-auto"><div style={{ minWidth: days.length > 1 ? 820 : 320 }}><div className="grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(100px, 1fr))` }}><div />{days.map((day) => <button key={day.toISOString()} onClick={() => onDay(day)} className="border-b p-2 text-center font-semibold text-blue-600">{day.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}</button>)}</div><div className="grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(100px, 1fr))` }}><div className="relative border-r" style={{ height: totalHeight }}>{Array.from({ length: 24 }, (_, hour) => <span key={hour} className="absolute right-2 text-xs text-gray-400" style={{ top: hour * hourHeight - 7 }}>{String(hour).padStart(2, '0')}:00</span>)}</div>{days.map((day) => <div key={day.toISOString()} className="relative border-r" style={{ height: totalHeight, backgroundImage: 'repeating-linear-gradient(to bottom, #e5e7eb 0, #e5e7eb 1px, transparent 1px, transparent 72px)' }}>{itemsForDate(day).map((item) => { const startMinute = minutes(item.start); const endMinute = Math.max(minutes(item.end), startMinute + 15); const top = startMinute / 60 * hourHeight; const height = Math.max((endMinute - startMinute) / 60 * hourHeight, 20); return <button onClick={() => onItem({ kind: item.kind, id: item.id })} key={item.id} className={`absolute left-1 right-1 z-10 text-left overflow-hidden rounded-md border-l-4 px-2 py-1 text-xs shadow-sm ${item.kind === 'event' ? 'border-blue-600 bg-blue-100 text-blue-900' : 'border-green-600 bg-green-100 text-green-900'}`} style={{ top, height }}><strong className="block truncate">{item.name}</strong><span>{item.start}–{item.end}</span></button>; })}</div>)}</div></div></div>;
+  return <div className="overflow-x-auto"><div style={{ minWidth: days.length > 1 ? 820 : 320 }}><div className="grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(100px, 1fr))` }}><div />{days.map((day) => <button key={day.toISOString()} onClick={() => onDay(day)} className="border-b p-2 text-center font-semibold text-blue-600">{day.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}</button>)}</div><div className="grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(100px, 1fr))` }}><div className="relative border-r" style={{ height: totalHeight }}>{Array.from({ length: 24 }, (_, hour) => <span key={hour} className="absolute right-2 text-xs text-gray-400" style={{ top: hour * hourHeight - 7 }}>{String(hour).padStart(2, '0')}:00</span>)}</div>{days.map((day) => <div key={day.toISOString()} className="relative border-r" style={{ height: totalHeight, backgroundImage: 'repeating-linear-gradient(to bottom, #e5e7eb 0, #e5e7eb 1px, transparent 1px, transparent 72px)' }}>{itemsForDate(day).map((item) => { const startMinute = minutes(item.start); const endMinute = Math.max(minutes(item.end), startMinute + 15); const top = startMinute / 60 * hourHeight; const height = Math.max((endMinute - startMinute) / 60 * hourHeight, 20); return <button onClick={() => onItem({ kind: item.kind, id: item.id })} key={item.id} className="absolute left-1 right-1 z-10 overflow-hidden rounded-md border-l-4 px-2 py-1 text-left text-xs shadow-sm" style={{ top, height, borderColor: item.color, backgroundColor: `${item.color}22`, color: item.color }}><strong className="block truncate">{item.name}</strong><span>{item.start}–{item.end}</span></button>; })}</div>)}</div></div></div>;
 };
 
 const ReminderSelect = ({ value, ro, onChange }: { value: number; ro: boolean; onChange: (value: number) => void }) => (
@@ -351,10 +359,13 @@ export const Events = () => {
 
   useEffect(() => {
     localStorage.setItem('calendarEvents', JSON.stringify(events));
+    scheduleCloudBackup();
+    void syncAllStoredAlarms().catch(() => undefined);
   }, [events]);
 
   useEffect(() => {
     localStorage.setItem('eventCategories', JSON.stringify(categories));
+    scheduleCloudBackup();
   }, [categories]);
 
   const addCategory = () => {
@@ -368,6 +379,7 @@ export const Events = () => {
   const addEvent = () => {
     const name = form.name.trim();
     if (!name || !form.date) return;
+    if (form.endTime <= form.startTime) return window.alert(ro ? 'Ora de final trebuie să fie după ora de început.' : 'End time must be after start time.');
     setEvents((current) => [...current, {
       id: crypto.randomUUID(),
       name,
