@@ -428,7 +428,7 @@ const ItemDetail = ({ item, groups, calendars, ro, onClose, onDelete, onBack, on
       </header>
       <main className="space-y-0">
         <section className="min-w-0 border-b p-5"><textarea rows={3} value={item.name} onChange={(e) => onChange({ name: e.target.value })} className="min-h-24 min-w-0 w-full resize-none overflow-y-auto border-0 text-2xl font-bold leading-tight outline-none" /></section>
-        <section className="grid grid-cols-1 gap-4 border-b p-5 sm:grid-cols-2">
+        <section className="grid min-w-0 grid-cols-1 gap-4 overflow-hidden border-b p-5 sm:grid-cols-2">
           <label className="text-sm text-gray-500"><span className="flex items-center gap-2"><CalendarDays size={19} />{ro ? 'De la' : 'From'}</span><input type="datetime-local" value={item.startAt} onChange={(e) => onChange({ startAt: e.target.value, dueDate: e.target.value.slice(0, 10) })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900" /></label>
           <label className="text-sm text-gray-500"><span className="flex items-center gap-2"><CalendarDays size={19} />{ro ? 'Până la' : 'To'}</span><input type="datetime-local" value={item.endAt} onChange={(e) => onChange({ endAt: e.target.value })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900" /></label>
           <label className="text-sm text-gray-500"><span className="flex items-center gap-2"><Folder size={19} />{ro ? 'Grup' : 'Group'}</span><select value={item.groupId || ''} onChange={(e) => onChange({ groupId: e.target.value || null })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900"><option value="">{ro ? 'Fără grup' : 'No group'}</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
