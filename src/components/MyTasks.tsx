@@ -201,6 +201,32 @@ export const MyTasks = () => {
 
   const allItems = useMemo(() => flattenItems(tasks).filter((item) => !item.children.length), [tasks]);
 
+  const customGroups = useMemo(() => {
+    const achuIds = new Set(
+      groups
+        .filter((group) => group.id.startsWith('achu-') || group.name.trim().toLowerCase() === 'achu')
+        .map((group) => group.id)
+    );
+    let changed = true;
+    while (changed) {
+      changed = false;
+      groups.forEach((group) => {
+        if (group.parentId && achuIds.has(group.parentId) && !achuIds.has(group.id)) {
+          achuIds.add(group.id);
+          changed = true;
+        }
+      });
+    }
+    return groups.filter((group) => !achuIds.has(group.id));
+  }, [groups]);
+
+  useEffect(() => {
+    if (selectedGroup !== 'all' && !customGroups.some((group) => group.id === selectedGroup)) {
+      setSelectedGroup('all');
+    }
+  }, [customGroups, selectedGroup]);
+
+
   const groupDescendants = (groupId: string) => {
     const ids = new Set([groupId]);
     let changed = true;
@@ -216,8 +242,8 @@ export const MyTasks = () => {
     return ids;
   };
 
-  const selectedGroupData = groups.find((group) => group.id === selectedGroup);
-  const selectedHasChildren = groups.some((group) => group.parentId === selectedGroup);
+  const selectedGroupData = customGroups.find((group) => group.id === selectedGroup);
+  const selectedHasChildren = customGroups.some((group) => group.parentId === selectedGroup);
   const visibleTasks = selectedGroup === 'all'
     ? tasks
     : tasks.filter((task) => task.groupId && groupDescendants(selectedGroup).has(task.groupId));
@@ -381,11 +407,11 @@ export const MyTasks = () => {
 
       <section className="space-y-0 border-b-[6px] border-gray-50 bg-white sm:space-y-3 sm:rounded-xl sm:border-0 sm:p-4 sm:shadow-sm">
         <div className="flex min-h-20 items-center justify-between border-b border-gray-100 px-5 sm:min-h-0 sm:border-0 sm:px-0"><h3 className="flex items-center gap-3 text-xl font-semibold"><Folder size={21} />{ro ? 'Secțiuni personalizate' : 'Custom sections'}</h3><button onClick={() => setShowGroupForm((value) => !value)} className="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 font-medium text-gray-800"><FolderPlus size={18} />{ro ? 'Adaugă' : 'Add'}</button></div>
-        {showGroupForm && <div className="grid grid-cols-1 gap-2 p-4 sm:grid-cols-3 sm:p-0"><input value={groupForm.name} onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })} placeholder={ro ? 'Nume grup' : 'Group name'} className="rounded-lg border px-3 py-2" /><select value={groupForm.parentId} onChange={(e) => setGroupForm({ ...groupForm, parentId: e.target.value })} className="rounded-lg border px-3 py-2"><option value="">{ro ? 'Nivel principal' : 'Top level'}</option>{groups.filter((group) => !group.id.startsWith('achu-')).map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select><button onClick={addGroup} className="rounded-lg bg-blue-600 px-3 py-2 text-white">{t('save')}</button></div>}
+        {showGroupForm && <div className="grid grid-cols-1 gap-2 p-4 sm:grid-cols-3 sm:p-0"><input value={groupForm.name} onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })} placeholder={ro ? 'Nume grup' : 'Group name'} className="rounded-lg border px-3 py-2" /><select value={groupForm.parentId} onChange={(e) => setGroupForm({ ...groupForm, parentId: e.target.value })} className="rounded-lg border px-3 py-2"><option value="">{ro ? 'Nivel principal' : 'Top level'}</option>{customGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select><button onClick={addGroup} className="rounded-lg bg-blue-600 px-3 py-2 text-white">{t('save')}</button></div>}
         {selectedGroup !== 'all' && <button onClick={() => setSelectedGroup(selectedGroupData?.parentId || 'all')} className="mx-5 my-3 rounded-lg bg-gray-100 px-3 py-2 text-left font-medium sm:mx-0">← {ro ? 'Înapoi' : 'Back'}</button>}
         <div className="p-3 sm:p-0">
-          {selectedGroup === 'all' && <GroupRows groups={groups.filter((group) => !group.id.startsWith('achu-'))} items={allItems} parentId={null} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />}
-          {selectedGroup !== 'all' && selectedHasChildren && <GroupRows groups={groups.filter((group) => !group.id.startsWith('achu-'))} items={allItems} parentId={selectedGroup} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />}
+          {selectedGroup === 'all' && <GroupRows groups={customGroups} items={allItems} parentId={null} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />}
+          {selectedGroup !== 'all' && selectedHasChildren && <GroupRows groups={customGroups} items={allItems} parentId={selectedGroup} depth={0} selected={selectedGroup} onSelect={setSelectedGroup} onRename={renameGroup} onDelete={deleteGroup} />}
         </div>
       </section>
 
