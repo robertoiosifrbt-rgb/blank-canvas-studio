@@ -200,8 +200,6 @@ export const MyTasks = () => {
   }, [groups]);
 
   const allItems = useMemo(() => flattenItems(tasks).filter((item) => !item.children.length), [tasks]);
-  const completed = allItems.filter((item) => item.completed).length;
-  const overall = allItems.length ? Math.round((completed / allItems.length) * 100) : 0;
 
   const groupDescendants = (groupId: string) => {
     const ids = new Set([groupId]);
@@ -332,14 +330,6 @@ export const MyTasks = () => {
           <Plus size={26} /> <span className="hidden sm:inline">{t('add_task')}</span>
         </button>
       </div>
-
-      <section className="border-b border-gray-200 bg-white p-5 sm:rounded-xl sm:shadow-sm">
-        <div className="mb-2 flex justify-between font-medium">
-          <span>{completed} / {allItems.length} {t('completed').toLowerCase()}</span>
-          <strong className="text-blue-600">{overall}%</strong>
-        </div>
-        <ProgressBar value={overall} />
-      </section>
 
       {showTaskForm && (
         <section className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
