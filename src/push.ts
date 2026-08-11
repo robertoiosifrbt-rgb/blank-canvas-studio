@@ -16,6 +16,11 @@ const urlBase64ToUint8Array = (value: string) => {
   return Uint8Array.from([...raw].map((character) => character.charCodeAt(0)));
 };
 
+const vapidApplicationServerKey = () => {
+  const bytes = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+};
+
 const getDeviceToken = () => {
   let token = localStorage.getItem('pushDeviceToken');
   if (!token) {
@@ -51,13 +56,14 @@ export const enablePush = async () => {
   }
   if (permission !== 'granted') throw new Error('Notification permission was not granted');
   const registration = await navigator.serviceWorker.register('/sw.js');
-  await navigator.serviceWorker.ready;
-  const existing = await registration.pushManager.getSubscription();
+  await registration.update();
+  const readyRegistration = await navigator.serviceWorker.ready;
+  const existing = await readyRegistration.pushManager.getSubscription();
   let subscription = existing;
   try {
-    subscription ??= await registration.pushManager.subscribe({
+    subscription ??= await readyRegistration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      applicationServerKey: vapidApplicationServerKey(),
     });
   } catch {
     throw new Error('Notificările nu au putut fi activate. Verifică permisiunea Notifications din Settings și încearcă din nou.');
