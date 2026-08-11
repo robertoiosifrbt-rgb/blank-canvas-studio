@@ -196,6 +196,19 @@ export const MyTasks = () => {
   const [groupForm, setGroupForm] = useState({ name: '', parentId: '' });
 
   useEffect(() => {
+    const collapseSections = () => setExpandedSections({});
+    const collapseWhenVisible = () => {
+      if (document.visibilityState === 'visible') collapseSections();
+    };
+    window.addEventListener('pageshow', collapseSections);
+    document.addEventListener('visibilitychange', collapseWhenVisible);
+    return () => {
+      window.removeEventListener('pageshow', collapseSections);
+      document.removeEventListener('visibilitychange', collapseWhenVisible);
+    };
+  }, []);
+
+  useEffect(() => {
     try { localStorage.setItem('tasks', JSON.stringify(tasks)); scheduleCloudBackup(); void syncAllStoredAlarms().catch(() => undefined); } catch { /* browser storage unavailable */ }
   }, [tasks]);
 
