@@ -130,9 +130,9 @@ function App() {
       </header>
 
       {/* Main content */}
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
-        <div className="max-w-7xl mx-auto px-0 sm:px-6 lg:px-8 py-0 sm:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain">
+        <div className="mx-auto w-full min-w-0 max-w-7xl px-0 py-0 sm:px-6 sm:py-8 lg:px-8">
+        <div className="grid min-w-0 grid-cols-1 gap-8 lg:grid-cols-4">
           {/* Sidebar navigation */}
           <div className="hidden lg:block">
             <nav className="space-y-2 sticky top-24">
@@ -184,7 +184,7 @@ function App() {
           </div>
 
           {/* Main content area */}
-          <div className="lg:col-span-3">
+          <div className="min-w-0 lg:col-span-3">
             {!dataReady && <div className="rounded-xl bg-white p-8 text-center">Se încarcă datele…</div>}
             {dataReady && currentView === 'tasks' && <Tasks />}
             {dataReady && currentView === 'myTasks' && <MyTasks />}
