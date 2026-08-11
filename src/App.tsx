@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calendar as CalendarIcon, CheckSquare, Folder, ListChecks, Menu, X } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckSquare, ListChecks, Menu, X } from 'lucide-react';
 import { Calendar, Events } from './components/Calendar';
 import { Tasks } from './components/Tasks';
 import { MyTasks } from './components/MyTasks';
