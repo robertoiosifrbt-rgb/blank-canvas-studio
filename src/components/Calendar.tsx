@@ -403,14 +403,14 @@ export const Events = () => {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-5 overflow-x-hidden px-4 sm:px-0">
       <h2 className="text-2xl font-bold">{ro ? 'Evenimente' : 'Events'}</h2>
       <section className="space-y-3 rounded-xl bg-white p-4 shadow-sm">
         <h3 className="font-semibold">{ro ? 'Eveniment nou' : 'New event'}</h3>
         <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={ro ? 'Nume eveniment' : 'Event name'} className="w-full rounded-lg border px-3 py-3" />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className="text-sm font-medium text-gray-600">{ro ? 'Data' : 'Date'}<input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3 text-gray-900" /></label>
-          <div className="grid grid-cols-2 gap-2"><label className="text-sm font-medium text-gray-600">{ro ? 'Începe' : 'Starts'}<input type="time" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3 text-gray-900" /></label><label className="text-sm font-medium text-gray-600">{ro ? 'Se termină' : 'Ends'}<input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3 text-gray-900" /></label></div>
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="min-w-0 text-sm font-medium text-gray-600">{ro ? 'Data' : 'Date'}<input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="mt-1 min-w-0 w-full rounded-lg border px-3 py-3 text-gray-900" /></label>
+          <div className="grid min-w-0 grid-cols-2 gap-2"><label className="min-w-0 text-sm font-medium text-gray-600">{ro ? 'Începe' : 'Starts'}<input type="time" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} className="mt-1 min-w-0 w-full rounded-lg border px-2 py-3 text-gray-900" /></label><label className="min-w-0 text-sm font-medium text-gray-600">{ro ? 'Se termină' : 'Ends'}<input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} className="mt-1 min-w-0 w-full rounded-lg border px-2 py-3 text-gray-900" /></label></div>
           <label className="text-sm font-medium text-gray-600">{ro ? 'Categorie' : 'Category'}<select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3 text-gray-900">{categories.map((category) => <option key={category}>{category}</option>)}</select></label>
           <label className="text-sm font-medium text-gray-600">Calendar<select value={form.calendarId} onChange={(e) => setForm({ ...form, calendarId: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-3 text-gray-900">{calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select></label>
           <ReminderSelect value={form.reminderMinutes} ro={ro} onChange={(value) => setForm({ ...form, reminderMinutes: value })} />
