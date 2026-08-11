@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, CalendarDays, CheckCircle2, ChevronRight, Circle, Folder, FolderPlus, MessageSquare, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { ACHU_BACKLOG_GROUPS, ACHU_BACKLOG_TASKS } from '../data/achuBacklog';
 
 type Priority = 'high' | 'medium' | 'low';
 
@@ -80,23 +81,26 @@ const normalizeItem = (value: unknown): Item | null => {
 const loadItems = (): Item[] => {
   try {
     const raw = localStorage.getItem('tasks');
-    if (!raw) return [];
+    if (!raw) return ACHU_BACKLOG_TASKS as unknown as Item[];
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed)
+    const existing = Array.isArray(parsed)
       ? parsed.map(normalizeItem).filter((item): item is Item => item !== null)
       : [];
+    const ids = new Set(existing.map((item) => item.id));
+    const imported = (ACHU_BACKLOG_TASKS as unknown as Item[]).filter((item) => !ids.has(item.id));
+    return [...existing, ...imported];
   } catch {
-    return [];
+    return ACHU_BACKLOG_TASKS as unknown as Item[];
   }
 };
 
 const loadGroups = (): Group[] => {
   try {
     const raw = localStorage.getItem('taskGroups');
-    if (!raw) return [];
+    if (!raw) return ACHU_BACKLOG_GROUPS as unknown as Group[];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed
+    const existing = parsed
       .filter((value): value is Record<string, unknown> => Boolean(value) && typeof value === 'object')
       .filter((value) => typeof value.id === 'string' && typeof value.name === 'string')
       .map((value) => ({
@@ -105,8 +109,10 @@ const loadGroups = (): Group[] => {
         parentId: typeof value.parentId === 'string' ? value.parentId : null,
       }))
       .filter((group) => group.name);
+    const ids = new Set(existing.map((group) => group.id));
+    return [...existing, ...(ACHU_BACKLOG_GROUPS as unknown as Group[]).filter((group) => !ids.has(group.id))];
   } catch {
-    return [];
+    return ACHU_BACKLOG_GROUPS as unknown as Group[];
   }
 };
 
