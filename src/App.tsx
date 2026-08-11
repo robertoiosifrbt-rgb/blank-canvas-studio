@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calendar as CalendarIcon, CheckSquare, ListChecks, Menu, X } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckSquare, Folder, ListChecks, Menu, X } from 'lucide-react';
 import { Calendar, Events } from './components/Calendar';
 import { Tasks } from './components/Tasks';
+import { MyTasks } from './components/MyTasks';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { bootstrapCloudState } from './cloudState';
 
-type View = 'calendar' | 'tasks' | 'events';
+type View = 'calendar' | 'tasks' | 'myTasks' | 'events';
 
 function App() {
   const { t } = useTranslation();
@@ -82,6 +83,20 @@ function App() {
               </button>
               <button
                 onClick={() => {
+                  setCurrentView('myTasks');
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg transition ${
+                  currentView === 'myTasks'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 hover:bg-gray-200'
+                }`}
+              >
+                <CheckSquare size={20} />
+                My Tasks
+              </button>
+              <button
+                onClick={() => {
                   setCurrentView('calendar');
                   setMobileMenuOpen(false);
                 }}
@@ -132,6 +147,17 @@ function App() {
                 {t('tasks')}
               </button>
               <button
+                onClick={() => setCurrentView('myTasks')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition font-medium ${
+                  currentView === 'myTasks'
+                    ? 'bg-blue-500 text-white shadow-md'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <CheckSquare size={20} />
+                My Tasks
+              </button>
+              <button
                 onClick={() => setCurrentView('calendar')}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition font-medium ${
                   currentView === 'calendar'
@@ -160,16 +186,21 @@ function App() {
           <div className="lg:col-span-3">
             {!dataReady && <div className="rounded-xl bg-white p-8 text-center">Se încarcă datele…</div>}
             {dataReady && currentView === 'tasks' && <Tasks />}
+            {dataReady && currentView === 'myTasks' && <MyTasks />}
             {dataReady && currentView === 'calendar' && <Calendar />}
             {dataReady && currentView === 'events' && <Events />}
           </div>
         </div>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-[80] grid h-20 grid-cols-3 border-t border-gray-200 bg-white md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-[80] grid h-20 grid-cols-4 border-t border-gray-200 bg-white md:hidden">
         <button onClick={() => setCurrentView('tasks')} className={`flex flex-col items-center justify-center gap-1 text-xs font-medium ${currentView === 'tasks' ? 'text-gray-950' : 'text-gray-500'}`}>
           <CheckSquare size={24} className={currentView === 'tasks' ? 'fill-gray-950 text-gray-950' : ''} />
           {t('tasks')}
+        </button>
+        <button onClick={() => setCurrentView('myTasks')} className={`flex flex-col items-center justify-center gap-1 text-xs font-medium ${currentView === 'myTasks' ? 'text-gray-950' : 'text-gray-500'}`}>
+          <CheckSquare size={24} className={currentView === 'myTasks' ? 'fill-gray-950 text-gray-950' : ''} />
+          My Tasks
         </button>
         <button onClick={() => setCurrentView('calendar')} className={`flex flex-col items-center justify-center gap-1 text-xs font-medium ${currentView === 'calendar' ? 'text-gray-950' : 'text-gray-500'}`}>
           <CalendarIcon size={24} className={currentView === 'calendar' ? 'fill-gray-950 text-gray-950' : ''} />
