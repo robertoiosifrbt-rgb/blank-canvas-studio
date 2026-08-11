@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CalendarDays, CheckCircle2, ChevronRight, Circle, Folder, FolderPlus, MessageSquare, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
+import { ArrowLeft, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, Circle, Folder, FolderPlus, MessageSquare, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ACHU_BACKLOG_GROUPS, ACHU_BACKLOG_TASKS } from '../data/achuBacklog';
 import { scheduleCloudBackup } from '../cloudState';
