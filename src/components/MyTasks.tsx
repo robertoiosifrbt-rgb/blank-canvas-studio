@@ -190,7 +190,7 @@ export const MyTasks = () => {
   const [tasks, setTasks] = useState<Item[]>(() => loadItems().map(reconcileCompletion));
   const [groups, setGroups] = useState<Group[]>(loadGroups);
   const [calendars] = useState<Array<{ id: string; name: string }>>(() => { try { const raw = localStorage.getItem('userCalendars'); const parsed = raw ? JSON.parse(raw) : []; return Array.isArray(parsed) && parsed.length ? parsed : [{ id: 'personal', name: 'Personal' }]; } catch { return [{ id: 'personal', name: 'Personal' }]; } });
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ recent: false, overdue: true, today: true, week: true, later: true });
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [selection, setSelection] = useState<Selection | null>(null);
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [groupForm, setGroupForm] = useState({ name: '', parentId: '' });
