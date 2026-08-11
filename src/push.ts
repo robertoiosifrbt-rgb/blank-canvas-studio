@@ -61,7 +61,7 @@ export const enablePush = async () => {
   if (permission !== 'granted') throw new Error(`Permisiunea pentru notificări este „${permission}”. Verifică Settings → Notifications → Tasks.`);
   let readyRegistration: ServiceWorkerRegistration | null = null;
   try {
-    const registration = await navigator.serviceWorker.register('/sw.js');
+    const registration = await navigator.serviceWorker.register(new URL('sw.js', document.baseURI).href);
     await registration.update();
     readyRegistration = await navigator.serviceWorker.ready;
   } catch (error) {
