@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Calendar as CalendarIcon, CheckSquare, ListChecks, Menu, X } from 'lucide-react';
 import { Calendar, Events } from './components/Calendar';
@@ -11,9 +11,36 @@ function App() {
   const { t } = useTranslation();
   const [currentView, setCurrentView] = useState<View>('tasks');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    let refreshing = false;
+    const onControllerChange = () => { if (!refreshing) { refreshing = true; window.location.reload(); } };
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+    void navigator.serviceWorker.register('/sw.js').then((registration) => {
+      const showUpdate = (worker: ServiceWorker | null) => { if (worker) { setWaitingWorker(worker); setUpdateAvailable(true); } };
+      showUpdate(registration.waiting);
+      registration.addEventListener('updatefound', () => {
+        const worker = registration.installing;
+        worker?.addEventListener('statechange', () => {
+          if (worker.state === 'installed' && navigator.serviceWorker.controller) showUpdate(worker);
+        });
+      });
+      void registration.update();
+    });
+    return () => navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+  }, []);
+
+  const installUpdate = () => {
+    if (waitingWorker) waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+    else window.location.reload();
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {updateAvailable && <div className="sticky top-0 z-[200] flex items-center justify-between gap-3 bg-blue-700 px-4 py-3 text-white"><span>Versiune nouă disponibilă</span><button onClick={installUpdate} className="rounded-lg bg-white px-4 py-2 font-semibold text-blue-700">Actualizează</button></div>}
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
