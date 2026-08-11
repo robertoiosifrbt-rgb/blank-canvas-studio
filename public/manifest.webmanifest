@@ -1,7 +1,9 @@
 {
   "name": "Tasks & Calendar",
   "short_name": "Tasks",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#f9fafb",
   "theme_color": "#2563eb",
