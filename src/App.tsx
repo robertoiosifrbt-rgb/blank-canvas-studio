@@ -5,16 +5,30 @@ import { MyTasks } from './components/MyTasks';
 import { bootstrapCloudState } from './cloudState';
 import { LifeOSShell } from './lifeos/ui/LifeOSShell';
 import { SkeletonScreen } from './lifeos/ui/SkeletonScreen';
-import { getScreen } from './lifeos/ui/screenRegistry';
+import { getScreen, lifeOSScreens } from './lifeos/ui/screenRegistry';
+
+const screenIds = new Set(lifeOSScreens.map((screen) => screen.id));
+
+const screenFromHash = () => {
+  const id = window.location.hash.replace(/^#\/?/, '');
+  return screenIds.has(id) ? id : 'today';
+};
 
 function App() {
-  const [currentScreen, setCurrentScreen] = useState('today');
+  const [currentScreen, setCurrentScreen] = useState(screenFromHash);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
   const [dataReady, setDataReady] = useState(false);
 
   useEffect(() => {
     void bootstrapCloudState().catch(() => undefined).finally(() => setDataReady(true));
+  }, []);
+
+  useEffect(() => {
+    const onHashChange = () => setCurrentScreen(screenFromHash());
+    window.addEventListener('hashchange', onHashChange);
+    if (!window.location.hash) window.history.replaceState(null, '', '#/today');
+    return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
   useEffect(() => {
@@ -49,6 +63,12 @@ function App() {
     return () => navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
   }, []);
 
+  const navigate = (id: string) => {
+    if (!screenIds.has(id)) return;
+    setCurrentScreen(id);
+    if (window.location.hash !== `#/${id}`) window.location.hash = `/${id}`;
+  };
+
   const installUpdate = () => {
     if (waitingWorker) waitingWorker.postMessage({ type: 'SKIP_WAITING' });
     else window.location.reload();
@@ -64,7 +84,7 @@ function App() {
     if (currentScreen === 'calendar') return <Calendar />;
     if (currentScreen === 'events') return <Events />;
 
-    return <SkeletonScreen screen={getScreen(currentScreen)} onNavigate={setCurrentScreen} />;
+    return <SkeletonScreen screen={getScreen(currentScreen)} onNavigate={navigate} />;
   };
 
   return (
@@ -75,7 +95,7 @@ function App() {
           <button onClick={installUpdate} className="rounded-lg bg-white px-4 py-2 font-semibold text-slate-950">Update</button>
         </div>
       )}
-      <LifeOSShell currentScreen={currentScreen} onNavigate={setCurrentScreen}>
+      <LifeOSShell currentScreen={currentScreen} onNavigate={navigate}>
         {renderScreen()}
       </LifeOSShell>
     </>
