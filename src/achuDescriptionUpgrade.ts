@@ -26,7 +26,6 @@ const sentence = (text: string) => {
 
 const explain = (name: string, groupName: string) => {
   const title = name.trim().replace(/[.]+$/, '');
-  const lower = sentence(title);
 
   const exact: Record<string, string> = {
     'Password reset': 'Permite utilizatorului să solicite resetarea parolei și să seteze în siguranță o parolă nouă prin fluxul de autentificare.',
