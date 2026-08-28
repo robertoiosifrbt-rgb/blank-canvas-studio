@@ -415,6 +415,37 @@ Devine home screen principal.
 
 Arată doar ce contează acum.
 
+## Daily Message / Quote of the Day
+
+Mesaj discret afișat în header-ul ecranului Today, sub greeting.
+
+Exemplu:
+
+`Discipline is choosing between what you want now and what you want most.`
+
+Reguli:
+
+- un singur mesaj pentru întreaga zi;
+- nu se schimbă la refresh sau la redeschiderea aplicației;
+- funcționează și offline;
+- poate proveni dintr-o bibliotecă verificată de quotes reale cu autor, mesaje originale Life OS fără atribuire sau mesaje AI generate și salvate înainte de afișare;
+- selecția de bază poate fi deterministă după dată;
+- userul poate ascunde funcția sau schimba categoria preferată;
+- mai târziu poate deveni context-aware folosind doar contextul relevant din Life OS, fără să pretindă că interpretează starea psihologică a userului;
+- mesajul zilei rămâne separat de AI Daily Brief: Daily Message inspiră, Daily Brief rezumă ziua.
+
+Potential categories:
+
+- focus;
+- discipline;
+- consistency;
+- progress;
+- resilience;
+- perspective;
+- creativity;
+- calm;
+- ambition.
+
 ## Morning
 
 - appointments;
