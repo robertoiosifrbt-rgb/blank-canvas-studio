@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import {
   CalendarDays,
-  CheckSquare2,
+  CheckSquare,
   FolderKanban,
   LayoutDashboard,
   Menu,
@@ -20,7 +20,7 @@ type LifeOSShellProps = {
 
 const mobilePrimary = [
   { id: 'today', label: 'Today', icon: LayoutDashboard },
-  { id: 'tasks', label: 'Tasks', icon: CheckSquare2 },
+  { id: 'tasks', label: 'Tasks', icon: CheckSquare },
   { id: 'calendar', label: 'Calendar', icon: CalendarDays },
   { id: 'projects', label: 'Projects', icon: FolderKanban },
 ];
