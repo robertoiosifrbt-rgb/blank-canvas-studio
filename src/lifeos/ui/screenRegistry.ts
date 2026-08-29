@@ -42,6 +42,8 @@ export const lifeOSScreens: LifeOSScreen[] = [
   { id: 'travel', title: 'Travel', group: 'Life', description: 'Trips, bookings, itinerary and travel tasks.', sections: ['Trips', 'Itinerary', 'Bookings', 'Accommodation', 'Flights', 'Budget', 'Packing', 'Documents'] },
   { id: 'health', title: 'Health & Fitness', group: 'Life', description: 'Organisation for workouts, appointments and progress.', sections: ['Workouts', 'Appointments', 'Measurements', 'Goals', 'Routines', 'Reminders', 'Documents'] },
   { id: 'learning', title: 'Learning', group: 'Life', description: 'Courses, study sessions and learning goals.', sections: ['Courses', 'Lessons', 'Progress', 'Notes', 'Study sessions', 'Deadlines', 'Certificates'] },
+  { id: 'business', title: 'Business', group: 'Life', description: 'Companies and business operations managed inside Life OS.', sections: ['ACHU'] },
+  { id: 'achu', title: 'ACHU', group: 'Life', description: 'ACHU business operating system.', sections: ['Overview', 'Customers', 'Operations', 'Workforce', 'Finance', 'Quality', 'Assets', 'Reports'] },
   { id: 'journal', title: 'Journal', group: 'Life', description: 'Daily journal and historical reflection.', sections: ['Today', 'History', 'Highlights', 'Problems', 'Gratitude', 'Attachments'] },
   { id: 'family', title: 'Family Mode', group: 'Life', description: 'Shared family organisation while preserving private areas.', sections: ['Calendar', 'Chores', 'Shopping', 'Bills', 'Trips', 'Documents'] },
 

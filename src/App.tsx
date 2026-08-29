@@ -5,6 +5,8 @@ import { MyTasks } from './components/MyTasks';
 import { bootstrapCloudState } from './cloudState';
 import { LifeOSShell } from './lifeos/ui/LifeOSShell';
 import { SkeletonScreen } from './lifeos/ui/SkeletonScreen';
+import { BusinessArea } from './lifeos/business/BusinessArea';
+import { AchuApp } from './lifeos/business/achu/AchuApp';
 import { getScreen, lifeOSScreens } from './lifeos/ui/screenRegistry';
 
 const screenIds = new Set(lifeOSScreens.map((screen) => screen.id));
@@ -83,6 +85,8 @@ function App() {
     if (currentScreen === 'myTasks') return <MyTasks />;
     if (currentScreen === 'calendar') return <Calendar />;
     if (currentScreen === 'events') return <Events />;
+    if (currentScreen === 'business') return <BusinessArea onOpenAchu={() => navigate('achu')} />;
+    if (currentScreen === 'achu') return <AchuApp onBack={() => navigate('business')} />;
 
     return <SkeletonScreen screen={getScreen(currentScreen)} onNavigate={navigate} />;
   };
