@@ -235,13 +235,13 @@ export const Tasks = () => {
   const addTask = () => {
     const name = taskForm.name.trim();
     if (!name) return;
-    if (!taskForm.startAt || !taskForm.endAt) return window.alert(ro ? 'Alege data și orele De la – Până la.' : 'Choose the start and end date/time.');
-    if (new Date(taskForm.endAt) <= new Date(taskForm.startAt)) return window.alert(ro ? 'Data finală trebuie să fie după început.' : 'End must be after start.');
+    if ((taskForm.startAt && !taskForm.endAt) || (!taskForm.startAt && taskForm.endAt)) return window.alert(ro ? 'Completează ambele date sau lasă-le pe ambele goale.' : 'Complete both dates or leave both empty.');
+    if (taskForm.startAt && taskForm.endAt && new Date(taskForm.endAt) <= new Date(taskForm.startAt)) return window.alert(ro ? 'Data finală trebuie să fie după început.' : 'End must be after start.');
     setTasks((current) => [{
       id: crypto.randomUUID(),
       name,
       description: taskForm.description.trim(),
-      dueDate: taskForm.startAt.slice(0, 10),
+      dueDate: taskForm.startAt ? taskForm.startAt.slice(0, 10) : '',
       startAt: taskForm.startAt,
       endAt: taskForm.endAt,
       completed: false,
@@ -419,16 +419,16 @@ const ItemDetail = ({ item, groups, calendars, ro, onClose, onDelete, onBack, on
   const progress = countProgress(item);
   const submitChild = () => { const name = childName.trim(); if (name) { onAddChild(name); setChildName(''); } };
   const submitComment = () => { const text = comment.trim(); if (text) { onAddComment(text); setComment(''); } };
-  return <div className="fixed inset-0 z-[100] overflow-y-auto bg-white">
-    <div className="mx-auto min-h-screen max-w-2xl">
+  return <div className="fixed inset-0 z-[100] overflow-x-hidden overflow-y-auto bg-white">
+    <div className="mx-auto min-h-screen w-full min-w-0 max-w-2xl overflow-x-hidden">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-4 py-3">
         <button onClick={onBack} className="p-2 text-gray-600"><ArrowLeft /></button>
         <button onClick={() => onChange({ completed: !item.completed })} className={`flex items-center gap-2 rounded-full border px-4 py-2 font-medium ${item.completed ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300'}`}>{item.completed ? <CheckCircle2 size={20} /> : <Circle size={20} />}{item.completed ? (ro ? 'Finalizat' : 'Completed') : (ro ? 'Marchează finalizat' : 'Mark complete')}</button>
         <div className="flex items-center gap-3"><button onClick={onDelete} className="text-red-500" title={ro ? 'Șterge' : 'Delete'}><Trash2 /></button><MoreHorizontal className="text-gray-500" /><button onClick={onClose}><X /></button></div>
       </header>
       <main className="space-y-0">
-        <section className="border-b p-5"><input value={item.name} onChange={(e) => onChange({ name: e.target.value })} className="w-full border-0 text-2xl font-bold outline-none" /></section>
-        <section className="grid grid-cols-1 gap-4 border-b p-5 sm:grid-cols-2">
+        <section className="min-w-0 border-b p-5"><textarea rows={3} value={item.name} onChange={(e) => onChange({ name: e.target.value })} className="min-h-24 min-w-0 w-full resize-none overflow-y-auto border-0 text-2xl font-bold leading-tight outline-none" /></section>
+        <section className="grid min-w-0 grid-cols-1 gap-4 overflow-hidden border-b p-5 sm:grid-cols-2">
           <label className="text-sm text-gray-500"><span className="flex items-center gap-2"><CalendarDays size={19} />{ro ? 'De la' : 'From'}</span><input type="datetime-local" value={item.startAt} onChange={(e) => onChange({ startAt: e.target.value, dueDate: e.target.value.slice(0, 10) })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900" /></label>
           <label className="text-sm text-gray-500"><span className="flex items-center gap-2"><CalendarDays size={19} />{ro ? 'Până la' : 'To'}</span><input type="datetime-local" value={item.endAt} onChange={(e) => onChange({ endAt: e.target.value })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900" /></label>
           <label className="text-sm text-gray-500"><span className="flex items-center gap-2"><Folder size={19} />{ro ? 'Grup' : 'Group'}</span><select value={item.groupId || ''} onChange={(e) => onChange({ groupId: e.target.value || null })} className="mt-2 w-full rounded-lg border px-3 py-3 text-gray-900"><option value="">{ro ? 'Fără grup' : 'No group'}</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
