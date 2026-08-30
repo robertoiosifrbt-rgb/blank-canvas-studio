@@ -1,11 +1,12 @@
 {
   "name": "tasks-and-calendar",
   "private": true,
+  "workspaces": ["achu-source"],
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && npm --prefix achu-source run build -- --base=/achu-copy/ && cp -R achu-source/dist dist/achu-copy",
     "test": "node --test tests/*.test.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
