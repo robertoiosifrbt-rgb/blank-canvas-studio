@@ -1,5 +1,11 @@
 # Roberto OS
 
+> **Se mută pe React.** Aplicația care rulează azi e cea din `app/`,
+> scrisă fără build. Temelia noii versiuni stă în `os/` — React, TypeScript
+> și Vite, pornită de la aplicația de sală, care intră astfel gata făcută.
+> `os/` are propriile lui reguli, în `os/CLAUDE.md`; regulile de mai jos
+> privesc `app/` cât timp acela e cel publicat.
+
 Panou personal: finanțe, datorii, task-uri, obiceiuri, jurnal și obiective.
 
 ## Regula principală — codul stă în module
