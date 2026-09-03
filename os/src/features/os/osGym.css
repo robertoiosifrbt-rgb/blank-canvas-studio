@@ -1,0 +1,39 @@
+/* Sala, îmbrăcată în hainele OS-ului.
+
+   Ecranele sălii nu sunt rescrise: ele își iau toate culorile din tokenii lor
+   (`--color-*`), iar aici tokenii ăia sunt redefiniți pe containerul gazdă, cu
+   valorile OS-ului. Deci sala se vopsește singură, corect, inclusiv pe temă
+   închisă, pe care ea nu o are. Când sala mai adaugă un ecran, vine deja
+   îmbrăcat — nu e nimic de ținut la zi aici.
+
+   `--color-surface-strong` rămâne cum e: pe el scrie text alb, scris direct în
+   CSS-ul sălii. Schimbat pe o culoare deschisă, textul ar dispărea. */
+
+.os-gym{
+  --color-bg:var(--os-bg);
+  --color-surface:var(--os-surface);
+  --color-surface-alt:var(--os-surface-2);
+  --color-text:var(--os-ink);
+  --color-text-secondary:var(--os-ink-2);
+  --color-border:var(--os-line);
+  --color-accent:var(--os-accent);
+  --color-accent-soft:var(--os-accent-soft);
+  --color-accent-contrast:var(--os-on-accent);
+  --color-danger:var(--os-bad);
+  --color-success:var(--os-good);
+  font-family:var(--os-sans);
+}
+
+/* Găzduită, sala nu-și mai desenează propriul ecran: gazda i-a dat deja o
+   lățime, un fundal și o bară de navigare. Fără astea rămâneau o coloană
+   îngustă centrată în mijlocul paginii, o bandă opacă fixată peste ceas și
+   92px de gol dedesubt, păstrat pentru o bară care nu mai există. */
+.os-gym .app-shell-hosted{
+  max-width:none; width:auto; min-height:0; margin:0; background:none;
+}
+.os-gym .app-shell-hosted::before{display:none}
+.os-gym .app-shell-hosted .app-content{padding:0}
+
+/* În Setările OS-ului, sala și-ar pune propriul titlu „Settings" sub cel al
+   ecranului. Un singur titlu per ecran. */
+.os-gym-settings .page-header{display:none}

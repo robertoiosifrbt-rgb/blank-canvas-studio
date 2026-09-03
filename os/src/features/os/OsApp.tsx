@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import GymApp from '../../app/App'
+import { GymScreens } from '../../app/App'
+import type { Page as GymPage } from '../../app/App'
 import { Dialog, type DialogSpec } from './Dialog'
 import { GoalStrips } from './GoalHero'
 import { coreDialogs } from './dialogsCore'
@@ -17,14 +18,27 @@ import { Tasks } from './screens/Tasks'
 import { Today } from './screens/Today'
 import { deviceToken, setDeviceToken } from './cloud'
 import { useOs } from './useOs'
+import { UnitsProvider } from '../../shared/UnitsProvider'
 import './osTokens.css'
 import './osLayout.css'
 import './osComponents.css'
 import './osScreens.css'
+import './osGym.css'
 
 /* Scurtăturile din bara de jos, aceleași ca înainte de mutarea pe React.
    Gym nu stă aici: e submodul al lui Health și se ajunge la el prin Health. */
 const PINNED = ['azi', 'goals', 'calendar', 'finante']
+
+/* Ecranele sălii, arătate ca submodulele oricărui alt modul. Numele sunt în
+   română pentru că bara asta e a OS-ului; ce scrie înăuntru rămâne al sălii.
+   Setările sălii nu apar aici — au intrat în Setările OS-ului, ca să fie un
+   singur loc de setări în toată aplicația. */
+const GYM_PAGES: Array<{ key: GymPage; name: string }> = [
+  { key: 'home', name: 'Acasă' },
+  { key: 'workout', name: 'Antrenament' },
+  { key: 'body', name: 'Corp' },
+  { key: 'progress', name: 'Poze' },
+]
 
 export function OsApp() {
   const { data, mode, error, update } = useOs()
@@ -37,6 +51,7 @@ export function OsApp() {
   const [dialog, setDialog] = useState<DialogSpec | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
   const [sheet, setSheet] = useState(false)
+  const [gymPage, setGymPage] = useState<GymPage>('home')
 
   const goals = useMemo(() => goalDialogs(data, update), [data, update])
   const core = useMemo(() => coreDialogs(data, update), [data, update])
@@ -54,16 +69,14 @@ export function OsApp() {
   const current = moduleById(data, view)
   const kind = view === '__set' ? 'settings' : current?.kind ?? 'dashboard'
 
-  if (view === 'gym') {
-    return (
-      <div className="os-takeover">
-        <button className="os-back" onClick={() => go('health')}>‹ Înapoi</button>
-        <GymApp />
-      </div>
-    )
-  }
-
   const screen = () => {
+    if (kind === 'gym') {
+      return (
+        <div className="os-gym">
+          <GymScreens hosted page={gymPage} onPage={setGymPage} />
+        </div>
+      )
+    }
     switch (kind) {
       case 'goals': return <Goals data={data}
         onAdd={() => open(goals.add())} onEdit={g => open(goals.edit(g))}
@@ -142,6 +155,7 @@ export function OsApp() {
   const kids = current ? childrenOf(data, current.id) : []
 
   return (
+    <UnitsProvider>
     <div className="os-shell">
       <aside className="os-rail">
         <div className="os-brand"><b>Roberto OS</b></div>
@@ -173,6 +187,14 @@ export function OsApp() {
             {kids.map(c => <button className="os-sub-chip" key={c.id} onClick={() => go(c.id)}>{c.name}</button>)}
           </div>
         ) : null}
+        {kind === 'gym' ? (
+          <div className="os-subs">
+            {GYM_PAGES.map(page => (
+              <button key={page.key} className={`os-chip${gymPage === page.key ? ' on' : ''}`}
+                onClick={() => setGymPage(page.key)}>{page.name}</button>
+            ))}
+          </div>
+        ) : null}
         {screen()}
       </main>
 
@@ -196,5 +218,6 @@ export function OsApp() {
       {dialog ? <Dialog spec={dialog} onClose={() => { setDialog(null); setProblem(null) }} onError={setProblem} /> : null}
       {problem ? <div className="os-toast">{problem}</div> : null}
     </div>
+    </UnitsProvider>
   )
 }

@@ -33,11 +33,6 @@
 .os-chip.on{background:var(--os-accent);border-color:var(--os-accent);color:var(--os-on-accent);font-weight:600}
 .os-chips{display:flex;gap:8px;flex-wrap:wrap}
 
-.os-takeover{min-height:100vh}
-.os-back{position:fixed;top:10px;left:10px;z-index:60;border:1px solid var(--os-line-strong);
-  background:var(--os-surface);color:var(--os-ink);border-radius:20px;padding:7px 14px;
-  font:inherit;font-size:13px;font-weight:600;cursor:pointer}
-
 @media (max-width:860px){
   .os-shell{grid-template-columns:1fr}
   .os-rail{position:fixed;bottom:0;left:0;right:0;top:auto;height:auto;flex-direction:row;

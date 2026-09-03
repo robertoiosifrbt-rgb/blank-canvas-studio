@@ -3,6 +3,7 @@
    de stiluri, și acolo le găsesc și uneltele de dezvoltare. */
 
 :root{
+  color-scheme:light;
   --os-bg:#F4F6F3;
   --os-surface:#FFFFFF;
   --os-surface-2:#EAEEE9;
@@ -30,6 +31,7 @@
 
 @media (prefers-color-scheme:dark){
   :root{
+    color-scheme:dark;
     --os-bg:#0E1512;
     --os-surface:#161E1A;
     --os-surface-2:#1D2723;

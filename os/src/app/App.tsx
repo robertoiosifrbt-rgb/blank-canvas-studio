@@ -19,8 +19,27 @@ type WorkoutSubPage = 'log' | 'exercises'
 /** `null` when the runner is closed; `sessionId` is empty while picking exercises for a new one. */
 type RunnerState = { sessionId: string } | null
 
-function AppScreens() {
-  const [page, setPage] = useState<Page>('home')
+/**
+ * Sala poate rula singură sau găzduită de Roberto OS.
+ *
+ * Găzduită, navigația și titlul vin de la gazdă: bara ei de jos ar fi a doua
+ * bară peste cea a OS-ului, iar bannerul de update ar dubla butonul din
+ * setările OS-ului. Ecranele dinăuntru rămân aceleași — se schimbă doar cine
+ * le încadrează.
+ */
+export interface HostProps {
+  hosted?: boolean
+  page?: Page
+  onPage?: (page: Page) => void
+}
+
+function AppScreens({ hosted = false, page: hostPage, onPage }: HostProps) {
+  const [ownPage, setOwnPage] = useState<Page>('home')
+  const page = hosted ? hostPage ?? 'home' : ownPage
+  const setPage = (next: Page) => {
+    if (hosted) onPage?.(next)
+    else setOwnPage(next)
+  }
   const [workoutSubPage, setWorkoutSubPage] = useState<WorkoutSubPage>('log')
   const [runner, setRunner] = useState<RunnerState>(null)
   const updateAvailable = useVersionCheck()
@@ -56,10 +75,10 @@ function AppScreens() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={hosted ? 'app-shell app-shell-hosted' : 'app-shell'}>
       {/* No global title bar: every screen in the visual target carries its own
           header, so the app name is not repeated above them. See PageHeader. */}
-      {updateAvailable && <UpdateBanner />}
+      {updateAvailable && !hosted && <UpdateBanner />}
 
       <main className="app-content">
         <ErrorBoundary>
@@ -97,7 +116,7 @@ function AppScreens() {
         </ErrorBoundary>
       </main>
 
-      <Nav current={page} onNavigate={setPage} />
+      {!hosted && <Nav current={page} onNavigate={setPage} />}
     </div>
   )
 }
@@ -115,5 +134,9 @@ function App() {
     </UnitsProvider>
   )
 }
+
+/* Fără `UnitsProvider`: gazda îl pune o dată, deasupra a tot, ca setarea de
+   unități schimbată în setările OS-ului să se vadă și în ecranele sălii. */
+export { AppScreens as GymScreens }
 
 export default App

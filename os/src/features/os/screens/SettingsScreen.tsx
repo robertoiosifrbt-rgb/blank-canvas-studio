@@ -1,3 +1,4 @@
+import { SettingsPage as GymSettings } from '../../settings'
 import { Rows, Row, Section } from '../parts'
 import { moduleTree } from '../modules'
 import type { OsData } from '../types'
@@ -98,6 +99,14 @@ export function SettingsScreen({ data, mode, error, token, onCurrency, onToken, 
           </div>
           <button className="os-btn" onClick={onExport}>Exportă tot</button>
         </div>
+      </div>
+
+      {/* Setările sălii, aici, nu într-un al doilea ecran de setări în alt
+          colț al aplicației. Sunt ale ei — unități, profil, importul și
+          exportul antrenamentelor — dar locul de setări e unul singur. */}
+      <Section title="Sală" />
+      <div className="os-gym os-gym-settings">
+        <GymSettings />
       </div>
 
       <Section title="Module" />
