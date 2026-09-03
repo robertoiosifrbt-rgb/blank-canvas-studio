@@ -526,6 +526,21 @@ const Store = {
       }
     }catch(e){}
     state.ready = true;
+    this.seed();
+  },
+  /* Cele două ancore, puse o singură dată. Dacă le ștergi, nu revin. */
+  seed(){
+    if(state.settings.seeded) return;
+    const now = new Date().toISOString();
+    if(!Object.keys(state.goals).length){
+      state.goals = {
+        g100k: {mod:"goals", name:"100k", kind:"sum", target:100000, due:"", main:true,
+                habits:[], contrib:[], createdAt:now},
+        gshape: {mod:"goals", name:"My best shape", kind:"metric", unit:"%", due:"", main:true,
+                habits:[], reads:[], createdAt:now}
+      };
+    }
+    state.settings = Object.assign({}, state.settings, {seeded:true});
   },
   saveLocal(){
     try{
