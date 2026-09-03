@@ -1,5 +1,6 @@
 import { iso, num, today } from './format'
 import { remainingDebt } from './goals'
+import { gymMeasurements, gymSessions } from './gymBridge'
 import type { OsData } from './types'
 
 /** Calendarul nu ține date proprii. Le citește pe ale celorlalte module. */
@@ -23,7 +24,7 @@ export function monthGrid(key: string): DayCell[] {
   return out
 }
 
-export type DayKind = 'task' | 'debt' | 'money' | 'habit' | 'goal'
+export type DayKind = 'task' | 'debt' | 'money' | 'habit' | 'goal' | 'gym'
 export type DayClass = 'acc' | 'good' | 'bad' | 'warn' | 'ochre'
 
 export interface DayItem {
@@ -65,6 +66,18 @@ export function dayItems(data: OsData, date: string): DayItem[] {
     for (const r of g.reads ?? [])
       if (r.date === date) out.push({ kind: 'goal', cls: 'ochre', title: g.name, sub: 'măsurătoare' })
   }
+
+  for (const s of gymSessions())
+    if (s.date === date) out.push({ kind: 'gym', cls: 'acc', title: s.name, sub: 'antrenament' })
+
+  for (const m of gymMeasurements())
+    if (m.date === date) {
+      const parts = [
+        m.weightKg !== undefined ? `${m.weightKg} kg` : '',
+        m.bodyFatPercent !== undefined ? `${m.bodyFatPercent}%` : '',
+      ].filter(Boolean)
+      out.push({ kind: 'gym', cls: 'ochre', title: 'Măsurătoare', sub: parts.join(' · ') || 'corp' })
+    }
 
   return out
 }
