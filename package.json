@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && npm --prefix achu-source run build -- --base=/achu-copy/ && cp -R achu-source/dist dist/achu-copy",
+    "build": "tsc -b && vite build && node scripts/stamp-service-worker.mjs && npm --prefix achu-source run build -- --base=/achu-copy/ && cp -R achu-source/dist dist/achu-copy",
     "test": "node --test tests/*.test.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
