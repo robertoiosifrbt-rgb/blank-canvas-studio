@@ -4,7 +4,7 @@ import { Tasks } from './components/Tasks';
 import { MyTasks } from './components/MyTasks';
 import { bootstrapCloudState } from './cloudState';
 import { LifeOSShell } from './lifeos/ui/LifeOSShell';
-import { SkeletonScreen } from './lifeos/ui/SkeletonScreen';
+import { ConnectedScreen } from './lifeos/ui/ConnectedScreen';
 import { BusinessArea } from './lifeos/business/BusinessArea';
 import { AchuApp } from './lifeos/business/achu/AchuApp';
 import { getScreen, lifeOSScreens } from './lifeos/ui/screenRegistry';
@@ -88,7 +88,7 @@ function App() {
     if (currentScreen === 'business') return <BusinessArea onOpenAchu={() => navigate('achu')} />;
     if (currentScreen === 'achu') return <AchuApp onBack={() => navigate('business')} />;
 
-    return <SkeletonScreen screen={getScreen(currentScreen)} onNavigate={navigate} />;
+    return <ConnectedScreen screen={getScreen(currentScreen)} onNavigate={navigate} />;
   };
 
   return (
