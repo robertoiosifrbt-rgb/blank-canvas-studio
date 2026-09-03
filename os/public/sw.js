@@ -1,5 +1,5 @@
 const CACHE_NAME = 'gym-app-runtime-v3'
-const APP_SCOPE = '/GYM-APP/'
+const APP_SCOPE = '/'
 const APP_SHELL = `${APP_SCOPE}`
 
 self.addEventListener('install', (event) => {

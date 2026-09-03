@@ -1,1 +1,1 @@
-{"name":"Gym App","short_name":"Gym App","start_url":"/GYM-APP/","scope":"/GYM-APP/","display":"standalone","background_color":"#f7f8fb","theme_color":"#f7f8fb","icons":[{"src":"/GYM-APP/favicon.svg","sizes":"any","type":"image/svg+xml"}]}
+{"name":"Roberto OS","short_name":"Roberto OS","start_url":"/","scope":"/","display":"standalone","background_color":"#F4F6F3","theme_color":"#0E6B54","icons":[{"src":"/favicon.svg","sizes":"any","type":"image/svg+xml"}]}
