@@ -1,7 +1,7 @@
 import { BUILTIN, MONTHS_L, svg } from "./config.js";
 import { anchors, gCur, gFmt, gHasTarget, gPct, goalStrip } from "./goals.js";
 import { limitBanner, worstLimit } from "./limits.js";
-import { itemsOf, modById, modules } from "./modules.js";
+import { childrenOf, itemsOf, modById, moduleTree, pathOf } from "./modules.js";
 import { Store } from "./store.js";
 import { state } from "./state.js";
 import { $, daysTo, esc, num, today, ym } from "./util.js";
@@ -50,7 +50,7 @@ export function paintGauge(){
 }
 export const PIN = ["azi","goals","calendar","finante"];
 export function renderNav(){
-  const ms = modules();
+  const ms = moduleTree();
   let h = '<div class="nav-h">Module</div>';
   ms.forEach(m => {
     /* Bulină doar pentru ce cere o acțiune. Câte obiective sau notițe ai
@@ -62,7 +62,7 @@ export function renderNav(){
       const d = state.debts[id];
       return remaining(d) > 0 && d.due && daysTo(d.due) <= 7;
     }).length || "";
-    h += '<a href="#" data-a="go" data-i="'+m.id+'" class="'+(state.view===m.id?"on ":"")+(PIN.includes(m.id)?"mob":"")+'">'+svg(m.kind)+
+    h += '<a href="#" data-a="go" data-i="'+m.id+'" class="'+(state.view===m.id?"on ":"")+(PIN.includes(m.id)?"mob":"")+'" style="--d:'+(m.depth||0)+'">'+svg(m.kind)+
          '<span>'+esc(m.name)+'</span>'+(c?'<span class="cnt num">'+c+'</span>':'')+'</a>';
   });
   h += '<div class="nav-h">Aplicație</div>' +
@@ -79,7 +79,19 @@ export function render(){
   const m = state.view === "__set" ? {kind:"settings"} : (modById(state.view) || BUILTIN[0]);
   const fns = {dashboard:viewDash, finance:viewFinance, debts:viewDebts, tasks:viewTasks, habits:viewHabits, notes:viewNotes, goals:viewGoals, calendar:viewCalendar, settings:viewSettings};
   const body = (fns[m.kind] || viewDash)(m);
-  $("#view").innerHTML = limitBanner() + (m.kind === "dashboard" || m.kind === "goals" ? "" : goalStrip()) + body;
+  const kids = m.id ? childrenOf(m.id) : [];
+  const trail = m.id ? pathOf(m.id) : [];
+  const crumb = trail.length > 1
+    ? '<nav class="crumb">' + trail.map((p, i) => i === trail.length - 1
+        ? '<span>' + esc(p.name) + '</span>'
+        : '<button data-a="go" data-i="' + p.id + '">' + esc(p.name) + '</button><i>›</i>').join("") + '</nav>'
+    : "";
+  const subs = kids.length
+    ? '<div class="subs">' + kids.map(c =>
+        '<button class="sub-chip" data-a="go" data-i="' + c.id + '">' + svg(c.kind) +
+        '<span>' + esc(c.name) + '</span></button>').join("") + '</div>'
+    : "";
+  $("#view").innerHTML = limitBanner() + (m.kind === "dashboard" || m.kind === "goals" ? "" : goalStrip()) + crumb + subs + body;
 }
 export function head(title, sub, actions){
   return '<div class="head"><div><h1>'+esc(title)+'</h1>'+(sub?'<p>'+sub+'</p>':'')+'</div><div class="sp"></div>'+(actions||"")+'</div>';

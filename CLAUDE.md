@@ -25,7 +25,7 @@ Nu e o convenție de bunăvoință.
     app/cloud.js          vorbește cu state-api
     app/store.js          salvare, încărcare, moduri de stocare
     app/limits.js         limitele locului unde rulează
-    app/modules.js        lista de module și elementele lor
+    app/modules.js        arborele de module și elementele lor
     app/goals.js          calculele obiectivelor
     app/calendar.js       aduna ce cade intr-o zi, din toate modulele
     app/ui.js             randare, navigare, bucăți de interfață
@@ -41,6 +41,11 @@ Nu e o convenție de bunăvoință.
 2. `app/actions/nume.js` — exportă `numeActions`, un obiect cu acțiuni
 3. Îl legi în `app/ui.js` (harta `fns`) și în `app/actions.js`
 4. Dacă e un modul vizibil, îl adaugi în `BUILTIN` din `app/config.js`
+
+Modulele formează un arbore: orice modul are un `parent` opțional, pe
+oricâte niveluri. Cele incluse stau la rădăcină. Firul de navigare și
+lista de submodule se randează o singură dată, în `app/ui.js` — nu în
+fiecare ecran.
 
 ## Reguli tehnice
 

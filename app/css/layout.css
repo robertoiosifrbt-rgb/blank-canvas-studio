@@ -28,3 +28,19 @@ main{min-width:0;padding:26px 30px 60px;max-width:1120px}
 .head h1{margin:0;font-size:27px;font-weight:700;letter-spacing:-.025em;text-wrap:balance}
 .head p{margin:3px 0 0;color:var(--ink-2);font-size:14px}
 .head .sp{flex:1}
+
+/* Arborele de module: adancimea vine din --d, pus la randare. */
+.nav a{padding-left:calc(10px + var(--d, 0) * 13px)}
+.nav a[style*="--d:"] svg{opacity:.7}
+
+/* Firul de navigare si submodulele unui modul. */
+.crumb{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.crumb button{color:var(--ink-3);padding:0;font:inherit}
+.crumb button:hover{color:var(--accent-ink);text-decoration:underline}
+.crumb i{color:var(--ink-3);font-style:normal}
+.crumb span{color:var(--ink-2)}
+.subs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.sub-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:20px;
+  border:1px solid var(--line-strong);background:var(--surface);font-size:13.5px;font-weight:500;color:var(--ink-2)}
+.sub-chip:hover{border-color:var(--accent);color:var(--ink)}
