@@ -1,0 +1,20 @@
+/* Stilurile globale ale aplicației de sală, puse într-un strat propriu.
+
+   Aplicația de sală stilează elemente, nu clase: `h1`, `p`, `form`, `input`,
+   `button[type=submit]`. Cât timp era singură în pagină, era în regulă. De
+   când Roberto OS o găzduiește, regulile astea cad și peste ecranele OS-ului,
+   iar `button[type='button']` (0-1-1) bate `.os-btn` (0-1-0), deci OS-ului îi
+   dispăreau titlurile și i se schimbau butoanele și câmpurile.
+
+   `layer(gym)` le lasă exact așa cum sunt, dar mai jos în cascadă decât orice
+   regulă nestratificată. Ordinea și specificitatea din interiorul aplicației
+   de sală rămân neatinse — se schimbă doar cine câștigă în afara ei. Nu am
+   umblat în niciunul din fișierele de mai jos: copia rămâne 1:1. */
+
+@import './styles/tokens.css' layer(gym);
+@import './index.css' layer(gym);
+@import './redesign.css' layer(gym);
+@import './target-shell.css' layer(gym);
+@import './workout-target.css' layer(gym);
+@import './progress-target.css' layer(gym);
+@import './styles/viewportStability.css' layer(gym);

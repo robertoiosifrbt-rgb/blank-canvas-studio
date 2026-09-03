@@ -22,7 +22,9 @@ import './osLayout.css'
 import './osComponents.css'
 import './osScreens.css'
 
-const PINNED = ['azi', 'goals', 'calendar', 'gym']
+/* Scurtăturile din bara de jos, aceleași ca înainte de mutarea pe React.
+   Gym nu stă aici: e submodul al lui Health și se ajunge la el prin Health. */
+const PINNED = ['azi', 'goals', 'calendar', 'finante']
 
 export function OsApp() {
   const { data, mode, error, update } = useOs()
