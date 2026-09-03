@@ -351,7 +351,7 @@ const ICON = {
 };
 function svg(n,s){return '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICON[n]||"")+'</svg>';}
 
-const BUILD = "2026-09-03 · 19:44";
+const BUILD = "2026-09-03 · 19:58";
 const CURRENCIES = {"£":"Liră (£)","€":"Euro (€)","RON":"Leu (RON)","$":"Dolar ($)"};
 const CATS_OUT = ["Casă","Mâncare","Transport","Sănătate","Familie","Business","Abonamente","Distracție","Altele"];
 const CATS_IN  = ["Salariu","Business","Cadou","Vânzare","Altele"];
@@ -467,22 +467,26 @@ const Store = {
     if(this.mode !== "cloud" && Cloud.init()){
       this.loadLocal();          /* arată imediat ce e pe aparat */
       paintMode();
+      let fromCloud = false;
       try{
         const d = await Cloud.load();
         if(d){
           COLLS.forEach(c => { if(c !== "settings" && d[c]) state[c] = d[c]; });
           if(d.settings) state.settings = Object.assign({currency:"£"}, d.settings);
-        } else {
-          await Cloud.save(this.snapshot());   /* prima dată: urcă ce ai local */
+          fromCloud = true;
         }
         this.mode = "state";
       }catch(e){
         this.err = (e && e.message) || "conectare eșuată";
       }
+      /* abia acum, ca datele din cloud să nu șteargă ce tocmai am creat */
+      const made = this.seed();
+      if(made || !fromCloud){ this.saveLocal(); if(this.mode === "state") this.pushCloud(); }
       state.ready = true; paintMode(); render();
       return;
     }
-    if(this.mode === "cloud") this.watch(); else this.loadLocal();
+    if(this.mode === "cloud"){ this.watch(); }
+    else { this.loadLocal(); if(this.seed()) this.saveLocal(); }
     paintMode();
   },
   snapshot(){
@@ -527,11 +531,12 @@ const Store = {
       }
     }catch(e){}
     state.ready = true;
-    this.seed();
   },
-  /* Cele două ancore, puse o singură dată. Dacă le ștergi, nu revin. */
+  /* Cele două ancore, puse o singură dată. Dacă le ștergi, nu revin.
+     Se cheamă DUPĂ ce s-au încărcat datele din cloud — altfel un sertar
+     gol venit din cloud le-ar suprascrie imediat. */
   seed(){
-    if(state.settings.seeded) return;
+    if(state.settings.seedV2) return false;
     const now = new Date().toISOString();
     if(!Object.keys(state.goals).length){
       state.goals = {
@@ -541,7 +546,8 @@ const Store = {
                 habits:[], reads:[], createdAt:now}
       };
     }
-    state.settings = Object.assign({}, state.settings, {seeded:true});
+    state.settings = Object.assign({}, state.settings, {seedV2:true});
+    return true;
   },
   saveLocal(){
     try{
@@ -622,7 +628,7 @@ function limits(){
   } else {
     let used = 0;
     try{ used = bytes(localStorage.getItem(LS_KEY) || ""); }catch(e){}
-    out.push({key:"ls", label:"Spațiu în browser", used, max:LS_MAX, show:kb(used) + " / ~5 MB",
+    out.push({key:"ls", label:"Spațiu folosit", used, max:LS_MAX, show:kb(used),
       why: Store.mode === "state"
         ? "Datele stau oglindite aici, ca aplicația să meargă și fără internet."
         : "Tot ce salvezi stă în browserul acestui aparat, nicăieri altundeva.",
