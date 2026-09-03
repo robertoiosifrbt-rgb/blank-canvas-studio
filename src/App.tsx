@@ -44,7 +44,7 @@ function App() {
     };
 
     navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
-    void navigator.serviceWorker.register('/sw.js').then((registration) => {
+    void navigator.serviceWorker.register(new URL('sw.js', document.baseURI).href).then((registration) => {
       const showUpdate = (worker: ServiceWorker | null) => {
         if (worker) {
           setWaitingWorker(worker);
