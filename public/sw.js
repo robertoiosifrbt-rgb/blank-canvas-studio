@@ -1,7 +1,7 @@
 const BASE_PATH = new URL(self.registration.scope).pathname;
 const asset = (path = '') => `${BASE_PATH}${path}`;
 
-const CACHE_NAME = 'tasks-calendar-v10';
+const CACHE_NAME = 'tasks-calendar-v11';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll([asset(), asset('manifest.webmanifest'), asset('icon.svg')])));
