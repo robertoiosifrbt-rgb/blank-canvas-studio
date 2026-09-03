@@ -351,7 +351,7 @@ const ICON = {
 };
 function svg(n,s){return '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICON[n]||"")+'</svg>';}
 
-const BUILD = "2026-09-03 · 19:58";
+const BUILD = "2026-09-03 · 20:07";
 const CURRENCIES = {"£":"Liră (£)","€":"Euro (€)","RON":"Leu (RON)","$":"Dolar ($)"};
 const CATS_OUT = ["Casă","Mâncare","Transport","Sănătate","Familie","Business","Abonamente","Distracție","Altele"];
 const CATS_IN  = ["Salariu","Business","Cadou","Vânzare","Altele"];
@@ -703,12 +703,15 @@ function renderNav(){
   const ms = modules();
   let h = '<div class="nav-h">Module</div>';
   ms.forEach(m => {
+    /* Bulină doar pentru ce cere o acțiune. Câte obiective sau notițe ai
+       nu e o sarcină, deci n-are ce sta aprins permanent. */
     let c = "";
     if(m.kind === "tasks")  c = itemsOf("tasks", m.id).filter(t => !t.done).length || "";
-    if(m.kind === "notes")  c = itemsOf("notes", m.id).length || "";
-    if(m.kind === "habits") c = itemsOf("habits", m.id).length || "";
-    if(m.kind === "debts")  c = Object.keys(state.debts).filter(id => remaining(state.debts[id]) > 0).length || "";
-    if(m.kind === "goals")  c = goalsAll().filter(g => (g.mod||"goals") === m.id).length || "";
+    if(m.kind === "habits") c = itemsOf("habits", m.id).filter(h => !(h.log||{})[today()]).length || "";
+    if(m.kind === "debts")  c = Object.keys(state.debts).filter(id => {
+      const d = state.debts[id];
+      return remaining(d) > 0 && d.due && daysTo(d.due) <= 7;
+    }).length || "";
     h += '<a href="#" data-a="go" data-i="'+m.id+'" class="'+(state.view===m.id?"on ":"")+(PIN.includes(m.id)?"mob":"")+'">'+svg(m.kind)+
          '<span>'+esc(m.name)+'</span>'+(c?'<span class="cnt num">'+c+'</span>':'')+'</a>';
   });
