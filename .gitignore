@@ -2,12 +2,10 @@ node_modules/
 dist/
 *.local
 .DS_Store
-package-lock.json
 vite.config.js
 
 # TypeScript
 *.tsbuildinfo
-*.d.ts
 
 # Vite
 .vite/
