@@ -6,6 +6,8 @@ Panou personal: finanțe, datorii, task-uri, obiceiuri, jurnal și obiective.
 
 **Un fișier = o singură responsabilitate. Maxim 300 de linii.**
 
+Se aplică la fel pentru `.js` și pentru `.css`.
+
 Când un fișier se apropie de limită, se sparge — nu se umflă. Un modul nou de
 aplicație înseamnă un fișier nou, nu încă o secțiune într-unul existent.
 
@@ -16,7 +18,7 @@ Nu e o convenție de bunăvoință.
 ## Structura
 
     index.html            doar scheletul + <script type="module">
-    app/styles.css        tot CSS-ul
+    app/css/*.css         CSS-ul, spart pe roluri
     app/state.js          starea. FĂRĂ importuri — altfel apar cicluri
     app/config.js         constante, icoane, monede, versiunea
     app/util.js           date, sume, escape, ajutoare mici

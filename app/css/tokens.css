@@ -1,0 +1,40 @@
+/* Culori, tipografie si cele trei stari de tema. */
+
+:root{
+  --bg:#F4F6F3; --surface:#FFFFFF; --surface-2:#EAEEE9; --surface-3:#E0E6DF;
+  --line:#D6DDD6; --line-strong:#BCC6BC;
+  --ink:#16201B; --ink-2:#57635C; --ink-3:#87938B;
+  --accent:#0E6B54; --accent-ink:#0B5744; --accent-soft:#DCEDE6; --on-accent:#FFFFFF;
+  --ochre:#9C6416; --ochre-soft:#F5E7D2;
+  --good:#1B7F4B; --good-soft:#DBEFE2;
+  --warn:#9A6608; --warn-soft:#F7E8CC;
+  --bad:#A93B2B; --bad-soft:#F7DFDA;
+  --shadow:0 1px 2px rgba(22,32,27,.05), 0 8px 24px -12px rgba(22,32,27,.18);
+  --radius:12px; --rail:236px;
+  --f-sans:'Archivo','Segoe UI',system-ui,-apple-system,sans-serif;
+  --f-mono:'IBM Plex Mono','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1512; --surface:#161E1A; --surface-2:#1D2723; --surface-3:#25302B;
+    --line:#293430; --line-strong:#3A4741;
+    --ink:#E6EBE7; --ink-2:#9CA9A2; --ink-3:#6D7B74;
+    --accent:#3FBF95; --accent-ink:#5FD4AE; --accent-soft:#14332A; --on-accent:#08130F;
+    --ochre:#D9A05B; --ochre-soft:#332614;
+    --good:#4CC98A; --good-soft:#123326;
+    --warn:#E0AE5A; --warn-soft:#332714;
+    --bad:#E8735E; --bad-soft:#3A1F1A;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -14px rgba(0,0,0,.75);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1512; --surface:#161E1A; --surface-2:#1D2723; --surface-3:#25302B;
+  --line:#293430; --line-strong:#3A4741;
+  --ink:#E6EBE7; --ink-2:#9CA9A2; --ink-3:#6D7B74;
+  --accent:#3FBF95; --accent-ink:#5FD4AE; --accent-soft:#14332A; --on-accent:#08130F;
+  --ochre:#D9A05B; --ochre-soft:#332614;
+  --good:#4CC98A; --good-soft:#123326;
+  --warn:#E0AE5A; --warn-soft:#332714;
+  --bad:#E8735E; --bad-soft:#3A1F1A;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -14px rgba(0,0,0,.75);
+}

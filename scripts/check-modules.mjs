@@ -10,13 +10,13 @@ function walk(dir) {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
     if (statSync(p).isDirectory()) walk(p);
-    else if (name.endsWith(".js")) {
+    else if (name.endsWith(".js") || name.endsWith(".css")) {
       const n = readFileSync(p, "utf8").split("\n").length;
       if (n > MAX) problems.push(`${p}: ${n} linii, peste limita de ${MAX}`);
     }
   }
 }
-walk("app");
+walk("app");   /* .js si .css, la fel */
 
 const html = readFileSync("index.html", "utf8");
 if (/<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?\S[\s\S]*?<\/script>/.test(html))
