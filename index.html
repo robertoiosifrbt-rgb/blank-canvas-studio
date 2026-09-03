@@ -291,7 +291,9 @@ label.fld>span{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;tex
   .modal footer .btn{width:100%;justify-content:center;padding:12px}
   .hero{padding:14px 15px;gap:11px}
   .heroes{grid-template-columns:1fr;gap:10px}
+  /* pe coloană, flex:1 ar întinde banda pe toată înălțimea rămasă */
   .strips{flex-direction:column;gap:8px}
+  .strips .strip{flex:0 0 auto;width:100%}
   .hero-main{gap:13px}
   .hero .cur{font-size:21px}
   .ringwrap,.ring{width:54px;height:54px}
@@ -365,7 +367,7 @@ const ICON = {
 };
 function svg(n,s){return '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICON[n]||"")+'</svg>';}
 
-const BUILD = "2026-09-03 · 20:22";
+const BUILD = "2026-09-03 · 20:31";
 const CURRENCIES = {"£":"Liră (£)","€":"Euro (€)","RON":"Leu (RON)","$":"Dolar ($)"};
 const CATS_OUT = ["Casă","Mâncare","Transport","Sănătate","Familie","Business","Abonamente","Distracție","Altele"];
 const CATS_IN  = ["Salariu","Business","Cadou","Vânzare","Altele"];
