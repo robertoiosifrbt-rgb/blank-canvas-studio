@@ -351,7 +351,7 @@ const ICON = {
 };
 function svg(n,s){return '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICON[n]||"")+'</svg>';}
 
-const BUILD = "2026-09-03 · 19:35";
+const BUILD = "2026-09-03 · 19:44";
 const CURRENCIES = {"£":"Liră (£)","€":"Euro (€)","RON":"Leu (RON)","$":"Dolar ($)"};
 const CATS_OUT = ["Casă","Mâncare","Transport","Sănătate","Familie","Business","Abonamente","Distracție","Altele"];
 const CATS_IN  = ["Salariu","Business","Cadou","Vânzare","Altele"];
@@ -602,26 +602,31 @@ function biggestDoc(){
   });
   return best;
 }
+/* Limitele diferă după locul în care rulează aplicația. Arătăm doar
+   pe cele care chiar se aplică aici. */
 function limits(){
   const out = [];
-  const docs = Store.count();
-  out.push({key:"docs", label:"Fișe în bază", used:docs, max:DOCS_MAX,
-    show:docs.toLocaleString("ro-RO") + " / " + DOCS_MAX.toLocaleString("ro-RO"),
-    why:"Fiecare task, notiță, obicei, datorie sau lună de finanțe e o fișă.",
-    fix:"Exportă și șterge ce nu-ți mai trebuie."});
-  const big = biggestDoc();
-  if(big) out.push({key:"doc", label:"Cea mai mare fișă", used:big.size, max:DOC_MAX,
-    show:kb(big.size) + " / 256 KB", detail:big.label,
-    why:"O singură fișă nu poate depăși 256 KB. „" + big.label + "” e cea mai plină.",
-    fix: big.coll === "finance" ? "Șterge mișcări vechi din luna aceea."
-       : big.coll === "habits"  ? "Bifele de zeci de ani se adună — șterge obiceiul vechi și fă-l din nou."
-       : "Scurtează conținutul sau împarte-l în două."});
-  if(Store.mode !== "cloud"){   /* și în modul state datele stau oglindite local */
+  if(Store.mode === "cloud"){
+    const docs = Store.count();
+    out.push({key:"docs", label:"Fișe în bază", used:docs, max:DOCS_MAX,
+      show:docs.toLocaleString("ro-RO") + " / " + DOCS_MAX.toLocaleString("ro-RO"),
+      why:"Fiecare task, notiță, obicei, datorie sau lună de finanțe e o fișă.",
+      fix:"Exportă și șterge ce nu-ți mai trebuie."});
+    const big = biggestDoc();
+    if(big) out.push({key:"doc", label:"Cea mai mare fișă", used:big.size, max:DOC_MAX,
+      show:kb(big.size) + " / 256 KB", detail:big.label,
+      why:"O singură fișă nu poate depăși 256 KB. „" + big.label + "” e cea mai plină.",
+      fix: big.coll === "finance" ? "Șterge mișcări vechi din luna aceea."
+         : big.coll === "habits"  ? "Bifele de zeci de ani se adună — șterge obiceiul vechi și fă-l din nou."
+         : "Scurtează conținutul sau împarte-l în două."});
+  } else {
     let used = 0;
     try{ used = bytes(localStorage.getItem(LS_KEY) || ""); }catch(e){}
     out.push({key:"ls", label:"Spațiu în browser", used, max:LS_MAX, show:kb(used) + " / ~5 MB",
-      why:"Fără sincronizare, tot ce salvezi stă în browserul acestui aparat.",
-      fix:"Exportă acum. Dacă se umple, browserul refuză să mai salveze."});
+      why: Store.mode === "state"
+        ? "Datele stau oglindite aici, ca aplicația să meargă și fără internet."
+        : "Tot ce salvezi stă în browserul acestui aparat, nicăieri altundeva.",
+      fix:"Exportă din când în când. Dacă se umple, browserul refuză să mai salveze."});
   }
   out.forEach(l => l.pct = Math.min(100, l.used/l.max*100));
   return out;
@@ -1291,9 +1296,13 @@ function viewSettings(){
     '<span'+(l.pct>=90?' style="color:var(--bad)"':l.pct>=75?' style="color:var(--warn)"':'')+'>'+esc(l.show)+' · '+l.pct.toFixed(l.pct<1?1:0)+'%</span></div>' +
     '<div class="gauge-bar"><i style="width:'+Math.max(1.5,l.pct)+'%;background:'+(l.pct>=90?'var(--bad)':l.pct>=75?'var(--warn)':'var(--accent)')+'"></i></div>' +
     '<p>'+esc(l.why)+' <b style="font-weight:600;color:var(--ink-2)">'+esc(l.fix)+'</b></p></div>').join("") +
-    (cloud ? '<p style="margin:14px 0 0;padding-top:13px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-3);line-height:1.5">' +
-      'Există și o a treia limită — spațiul din browser — dar apare doar când folosești aplicația fără sincronizare. ' +
-      'Fiind sincronizat, datele tale stau pe server, deci nu te privește.</p>' : '') + '</div>';
+    '<p style="margin:14px 0 0;padding-top:13px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-3);line-height:1.5">' +
+    (cloud
+      ? 'Aici datele stau pe serverul Claude, deci contează numărul de fișe și mărimea fiecăreia. Spațiul din browser nu te privește.'
+      : Store.mode === "state"
+      ? 'Aici datele stau în baza ta de date, iar browserul le ține doar ca oglindă. Nu există limită de număr de fișe — mărimea totală o hotărăște funcția ta, și n-o pot citi de aici.'
+      : 'Aici datele stau doar în browser. Nu există limită de număr de fișe, doar spațiul de mai sus.') +
+    '</p></div>';
 
   h += sec("Datele tale");
   h += '<div class="card pad" style="display:flex;flex-direction:column;gap:14px">' +
