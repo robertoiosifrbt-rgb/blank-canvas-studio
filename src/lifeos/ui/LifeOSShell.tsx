@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   CalendarDays,
   CheckSquare,
@@ -42,6 +42,17 @@ export function LifeOSShell({ currentScreen, onNavigate, children }: LifeOSShell
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        go('search');
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-20 lg:pb-0">
       <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
@@ -58,7 +69,7 @@ export function LifeOSShell({ currentScreen, onNavigate, children }: LifeOSShell
             <span className="truncate">Search Life OS</span>
             <span className="ml-auto hidden rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] sm:inline">⌘K</span>
           </button>
-          <button className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">+ Create</button>
+          <button onClick={() => go('inbox')} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">+ Create</button>
         </div>
       </header>
 
