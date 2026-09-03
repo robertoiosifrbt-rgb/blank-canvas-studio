@@ -19,8 +19,8 @@
   --good:#1B7F4B; --good-soft:#DBEFE2;
   --warn:#9A6608; --warn-soft:#F7E8CC;
   --bad:#A93B2B; --bad-soft:#F7DFDA;
-  --shadow:0 1px 2px rgba(22,32,27,.06), 0 4px 14px rgba(22,32,27,.05);
-  --radius:10px; --rail:236px;
+  --shadow:0 1px 2px rgba(22,32,27,.05), 0 8px 24px -12px rgba(22,32,27,.18);
+  --radius:12px; --rail:236px;
   --f-sans:'Archivo','Segoe UI',system-ui,-apple-system,sans-serif;
   --f-mono:'IBM Plex Mono','SF Mono',ui-monospace,Menlo,Consolas,monospace;
 }
@@ -34,7 +34,7 @@
     --good:#4CC98A; --good-soft:#123326;
     --warn:#E0AE5A; --warn-soft:#332714;
     --bad:#E8735E; --bad-soft:#3A1F1A;
-    --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -14px rgba(0,0,0,.75);
   }
 }
 :root[data-theme="dark"]{
@@ -46,7 +46,7 @@
   --good:#4CC98A; --good-soft:#123326;
   --warn:#E0AE5A; --warn-soft:#332714;
   --bad:#E8735E; --bad-soft:#3A1F1A;
-  --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -14px rgba(0,0,0,.75);
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
@@ -121,7 +121,8 @@ label.fld>span{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;tex
 
 /* ---------- stat tiles ---------- */
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px}
-.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;gap:5px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;gap:5px;box-shadow:0 1px 2px rgba(22,32,27,.04)}
+:root[data-theme="dark"] .tile,:root:not([data-theme="light"]) .tile{box-shadow:none}
 .tile .k{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
 .tile .v{font-family:var(--f-mono);font-size:23px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .tile .s{font-size:12.5px;color:var(--ink-2)}
@@ -129,7 +130,7 @@ label.fld>span{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;tex
 .v.good{color:var(--good)} .v.bad{color:var(--bad)} .v.warn{color:var(--warn)}
 
 /* ---------- rows ---------- */
-.rows{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.rows{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:0 1px 2px rgba(22,32,27,.04)}
 .row{display:flex;align-items:center;gap:12px;padding:11px 15px;border-bottom:1px solid var(--line)}
 .row:last-child{border-bottom:none}
 .row:hover{background:var(--surface-2)}
@@ -213,18 +214,30 @@ label.fld>span{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;tex
 .chip{padding:7px 12px;border-radius:20px;border:1px solid var(--line-strong);background:var(--surface);font-size:13.5px;font-weight:500;color:var(--ink-2)}
 .chip:hover{border-color:var(--accent);color:var(--ink)}
 .chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
-.hero{background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;padding:19px 21px;display:flex;flex-direction:column;gap:14px;margin-bottom:6px}
-.hero-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.hero .cur{font-family:var(--f-mono);font-size:33px;font-weight:600;color:var(--accent-ink);letter-spacing:-.025em;font-variant-numeric:tabular-nums}
-.hero .of{font-size:13.5px;color:var(--ink-2)}
-.hero .pc{margin-left:auto;font-family:var(--f-mono);font-size:25px;font-weight:600;color:var(--accent-ink);font-variant-numeric:tabular-nums}
-.hero-name{font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);opacity:.8}
-.hero-bar{height:9px;background:var(--surface);border-radius:5px;overflow:hidden}
-.hero-bar i{display:block;height:100%;background:var(--accent);border-radius:5px}
-.hero-facts{display:flex;gap:26px;flex-wrap:wrap}
+.hero{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--line);
+  border-radius:14px;padding:15px 17px;display:flex;flex-direction:column;gap:13px;margin-bottom:6px;
+  box-shadow:0 1px 2px rgba(22,32,27,.05), 0 6px 18px -8px rgba(22,32,27,.14)}
+.hero::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 90% at 0% 0%, var(--accent-soft) 0%, transparent 62%)}
+.hero>*{position:relative}
+.hero-main{display:flex;align-items:center;gap:15px}
+.hero-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.hero-name{font-family:var(--f-mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--ink-3);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.hero .cur{font-family:var(--f-mono);font-size:23px;font-weight:600;letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;line-height:1.15;overflow-wrap:anywhere}
+.hero .of{font-size:12.5px;color:var(--ink-2)}
+.ringwrap{position:relative;width:62px;height:62px;flex:none;display:grid;place-items:center}
+.ring{width:62px;height:62px;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:5;stroke-linecap:round}
+.ring .bg{stroke:var(--surface-3)}
+.ring .fg{stroke:var(--accent);transition:stroke-dashoffset .7s cubic-bezier(.22,.7,.3,1)}
+.ringpct{position:absolute;font-family:var(--f-mono);font-size:13px;font-weight:600;
+  color:var(--accent-ink);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.hero-facts{display:flex;gap:8px 20px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:11px}
 .hero-facts div{display:flex;flex-direction:column;gap:1px}
-.hero-facts b{font-family:var(--f-mono);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
-.hero-facts span{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
+.hero-facts b{font-family:var(--f-mono);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.hero-facts span{font-family:var(--f-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
 .strip{display:flex;align-items:center;gap:12px;padding:9px 14px;background:var(--surface);border:1px solid var(--line);border-radius:9px;margin-bottom:18px;width:100%;text-align:left}
 .strip:hover{border-color:var(--accent)}
 .strip .lbl{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
@@ -276,13 +289,14 @@ label.fld>span{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;tex
   .modal{max-width:none;border-radius:16px 16px 0 0;border-bottom:none;max-height:92vh;overflow-y:auto}
   .modal footer{flex-direction:column-reverse;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
   .modal footer .btn{width:100%;justify-content:center;padding:12px}
-  .hero{padding:16px 17px}
-  .heroes{grid-template-columns:1fr}
+  .hero{padding:14px 15px;gap:11px}
+  .heroes{grid-template-columns:1fr;gap:10px}
   .strips{flex-direction:column;gap:8px}
-  .hero .cur{font-size:26px}
-  .hero .pc{font-size:20px}
-  .hero .of{order:3;flex-basis:100%;margin-top:-6px}
-  .hero-facts{gap:18px}
+  .hero-main{gap:13px}
+  .hero .cur{font-size:21px}
+  .ringwrap,.ring{width:54px;height:54px}
+  .ringpct{font-size:12px}
+  .hero-facts{gap:6px 16px;padding-top:10px}
   .hcell{width:30px;height:30px;border-radius:7px}
   .hlabels em{width:30px;font-size:10px}
   .hrow{gap:11px}
@@ -351,7 +365,7 @@ const ICON = {
 };
 function svg(n,s){return '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICON[n]||"")+'</svg>';}
 
-const BUILD = "2026-09-03 · 20:07";
+const BUILD = "2026-09-03 · 20:22";
 const CURRENCIES = {"£":"Liră (£)","€":"Euro (€)","RON":"Leu (RON)","$":"Dolar ($)"};
 const CATS_OUT = ["Casă","Mâncare","Transport","Sănătate","Familie","Business","Abonamente","Distracție","Altele"];
 const CATS_IN  = ["Salariu","Business","Cadou","Vânzare","Altele"];
@@ -867,21 +881,33 @@ function goalStatus(g, isAnchor){
 }
 
 /* ── panourile mari, unul per ancoră ── */
+/* Inel de progres — ocupă mult mai puțin decât o bară lată. */
+function ring(pct, ready){
+  const C = 2 * Math.PI * 26;
+  const off = C * (1 - Math.max(0, Math.min(100, pct)) / 100);
+  return '<div class="ringwrap"><svg class="ring" viewBox="0 0 62 62" aria-hidden="true">' +
+    '<circle class="bg" cx="31" cy="31" r="26"></circle>' +
+    '<circle class="fg" cx="31" cy="31" r="26" stroke-dasharray="'+C.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"></circle>' +
+    '</svg><b class="ringpct">'+(ready ? pct.toFixed(pct < 10 && pct > 0 ? 1 : 0) + "%" : "—")+'</b></div>';
+}
 function goalHero(g, acts){
   const st = goalStatus(g, true), pct = gPct(g), ready = gHasTarget(g);
-  let h = '<div class="hero"><span class="hero-name">'+esc(g.name)+
-    (st?' · <span class="pill '+st.cls+'" style="vertical-align:middle">'+st.txt+'</span>':'')+'</span>';
+  let h = '<div class="hero"><div class="hero-main">' + ring(pct, ready) +
+    '<div class="hero-txt"><span class="hero-name">'+esc(g.name)+
+    (st?'<span class="pill '+st.cls+'">'+st.txt+'</span>':'')+'</span>';
   if(!ready){
-    h += '<p style="margin:0;font-size:14px;color:var(--ink-2);line-height:1.55">Pune punctul de plecare și ținta, ca să pot urmări progresul și să-ți spun ritmul.</p>' +
+    h += '<span class="of">Pune punctul de plecare și ținta, ca să-ți pot urmări progresul.</span></div></div>' +
       '<div><button class="btn sm" data-a="gedit" data-i="'+g.id+'">Completează</button></div></div>';
     return h;
   }
-  h += '<div class="hero-top"><span class="cur">'+gFmt(g, gCur(g))+'</span>' +
+  h += '<span class="cur">'+gFmt(g, gCur(g))+'</span>' +
     '<span class="of">'+(gKind(g)==="sum"?"din ":"→ ")+gFmt(g, num(g.target))+(g.due?' · până în '+dLabel(g.due):'')+'</span>' +
-    '<span class="pc">'+pct.toFixed(pct < 10 ? 1 : 0)+'%</span></div>' +
-    '<div class="hero-bar"><i style="width:'+Math.max(pct,0.8)+'%"></i></div>' +
-    '<div class="hero-facts">' + goalFacts(g, true).map(f => '<div><b>'+f.v+'</b><span>'+esc(f.k)+'</span></div>').join("") + '</div>';
-  if(acts) h += '<div style="display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--accent);padding-top:12px">' +
+    '</div></div>';
+  /* pe „Azi" ținem doar esențialul; detaliile stau pe ecranul Goals */
+  const facts = goalFacts(g, true).slice(0, acts ? 99 : 2);
+  if(facts.length) h += '<div class="hero-facts">' +
+    facts.map(f => '<div><b>'+f.v+'</b><span>'+esc(f.k)+'</span></div>').join("") + '</div>';
+  if(acts) h += '<div style="display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:11px">' +
     '<button class="btn sm" data-a="'+(gKind(g)==="sum"?"gcon":"gread")+'" data-i="'+g.id+'">'+svg("plus")+(gKind(g)==="sum"?"Contribuție":"Măsurătoare")+'</button>' +
     '<button class="btn ghost sm" data-a="gedit" data-i="'+g.id+'">Modifică</button>' +
     '<button class="icon-btn del" style="margin-left:auto" data-a="gdel" data-i="'+g.id+'" aria-label="Șterge">'+svg("trash")+'</button></div>';
