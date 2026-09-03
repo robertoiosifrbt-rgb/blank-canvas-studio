@@ -72,6 +72,18 @@ export function SettingsScreen({ data, mode, error, token, onCurrency, onToken, 
           <span className={`os-pill ${mode === 'cloud' ? 'good' : 'warn'}`}>{mode === 'cloud' ? 'cloud propriu' : 'local'}</span>
         </div>
 
+        <div className="os-split">
+          <div>
+            <b>Datele de la sală</b>
+            <span className="os-muted">
+              {mode === 'cloud'
+                ? 'Antrenamentele, exercițiile și măsurătorile merg în același cloud, în sertarul lor. Pozele de progres rămân pe aparat — sunt prea mari și se salvează doar prin exportul din setările sălii.'
+                : 'Cât timp cloud-ul nu răspunde, sala scrie doar pe aparatul ăsta.'}
+            </span>
+          </div>
+          <span className={`os-pill ${mode === 'cloud' ? 'good' : 'warn'}`}>{mode === 'cloud' ? 'sincronizat' : 'local'}</span>
+        </div>
+
         <div>
           <b>Cod de sincronizare</b>
           <span className="os-muted">Pune același cod pe telefon și pe laptop ca să vezi aceleași date.</span>

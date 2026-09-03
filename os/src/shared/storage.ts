@@ -110,6 +110,23 @@ export function readJson<T>(key: string, fallback: T, recover: Recover<T>): Read
   return { value, error: null }
 }
 
+/**
+ * Cine vrea să afle că s-a scris ceva în stocare.
+ *
+ * Sincronizarea în cloud a Roberto OS ascultă aici. Alternativele erau să
+ * întrebe periodic dacă s-a schimbat ceva, sau ca aplicația asta să știe de
+ * existența cloud-ului — niciuna bună. Un abonament e destul: aici trece
+ * oricum fiecare scriere.
+ */
+const writeListeners = new Set<(key: string) => void>()
+
+export function onWrite(listener: (key: string) => void): () => void {
+  writeListeners.add(listener)
+  return () => {
+    writeListeners.delete(listener)
+  }
+}
+
 export function writeJson(key: string, value: unknown): WriteResult {
   let serialized: string
   try {
@@ -120,6 +137,7 @@ export function writeJson(key: string, value: unknown): WriteResult {
 
   try {
     localStorage.setItem(key, serialized)
+    for (const listener of writeListeners) listener(key)
     return { ok: true }
   } catch (error) {
     if (isQuotaError(error)) {
