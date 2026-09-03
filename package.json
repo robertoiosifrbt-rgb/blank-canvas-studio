@@ -1,0 +1,36 @@
+{
+  "name": "tasks-and-calendar",
+  "private": true,
+  "workspaces": ["achu-source"],
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build && node scripts/stamp-service-worker.mjs && npm --prefix achu-source run build -- --base=/achu-copy/ && cp -R achu-source/dist dist/achu-copy",
+    "test": "node --test tests/*.test.mjs",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "i18next": "^23.7.6",
+    "react-i18next": "^14.0.0",
+    "lucide-react": "^0.263.1"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "latest",
+    "eslint": "^8.55.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "postcss": "latest",
+    "tailwindcss": "^3.4.17",
+    "typescript": "~5.7.2",
+    "vite": "^5.4.10"
+  }
+}

@@ -1,0 +1,320 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@300;400;500;600;700&display=swap");
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 92%;
+    --foreground: 0 0% 6%;
+
+    /* Sesiunea 28: --card was 92%, identical to --background, so every card in
+       the app sat flush against the page with only a hairline border to define
+       it — the main reason the Dashboard read as one undifferentiated wash
+       ("e cam amestecata"). White cards on the 92% grey give grouping actual
+       depth, app-wide, without touching a single component. */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 6%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 6%;
+
+    --primary: 225 91% 34%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 223 63% 77%;
+    --secondary-foreground: 0 0% 4%;
+
+    --muted: 0 0% 88%;
+    --muted-foreground: 0 0% 38%;
+
+    --accent: 216 89% 41%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 84% 48%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 83%;
+    --input: 0 0% 83%;
+    --ring: 225 91% 34%;
+
+    --chart-1: 225 91% 34%;
+    --chart-2: 12 70% 55%;
+    --chart-3: 173 70% 55%;
+    --chart-4: 257 70% 55%;
+    --chart-5: 43 70% 55%;
+
+    --radius: 1.3rem;
+
+    --sidebar-background: 0 0% 92%;
+    --sidebar-foreground: 0 0% 6%;
+    --sidebar-primary: 225 91% 34%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 216 89% 41%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 83%;
+    --sidebar-ring: 225 91% 34%;
+
+    --font-sans: 'Inter', 'Helvetica Neue', sans-serif;
+    --font-mono: 'Fira Code', monospace;
+    /* Sesiunea 57 (ACHU-256). Every shadow variable was 0, so the whole shadow
+       system below computed to nothing and every card sat flat against the page.
+       Sesiunea 28 had already fixed half of this by making cards white against a
+       grey background; this is the other half. Kept deliberately soft — a
+       business tool read on a phone in a van does not want drama, it wants
+       things to look like they are *on* the page rather than printed into it. */
+    --shadow-x: 0px;
+    --shadow-y: 1px;
+    --shadow-blur: 3px;
+    --shadow-spread: 0px;
+    --shadow-opacity: 0.10;
+    --shadow-color: #000000;
+    --shadow-rgb: 0 0 0;
+
+    --shadow-2xs: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) rgb(var(--shadow-rgb) / calc(var(--shadow-opacity) * 0.5));
+    --shadow-xs: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) rgb(var(--shadow-rgb) / calc(var(--shadow-opacity) * 0.5));
+    --shadow-sm: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) rgb(var(--shadow-rgb) / var(--shadow-opacity)), var(--shadow-x) calc(var(--shadow-y) / 4) calc(var(--shadow-blur) / 2) calc(var(--shadow-spread) - 1px) rgb(var(--shadow-rgb) / var(--shadow-opacity));
+    --shadow: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) rgb(var(--shadow-rgb) / var(--shadow-opacity)), var(--shadow-x) calc(var(--shadow-y) / 2) calc(var(--shadow-blur) / 2) calc(var(--shadow-spread) - 1px) rgb(var(--shadow-rgb) / var(--shadow-opacity));
+    --shadow-md: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) rgb(var(--shadow-rgb) / var(--shadow-opacity)), var(--shadow-x) calc(var(--shadow-y) / 2) calc(var(--shadow-blur) * 2) calc(var(--shadow-spread) - 1px) rgb(var(--shadow-rgb) / var(--shadow-opacity));
+    --shadow-lg: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) rgb(var(--shadow-rgb) / var(--shadow-opacity)), var(--shadow-x) var(--shadow-y) calc(var(--shadow-blur) * 3) calc(var(--shadow-spread) - 1px) rgb(var(--shadow-rgb) / var(--shadow-opacity));
+    --shadow-xl: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) rgb(var(--shadow-rgb) / var(--shadow-opacity)), var(--shadow-x) calc(var(--shadow-y) * 2) calc(var(--shadow-blur) * 5) calc(var(--shadow-spread) - 1px) rgb(var(--shadow-rgb) / var(--shadow-opacity));
+    --shadow-2xl: var(--shadow-x) var(--shadow-y) var(--shadow-blur) var(--shadow-spread) rgb(var(--shadow-rgb) / calc(var(--shadow-opacity) * 2.5));
+  }
+
+  /**
+   * ─── Dark theme (ACHU-256) ────────────────────────────────────────────
+   *
+   * Tailwind was configured for `darkMode: ["class"]` from the start and 58
+   * `dark:` classes had accumulated across the app — but no `.dark` block ever
+   * existed and nothing ever set the class, so every one of them was dead code.
+   * Written now, so they all come alive at once.
+   *
+   * Not pure black. The same structure as the light theme is preserved — the
+   * page is DARKER than the cards, so a card still lifts off it. Flipping to
+   * black cards on a black page would lose the grouping that Sesiunea 28 was
+   * about, in the dark instead of in the light.
+   */
+  .dark {
+    --background: 224 14% 11%;
+    --foreground: 0 0% 96%;
+
+    --card: 224 13% 15%;
+    --card-foreground: 0 0% 96%;
+
+    --popover: 224 13% 15%;
+    --popover-foreground: 0 0% 96%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 224 20% 10%;
+
+    --secondary: 224 12% 24%;
+    --secondary-foreground: 0 0% 96%;
+
+    --muted: 224 12% 20%;
+    --muted-foreground: 220 9% 64%;
+
+    --accent: 217 91% 60%;
+    --accent-foreground: 224 20% 10%;
+
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 224 11% 24%;
+    --input: 224 11% 24%;
+    --ring: 217 91% 60%;
+
+    --sidebar-background: 224 15% 9%;
+    --sidebar-foreground: 0 0% 92%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 224 20% 10%;
+    --sidebar-accent: 217 91% 60%;
+    --sidebar-accent-foreground: 224 20% 10%;
+    --sidebar-border: 224 11% 20%;
+    --sidebar-ring: 217 91% 60%;
+
+    /* Darker surfaces need a stronger shadow to read at all. */
+    --shadow-opacity: 0.45;
+    --shadow-blur: 6px;
+  }
+
+  /**
+   * ─── Accent colours (ACHU-256) ────────────────────────────────────────
+   *
+   * Owner: *"adauga niste theme ceva culori... fao sa par vie... nu o baza de
+   * date plictisitoare"*.
+   *
+   * Each one moves ONLY the accent: primary, ring and the sidebar's highlight.
+   * Backgrounds, text and borders stay put in every theme, so contrast is
+   * decided once and cannot be broken by a colour choice. That is the whole
+   * reason these are four short blocks rather than four palettes — a palette
+   * per theme is four times the surface for an unreadable combination to hide
+   * in, and nobody would find it until a cleaner was squinting at a phone.
+   *
+   * Applied on the same element as `.dark`, so the two combine.
+   */
+  .accent-ocean {
+    --primary: 225 91% 34%; --ring: 225 91% 34%;
+    --accent: 216 89% 41%; --sidebar-primary: 225 91% 34%; --sidebar-accent: 216 89% 41%;
+  }
+  .dark.accent-ocean {
+    --primary: 217 91% 60%; --ring: 217 91% 60%;
+    --accent: 217 91% 60%; --sidebar-primary: 217 91% 60%; --sidebar-accent: 217 91% 60%;
+  }
+
+  .accent-fresh {
+    --primary: 160 84% 26%; --ring: 160 84% 26%;
+    --accent: 160 76% 28%; --sidebar-primary: 160 84% 26%; --sidebar-accent: 160 76% 28%;
+  }
+  .dark.accent-fresh {
+    --primary: 158 64% 52%; --ring: 158 64% 52%; --primary-foreground: 160 40% 8%;
+    --accent: 158 64% 52%; --sidebar-primary: 158 64% 52%; --sidebar-accent: 158 64% 52%;
+  }
+
+  .accent-berry {
+    --primary: 271 76% 42%; --ring: 271 76% 42%;
+    --accent: 271 70% 50%; --sidebar-primary: 271 76% 42%; --sidebar-accent: 271 70% 50%;
+  }
+  .dark.accent-berry {
+    --primary: 270 85% 70%; --ring: 270 85% 70%; --primary-foreground: 270 40% 10%;
+    --accent: 270 85% 70%; --sidebar-primary: 270 85% 70%; --sidebar-accent: 270 85% 70%;
+  }
+
+  .accent-sunset {
+    --primary: 21 90% 40%; --ring: 21 90% 40%;
+    --accent: 25 90% 38%; --sidebar-primary: 21 90% 40%; --sidebar-accent: 25 90% 38%;
+  }
+  .dark.accent-sunset {
+    --primary: 27 96% 61%; --ring: 27 96% 61%; --primary-foreground: 20 40% 10%;
+    --accent: 27 96% 61%; --sidebar-primary: 27 96% 61%; --sidebar-accent: 27 96% 61%;
+  }
+}
+
+@layer base {
+  /* Colour changes should feel like a setting taking effect, not a flash. Kept
+     off transforms and opacity so nothing else in the app inherits a lag. */
+  body, .bg-card, .bg-background, .border-border {
+    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+  }
+  /* Respected without exception: some people get motion sick, and a colour
+     scheme is not worth that. */
+  @media (prefers-reduced-motion: reduce) {
+    body, .bg-card, .bg-background, .border-border { transition: none; }
+  }
+}
+
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    /* ACHU-059: Minimum supported viewport width — 360px for Admin */
+    min-width: 360px;
+  }
+
+  /* ACHU-415 / ACHU-417 (Sesiunea 92) — date fields on a phone.
+   *
+   * 🔴 THE FIRST FIX HERE DID NOT WORK, AND SAYING IT DID WAS THE REAL ERROR.
+   *
+   * The bug: on Audit History the two date filters sit in a `grid-cols-2`
+   * whose columns are 193px on a 430px iPhone, and the date inputs render
+   * 209px anyway — so "To Date" is cut off by the edge of the screen.
+   *
+   * I diagnosed a user-agent `min-width` and wrote the rule below to displace
+   * it. It shipped, it went live, and Archana photographed the identical
+   * clipping an hour later. The rule is in the built CSS; it simply does not
+   * do this. ⚠️ The diagnosis was a GUESS about an engine I cannot run — this
+   * sandbox has no iOS, and desktop Chromium does not reproduce the overflow
+   * at all (171px in the same 193px column). There was nothing to verify it
+   * against, and I reported it as fixed regardless.
+   *
+   * ⛔ SO THE REAL FIX IS NOT CSS. It is geometry: the date filters now take a
+   * full-width row on a phone (`col-span-2` in AuditHistory), which gives them
+   * ~398px for a control that wants ~209px. That cannot fail whatever the
+   * engine's minimum turns out to be, because it never asks the control to
+   * shrink.
+   *
+   * The rule below stays because it is harmless and may help elsewhere. It is
+   * NOT the fix, and nothing should be reported fixed on the strength of it. */
+  input[type='date'],
+  input[type='time'],
+  input[type='datetime-local'],
+  input[type='month'],
+  input[type='week'] {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+}
+
+@layer base {
+  /* §48 „Touch-target sizes" (Sesiunea 154) — CÂT DE MARE E UN BUTON SUB UN DEGET.
+   *
+   * ─── Ce s-a măsurat ───────────────────────────────────────────────────────
+   * Butoanele-iconiță scrise de mână din tabelele de administrare sunt `p-1.5`
+   * peste o iconiță de `h-3.5` — adică 14px + 12px = **26px**. Componenta
+   * `Button size="icon"` e `h-10 w-10` = **40px**. Aplicația curățătorilor,
+   * singura scrisă de la început pentru telefon, își pune explicit 44px.
+   *
+   * 26px trece pragul obligatoriu (WCAG 2.5.8, AA: 24px) și cade sub cel
+   * recomandat (2.5.5, AAA: 44px). Deci nu e o încălcare — e o țintă la care
+   * un deget nimerește greu, într-un rând cu încă două lipite de ea.
+   *
+   * ─── De ce o interogare de POINTER și nu clase pe fiecare buton ──────────
+   * ⛔ 44px pe fiecare buton din tabel ar crește rândurile cu ~18px **și pe
+   * desktop**, unde nimeni n-a cerut asta și unde densitatea listei e chiar ce
+   * face lista utilă. Aia e o decizie de design, nu o reparație.
+   *
+   * ✅ `pointer: coarse` întreabă exact ce ne interesează: *dispozitivul ăsta
+   * arată cu un deget?* Dacă da, ținta crește; dacă e mouse, nu se schimbă
+   * nimic. Un singur loc, nicio clasă de repetat, și fără al doilea adevăr
+   * despre „cât de mare e un buton".
+   *
+   * ⚠️ `min-width` doar pe `button`, nu pe orice link: un link în mijlocul unei
+   * fraze n-are nevoie de 44px de lățime, ci de înălțime de rând. */
+  @media (pointer: coarse) {
+    button {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+}
+
+@layer components {
+  /* §48 „No hidden actions" (Sesiunea 154) — O ACȚIUNE CARE APARE LA HOVER NU EXISTĂ PE TELEFON.
+   *
+   * ─── Ce s-a găsit ─────────────────────────────────────────────────────────
+   * Trei butoane de ȘTERGERE a unei poze erau `opacity-0 group-hover:opacity-100`. 🔴 Două dintre
+   * ele sunt în aplicația curățătorilor și în portalul clientului — adică **exact ecranele care se
+   * deschid numai de pe telefon**, unde „hover" nu există. Butonul era acolo, ocupa spațiu, avea
+   * `onClick`, și nu se putea atinge.
+   *
+   * ⚠️ Nu e teoretic: pe multe browsere de telefon prima atingere pe un element cu `:hover` îl
+   * „arată", iar a doua îl apasă. Deci acțiunea fie nu se întâmplă, fie se întâmplă la a doua
+   * atingere, când degetul crede că doar a arătat spre poză. Pentru un buton care ȘTERGE, a doua
+   * variantă e mai rea decât prima.
+   *
+   * ─── Regula ───────────────────────────────────────────────────────────────
+   * ✅ Pe un dispozitiv cu mouse rămâne discret, ca înainte. ⛔ Pe unul cu deget e **întotdeauna
+   * vizibil** — aceeași întrebare ca la ținte de atins (`pointer: coarse`), pusă o singură dată.
+   *
+   * ⚠️ Și `:focus-visible`, ca să se poată ajunge la el cu tastatura pe desktop: altfel butonul e
+   * ascuns și de cineva care nu folosește mouse deloc. */
+  .reveal-on-hover {
+    opacity: 0;
+    transition: opacity 150ms ease;
+  }
+  .group:hover .reveal-on-hover,
+  .reveal-on-hover:focus-visible {
+    opacity: 1;
+  }
+  @media (pointer: coarse) {
+    .reveal-on-hover {
+      opacity: 1;
+    }
+  }
+}
+
