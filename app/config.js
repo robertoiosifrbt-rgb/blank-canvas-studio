@@ -6,6 +6,7 @@ export const KINDS = {
   tasks:{label:"Listă"},
   habits:{label:"Tracker"},
   notes:{label:"Notițe"},
+  calendar:{label:"Calendar"},
   goals:{label:"Obiective"}
 };
 export const BUILTIN = [
@@ -15,6 +16,7 @@ export const BUILTIN = [
   {id:"taskuri",  name:"Task-uri",   kind:"tasks",     builtin:true},
   {id:"obiceiuri",name:"Obiceiuri",  kind:"habits",    builtin:true},
   {id:"goals",    name:"Goals",      kind:"goals",     builtin:true},
+  {id:"calendar", name:"Calendar",   kind:"calendar",  builtin:true},
   {id:"jurnal",   name:"Jurnal",     kind:"notes",     builtin:true}
 ];
 export const ICON = {
@@ -24,6 +26,7 @@ export const ICON = {
   tasks:'<path d="M3 8.4l2.6 2.6L13 3.8"/>',
   habits:'<rect x="2.4" y="2.4" width="4.6" height="4.6" rx="1"/><rect x="9" y="2.4" width="4.6" height="4.6" rx="1"/><rect x="2.4" y="9" width="4.6" height="4.6" rx="1"/><rect x="9" y="9" width="4.6" height="4.6" rx="1"/>',
   notes:'<path d="M4 2.6h8v10.8H4z"/><path d="M6.2 5.6h3.6M6.2 8h3.6M6.2 10.4h2.2"/>',
+  calendar:'<rect x="2.4" y="3.4" width="11.2" height="10.2" rx="1.4"/><path d="M2.4 6.6h11.2M5.6 2.2v2.4M10.4 2.2v2.4"/>',
   goals:'<circle cx="8" cy="8" r="5.9"/><circle cx="8" cy="8" r="2.6"/><path d="M8 2.1V.8M8 15.2v-1.3M13.9 8h1.3M.8 8h1.3"/>',
   settings:'<circle cx="8" cy="8" r="2.2"/><path d="M8 1.6v1.9M8 12.5v1.9M14.4 8h-1.9M3.5 8H1.6M12.5 3.5l-1.3 1.3M4.8 11.2l-1.3 1.3M12.5 12.5l-1.3-1.3M4.8 4.8L3.5 3.5"/>',
   plus:'<path d="M8 3.4v9.2M3.4 8h9.2"/>',
@@ -36,7 +39,7 @@ export const ICON = {
 };
 export function svg(n,s){return '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICON[n]||"")+'</svg>';}
 
-export const BUILD = "2026-09-03 · 20:31";
+export const BUILD = "2026-09-03 · 21:05";
 export const CURRENCIES = {"£":"Liră (£)","€":"Euro (€)","RON":"Leu (RON)","$":"Dolar ($)"};
 export const CATS_OUT = ["Casă","Mâncare","Transport","Sănătate","Familie","Business","Abonamente","Distracție","Altele"];
 export const CATS_IN  = ["Salariu","Business","Cadou","Vânzare","Altele"];

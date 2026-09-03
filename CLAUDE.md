@@ -27,6 +27,7 @@ Nu e o convenție de bunăvoință.
     app/limits.js         limitele locului unde rulează
     app/modules.js        lista de module și elementele lor
     app/goals.js          calculele obiectivelor
+    app/calendar.js       aduna ce cade intr-o zi, din toate modulele
     app/ui.js             randare, navigare, bucăți de interfață
     app/modal.js          ferestre
     app/views/*.js        câte un ecran per fișier

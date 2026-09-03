@@ -5,6 +5,7 @@ import { itemsOf, modById, modules } from "./modules.js";
 import { Store } from "./store.js";
 import { state } from "./state.js";
 import { $, daysTo, esc, num, today, ym } from "./util.js";
+import { viewCalendar } from "./views/calendar.js";
 import { viewDash } from "./views/dashboard.js";
 import { viewDebts } from "./views/debts.js";
 import { remaining, viewFinance } from "./views/finance.js";
@@ -47,7 +48,7 @@ export function paintGauge(){
   if(t) t.textContent = w.label;
   $("#gaugeN").title = w.why + " " + w.fix;
 }
-export const PIN = ["azi","goals","finante","taskuri"];
+export const PIN = ["azi","goals","calendar","finante"];
 export function renderNav(){
   const ms = modules();
   let h = '<div class="nav-h">Module</div>';
@@ -76,7 +77,7 @@ export function render(){
   const d = new Date();
   $("#brandDate").textContent = d.getDate() + " " + MONTHS_L[d.getMonth()];
   const m = state.view === "__set" ? {kind:"settings"} : (modById(state.view) || BUILTIN[0]);
-  const fns = {dashboard:viewDash, finance:viewFinance, debts:viewDebts, tasks:viewTasks, habits:viewHabits, notes:viewNotes, goals:viewGoals, settings:viewSettings};
+  const fns = {dashboard:viewDash, finance:viewFinance, debts:viewDebts, tasks:viewTasks, habits:viewHabits, notes:viewNotes, goals:viewGoals, calendar:viewCalendar, settings:viewSettings};
   const body = (fns[m.kind] || viewDash)(m);
   $("#view").innerHTML = limitBanner() + (m.kind === "dashboard" || m.kind === "goals" ? "" : goalStrip()) + body;
 }

@@ -25,6 +25,10 @@ document.addEventListener("input", e => {
   }
 });
 
+/* Poarta de depanare: cu module, nimic nu mai e global. Din consola
+   browserului poti citi starea sau forta o randare. */
+window.RobertoOS = { state, ui, Store, render };
+
 /* ══════════ Pornire ══════════ */
 ui.month = ym();          /* luna curentă, la deschidere */
 let wasPhone = isPhone(), rz;

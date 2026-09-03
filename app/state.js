@@ -6,4 +6,4 @@ export const state = {
   view:"azi", ready:false
 };
 
-export const ui = { month: "", taskFilter: "open", search: "" };
+export const ui = { month: "", taskFilter: "open", search: "", calMonth: "", calDay: "" };
