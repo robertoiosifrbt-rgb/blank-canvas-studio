@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Archive, Bell, CheckCircle2, Download, Pause, Play, Plus, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react';
 import { scheduleCloudBackup } from '../../cloudState';
+import { enablePush } from '../../push';
 import { LifeOSRepository, LocalStorageAdapter } from '../core/repository';
 import type { LifeEntity, LifeEntityType } from '../core/types';
 import type { LifeOSScreen } from './screenRegistry';
@@ -306,9 +307,12 @@ export function ConnectedScreen({ screen, onNavigate }: ConnectedScreenProps) {
   };
 
   const requestNotifications = async () => {
-    if (!('Notification' in window)) return setMessage('Notifications are not supported on this device.');
-    const result = await Notification.requestPermission();
-    setMessage(`Notification permission: ${result}.`);
+    try {
+      await enablePush();
+      setMessage('Push notifications are enabled on this device.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Could not enable push notifications.');
+    }
   };
 
   const isSearch = screen.id === 'search' || screen.id === 'aiSearch';
@@ -414,6 +418,12 @@ export function ConnectedScreen({ screen, onNavigate }: ConnectedScreenProps) {
       {screen.id === 'notifications' && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <button onClick={() => void requestNotifications()} className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-white"><Bell size={17} />Enable notifications</button>
+        </div>
+      )}
+
+      {screen.id === 'sync' && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <button onClick={() => { scheduleCloudBackup(); setMessage('Cloud backup scheduled.'); }} className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-white"><RefreshCw size={17} />Sync now</button>
         </div>
       )}
 
