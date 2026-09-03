@@ -1,0 +1,90 @@
+/* Global shell overrides for the approved visual target. */
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden
+}
+
+body {
+  background: #f7f8fb
+}
+
+.app-shell {
+  width: 100%;
+  max-width: 430px;
+  min-height: 100dvh;
+  background: #f7f8fb
+}
+
+.app-content {
+  padding: calc(env(safe-area-inset-top) + 10px) var(--page-gutter) calc(env(safe-area-inset-bottom) + 82px)
+}
+
+/*
+ * Bandă opacă peste zona barei de status.
+ *
+ * `viewport-fit=cover` din `index.html` întinde pagina până sub ceas și sub
+ * indicatorul de baterie. Padding-ul de mai sus ține conținutul dedesubt cât
+ * timp ești în capul paginii — dar la derulare titlul urcă pe sub bară și se
+ * ciocnește de ceas („Exercises" peste „20:56"). Padding-ul nu poate rezolva
+ * asta: el mută conținutul, nu-l acoperă.
+ *
+ * Banda are exact înălțimea inset-ului, deci pe un ecran fără crestătură
+ * (`env()` = 0) nu ocupă nimic și nu se vede.
+ */
+.app-shell::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top);
+  background: #f7f8fb;
+  /* Peste conținut, sub bara de jos (care nu are z-index propriu, deci rămâne
+     deasupra prin ordinea din document). */
+  z-index: 10;
+  pointer-events: none
+}
+
+.app-content>section {
+  margin-bottom: 0
+}
+
+.target-bottom-nav {
+  width: min(430px,100%);
+  padding: 5px 10px calc(env(safe-area-inset-bottom) + 5px);
+  border-top: 1px solid #eceef2;
+  background: rgba(255,255,255,.98);
+  box-shadow: 0 -4px 16px rgba(16,24,40,.055)
+}
+
+.target-bottom-nav button {
+  min-height: 51px;
+  gap: 2px;
+  padding: 4px 2px;
+  border: 0!important;
+  border-radius: 0!important;
+  background: transparent!important;
+  color: #9a9faa!important;
+  font-weight: 700;
+  box-shadow: none!important
+}
+
+.target-bottom-nav button.active {
+  color: var(--color-accent)!important
+}
+
+.target-bottom-nav .nav-icon {
+  width: 22px;
+  height: 22px;
+  font-size: 1.16rem;
+  font-weight: 800
+}
+
+.target-bottom-nav .nav-label {
+  font-size: .58rem;
+  font-weight: 750
+}

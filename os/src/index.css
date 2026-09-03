@@ -1,0 +1,832 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3 {
+  margin-top: 0;
+  color: var(--color-text);
+  letter-spacing: -0.025em;
+}
+
+h1 {
+  font-size: 1.85rem;
+  line-height: 1.08;
+}
+
+h2 {
+  font-size: 1.22rem;
+  margin-bottom: 1rem;
+}
+
+h3 {
+  font-size: 1rem;
+}
+
+p {
+  line-height: 1.5;
+}
+
+/* App shell */
+
+.app-shell {
+  min-height: 100dvh;
+  max-width: 760px;
+  margin: 0 auto;
+  background: var(--color-bg);
+}
+
+.app-content {
+  padding: 8px var(--page-gutter) calc(env(safe-area-inset-bottom) + 92px);
+}
+
+.app-content > section {
+  background: transparent;
+  padding: 0;
+  margin: 0 0 18px;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+/* Cards */
+
+.card,
+.app-content section > form,
+.session-card,
+.photo-set {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+/* Home */
+
+.home-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hero-card {
+  position: relative;
+  overflow: hidden;
+  padding: 22px 20px;
+  background: linear-gradient(145deg, var(--color-surface-strong), #1e304d);
+  color: #fff;
+}
+
+.hero-card::after {
+  content: '';
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  right: -72px;
+  top: -70px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-accent) 38%, transparent);
+}
+
+.hero-card h2 {
+  position: relative;
+  z-index: 1;
+  margin: 5px 0 6px;
+  color: #fff;
+  font-size: 1.45rem;
+}
+
+.hero-card p {
+  position: relative;
+  z-index: 1;
+  max-width: 34rem;
+  margin: 0 0 18px;
+  color: rgba(255,255,255,.72);
+  font-size: .9rem;
+}
+
+.card-kicker {
+  display: block;
+  position: relative;
+  z-index: 1;
+  color: var(--color-accent);
+  font-size: .66rem;
+  font-weight: 850;
+  letter-spacing: .12em;
+}
+
+.hero-action {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 50px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.section-heading h2 {
+  margin: 3px 0 0;
+}
+
+.quick-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 10px;
+}
+
+button.quick-action-card {
+  min-height: 118px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 2px;
+  padding: 14px;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.quick-action-card strong {
+  font-size: .94rem;
+}
+
+.quick-action-card > span:last-child {
+  color: var(--color-text-secondary);
+  font-size: .74rem;
+}
+
+.quick-action-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-bottom: auto;
+  border-radius: 11px;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.home-summary-card {
+  padding: 17px;
+}
+
+.home-summary-card h2 {
+  margin: 4px 0 6px;
+}
+
+.home-summary-card p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: .84rem;
+}
+
+/* Bottom nav */
+
+.bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: 20;
+  width: min(760px, 100%);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  padding: 7px 8px calc(env(safe-area-inset-bottom) + 7px);
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  border-top: 1px solid var(--color-border);
+  box-shadow: var(--shadow-floating);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.bottom-nav button {
+  min-width: 0;
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.bottom-nav button.active {
+  color: var(--color-accent);
+}
+
+.nav-icon {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  font-size: 1.32rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.nav-label {
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  font-size: .62rem;
+  font-weight: 700;
+}
+
+/* Segmented sub-nav */
+
+.sub-nav {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.sub-nav button {
+  flex: 1;
+  min-height: 40px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sub-nav button.active {
+  background: var(--color-surface-strong);
+  color: var(--color-bg);
+}
+
+/* Forms */
+
+form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: end;
+  margin-bottom: 18px;
+}
+
+.app-content section > form {
+  padding: 16px;
+}
+
+.field {
+  display: flex;
+  flex: 1 1 150px;
+  flex-direction: column;
+  gap: 6px;
+  /*
+   * Un flex item are implicit `min-width: auto`, deci nu se micșorează sub
+   * lățimea minimă a conținutului. Controalele native ale iOS-ului —
+   * `input[type=date]` și `input[type=file]` — au o lățime intrinsecă mult mai
+   * mare decât în Chromium, așa că pe telefon câmpul ieșea din card, chiar
+   * dacă input-ul dinăuntru e `width: 100%`. Aici nu se vede, pe iOS da.
+   */
+  min-width: 0;
+}
+
+.field label,
+.field > span {
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.field-wide {
+  flex-basis: 100%;
+  width: 100%;
+}
+
+/*
+ * Câmpurile de text. Checkbox-urile și radio-urile sunt scoase explicit: sunt
+ * controale de dimensiune fixă, iar `width: 100%` le întindea peste tot rândul.
+ * Se vedea la selectorul de Tracks — checkbox-ul ieșea 246px, iar etichetei
+ * („Weight (kg)") îi rămâneau 27, deci se rupea literă cu literă pe verticală.
+ * Nimic nu semnala nimic: regula era validă, doar se aplica unde nu trebuia.
+ *
+ * `:not(.visually-hidden)` din același motiv, invers: regula bate clasa (0-2-1
+ * față de 0-1-0), deci câmpurile de fișier ascunse din Settings rămâneau late
+ * cât ecranul, nu 1px, și împingeau pagina cu 13px peste marginea telefonului.
+ */
+input:not([type='checkbox']):not([type='radio']):not(.visually-hidden),
+select,
+textarea {
+  width: 100%;
+  /* Aceeași poveste ca la `.field`: pe iOS lățimea intrinsecă a controalelor
+     native depășește containerul dacă nu i se pune un plafon explicit. */
+  max-width: 100%;
+  min-height: var(--tap-size);
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+/* Dimensiune de atins cu degetul, fără să ia lățimea rândului. */
+input[type='checkbox'],
+input[type='radio'] {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  accent-color: var(--color-accent)
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 72%, transparent);
+  outline-offset: 1px;
+  border-color: var(--color-accent);
+}
+
+textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+button[type='submit'],
+.primary-action {
+  min-height: var(--tap-size);
+  padding: 10px 17px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+button[type='submit']:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+button[type='button'] {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 11px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+button[type='button']:active,
+button[type='submit']:active {
+  transform: translateY(1px);
+}
+
+/* Tables */
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-md);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .88rem;
+  background: var(--color-surface);
+}
+
+th,
+td {
+  padding: 10px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+th {
+  color: var(--color-text-secondary);
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+}
+
+/* Photos */
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.photo-grid figure {
+  margin: 0;
+  width: auto;
+}
+
+.photo-grid img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  height: auto;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+}
+
+.photo-grid figcaption {
+  padding-top: 5px;
+  text-align: center;
+  font-size: .75rem;
+  color: var(--color-text-secondary);
+}
+
+.photo-set {
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.photo-set h3 {
+  margin-bottom: 10px;
+}
+
+/* Notices */
+
+.error-screen {
+  padding: 14px;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+}
+
+.error-screen pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.storage-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-danger) 11%, var(--color-surface));
+  font-size: .86rem;
+  line-height: 1.4;
+}
+
+.storage-notice button {
+  flex-shrink: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.form-error {
+  width: 100%;
+  margin: 0;
+  color: var(--color-danger);
+  font-size: .82rem;
+}
+
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  margin: 0 var(--page-gutter) 8px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: white;
+  box-shadow: var(--shadow-card);
+}
+
+.update-banner button {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 0;
+  background: white;
+  color: var(--color-accent);
+  font-weight: 800;
+}
+
+/* Workout log */
+
+.session-card {
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+button.session-card-header {
+  display: block;
+  width: 100%;
+  min-height: 60px;
+  padding: 13px 15px;
+  text-align: left;
+  border: 0;
+  border-radius: 0;
+  background: var(--color-surface);
+}
+
+.session-card-header h3 {
+  margin: 0 0 2px;
+}
+
+.session-card-body {
+  padding: 0 15px 15px;
+}
+
+.session-card-body ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+.last-log-hint {
+  width: 100%;
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--color-accent-soft);
+  color: var(--color-text-secondary);
+  font-size: .8rem;
+}
+
+.sets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.set-row {
+  display: grid;
+  grid-template-columns: auto repeat(4, minmax(62px, 1fr)) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 7px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.set-row span {
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.set-row input {
+  min-width: 64px;
+  width: 100%;
+}
+
+/* Exercises */
+
+.checkbox-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.checkbox-row > span,
+.checkbox-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.checkbox-row label {
+  padding: 7px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  font-size: .84rem;
+  font-weight: 650;
+}
+
+.checkbox-row input {
+  width: 18px;
+  min-height: 18px;
+}
+
+
+
+
+
+
+
+
+
+
+@media (max-width: 430px) {
+
+  :root {
+    --page-gutter: 12px;
+  }
+
+  .app-content {
+    padding-top: 4px;
+  }
+
+  .app-content section > form {
+    padding: 14px;
+  }
+
+  .field {
+    flex-basis: 100%;
+  }
+
+  .photo-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+}
+
+/* Ascuns pentru ochi, prezent pentru cititoarele de ecran și pentru clic —
+   așa e ținut câmpul de fișier din Settings sub butonul lui. Aici, nu într-un
+   ecran anume: îl folosesc două module. */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Regulile ecranului Settings au plecat în `features/settings/settings.css`.
+   Cele de aici erau moarte de mult — niciun element nu le mai purta clasele —
+   iar butonul lor ținea singur 6 `!important`. */
+
+/* Page headers */
+
+.section-header {
+  margin-bottom: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.add-button {
+  background: var(--color-accent) !important;
+  color: var(--color-accent-contrast) !important;
+  border: none !important;
+  padding: 0.5rem 1rem !important;
+  border-radius: var(--radius-md) !important;
+  font-weight: 700 !important;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.progress-photo-filters {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 1rem 0;
+}
+
+.progress-photo-filters .filter-button {
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--color-text-secondary);
+}
+
+.progress-photo-filters .filter-button:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.progress-photo-filters .filter-button.active {
+  background: var(--color-surface-strong);
+  color: var(--color-accent-contrast);
+  border-color: var(--color-surface-strong);
+}
+
+.header-action-button {
+  background: none !important;
+  border: none !important;
+  color: var(--color-text) !important;
+  font-size: 1.5rem !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 300;
+}
+
+.progress-photo-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.progress-photo-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.progress-photo-group h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+}
+
+.progress-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.progress-photo-tile {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.progress-photo-tile img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4/5;
+  object-fit: cover;
+  display: block;
+}
+
+.progress-photo-tile figcaption {
+  background: var(--color-surface-strong);
+  color: var(--color-accent-contrast);
+  padding: 0.5rem 0.75rem;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 500;
+}

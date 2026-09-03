@@ -1,0 +1,225 @@
+/*
+ * Formularul de măsurători.
+ *
+ * Până acum n-avea nicio regulă — niciuna dintre cele șapte clase ale lui nu
+ * apărea în vreo foaie de stil. Cădea deci pe regula generică din `index.css`,
+ * `form { display: flex; flex-wrap: wrap; align-items: end }`, iar consecința
+ * se vedea imediat: `<details class="measurement-more">` devenea un flex item
+ * lângă secțiunea principală, așa că „More measurements" ajungea sus-dreapta,
+ * în dreptul câmpului Date, cu propria lui coloană de câmpuri sub el. Nu era o
+ * secțiune care se desface sub formular; erau două coloane care nu aveau nicio
+ * legătură una cu alta.
+ */
+
+.measurement-form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  width: 100%
+}
+
+.measurement-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px
+}
+
+/* Două coloane de câmpuri numerice; pe ecrane foarte înguste, una singură. */
+.measurement-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px
+}
+
+.measurement-more {
+  padding: 12px 13px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt)
+}
+
+.measurement-more > summary {
+  cursor: pointer;
+  color: var(--color-text);
+  font-size: .8rem;
+  font-weight: 800;
+  /* Fără marcatorul implicit: îl desenăm noi, ca să arate la fel pe iOS și pe
+     desktop, unde formele native diferă vizibil. */
+  list-style: none
+}
+
+.measurement-more > summary::-webkit-details-marker {
+  display: none
+}
+
+.measurement-more > summary::before {
+  content: "＋";
+  display: inline-block;
+  width: 1.1em;
+  color: var(--color-accent);
+  font-weight: 700
+}
+
+.measurement-more[open] > summary::before {
+  content: "－"
+}
+
+.measurement-more[open] > summary {
+  margin-bottom: 12px
+}
+
+.measurement-save {
+  width: 100%
+}
+
+@media (max-width: 359px) {
+  .measurement-grid {
+    grid-template-columns: 1fr
+  }
+}
+
+/* --- Body Stats: cardul „Key Measurements" --- */
+
+.key-measurements {
+  padding: 14px;
+  margin-bottom: 14px
+}
+
+.key-measurements-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 12px
+}
+
+.key-measurements-head h3 {
+  margin: 0;
+  font-size: .95rem
+}
+
+/* Data sub titlu, cum e în mockup: spune „a cui" e cifra de dedesubt. */
+.key-measurements-head span {
+  color: var(--color-text-secondary);
+  font-size: .7rem;
+  font-weight: 700
+}
+
+.key-measurements-empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: .8rem;
+  line-height: 1.5
+}
+
+.key-measurement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none
+}
+
+/*
+ * iconiță | nume | valoare | deltă. Numele e singurul care se micșorează, deci
+ * cifrele din dreapta rămân aliniate oricât de lung e „Right thigh".
+ */
+.key-measurement-list li {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--color-border)
+}
+
+.key-measurement-list li:last-child {
+  border-bottom: 0
+}
+
+.key-measurement-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+  font-size: .74rem;
+  font-weight: 800
+}
+
+.key-measurement-name {
+  overflow: hidden;
+  font-size: .82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap
+}
+
+.key-measurement-value {
+  font-size: .95rem;
+  font-variant-numeric: tabular-nums
+}
+
+.key-measurement-value small {
+  margin-left: 2px;
+  color: var(--color-text-secondary);
+  font-size: .66rem;
+  font-weight: 700
+}
+
+/*
+ * Pastila cu diferența. Aceeași culoare pentru ▲ și ▼ — vezi comentariul din
+ * KeyMeasurements.tsx: săgeata arată direcția, nu dă un verdict. La talie
+ * scăderea e de obicei ținta, la braț creșterea; un verde/roșu ar minți pe
+ * jumătate dintre rânduri.
+ */
+.key-measurement-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 62px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: .68rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  justify-content: center;
+  white-space: nowrap
+}
+
+.key-measurement-delta.is-first,
+.key-measurement-delta.is-flat {
+  background: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+  font-weight: 700
+}
+
+/* Butonul care deschide formularul — închis, ca în mockup. */
+.measurement-add-trigger {
+  width: 100%;
+  min-height: 46px;
+  border: 0!important;
+  border-radius: var(--radius-md)!important;
+  background: var(--color-surface-strong)!important;
+  color: #fff!important;
+  font-size: .84rem;
+  font-weight: 800
+}
+
+.measurement-add-panel {
+  margin-top: 14px
+}
+
+.measurement-form-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%
+}
+
+.measurement-form-actions .measurement-save {
+  flex: 1
+}

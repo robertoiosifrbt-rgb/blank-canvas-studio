@@ -1,0 +1,272 @@
+
+/*
+ * Aici era un comentariu deschis și niciodată închis. Înghițea tot ce urma,
+ * până la următoarea secvență de închidere — 16 reguli, dezactivate în tăcere.
+ * CSS-ul rămâne valid, deci nimic nu semnala nimic; regulile nu existau.
+ *
+ * Cea mai vizibilă consecință: `.danger-action` nu se aplica, așa că butonul
+ * „Delete" de pe cardurile de exercițiu era negru, nu roșu. Singura regulă
+ * activă pentru clasa asta era `.session-tools .danger-action`, care acoperă
+ * doar butonul de la subsolul sesiunii.
+ *
+ * Din cele 16, se păstrează cele patru folosite și fără alt stăpân, mai jos.
+ * Restul s-au șters, nu s-au reactivat, ca să nu schimbe aspectul pe care
+ * proprietarul l-a aprobat cu ele stinse:
+ *   - `.target-bottom-nav` (5 reguli) — bara de jos e descrisă complet în
+ *     `target-shell.css`, care se importă după asta; astea erau versiunea
+ *     veche și ar fi crescut nav-ul de la 51px la 58px;
+ *   - `.module-toolbar`, `.editor-panel*` (7 reguli) — clase care nu apar în
+ *     niciun `.tsx`;
+ *   - un bloc rămas fără selector, care dimensiona inelul de progres; inelul
+ *     e acum în întregime în `HomePage.css` (etapa 2b).
+ */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px;
+  color: var(--color-text-secondary)
+}
+
+.empty-state strong {
+  color: var(--color-text)
+}
+
+.danger-action {
+  color: var(--color-danger)!important
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%
+}
+
+/* Existing migrated modules */
+
+
+.session-card-open {
+  border-color: color-mix(in srgb,var(--color-accent) 30%,var(--color-border))
+}
+
+button.session-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 76px
+}
+
+.session-card-title {
+  min-width: 0
+}
+
+.session-card-title h3 {
+  margin: 2px 0 3px;
+  font-size: 1rem
+}
+
+.session-date {
+  color: var(--color-accent);
+  font-size: .67rem;
+  font-weight: 800
+}
+
+.session-meta {
+  color: var(--color-text-secondary);
+  font-size: .74rem
+}
+
+.session-chevron {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+  font-size: 1.2rem
+}
+
+.session-card-body {
+  padding: 0 14px 14px
+}
+
+.logged-exercise-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px
+}
+
+.logged-exercise-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-alt)
+}
+
+.logged-exercise-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px
+}
+
+.logged-exercise-main strong {
+  font-size: .88rem
+}
+
+.logged-exercise-main span {
+  color: var(--color-text-secondary);
+  font-size: .75rem;
+  line-height: 1.4
+}
+
+.logged-exercise-actions {
+  display: flex;
+  gap: 5px;
+  flex: 0 0 auto
+}
+
+.logged-exercise-actions button {
+  min-height: 34px;
+  padding: 6px 9px;
+  font-size: .72rem
+}
+
+.session-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin: 8px 0 12px
+}
+
+.add-exercise-panel {
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border)
+}
+
+.add-exercise-panel .card-kicker {
+  margin-bottom: 8px
+}
+
+.exercise-entry-form {
+  margin: 0!important;
+  padding: 0!important;
+  border: 0!important;
+  background: transparent!important;
+  box-shadow: none!important
+}
+
+.exercise-entry-form .field-wide {
+  margin-bottom: 12px
+}
+
+.last-log-hint {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--color-accent-soft);
+  color: var(--color-text-secondary);
+  font-size: .75rem;
+  line-height: 1.45
+}
+
+.sets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+  overflow: hidden
+}
+
+.sets-header,
+.set-row {
+  display: grid;
+  grid-template-columns: 32px repeat(var(--track-count,4),minmax(62px,1fr)) 32px;
+  gap: 6px;
+  align-items: center
+}
+
+.sets-header {
+  padding: 0 6px;
+  color: var(--color-text-secondary);
+  font-size: .62rem;
+  font-weight: 800;
+  text-align: center
+}
+
+.set-row {
+  padding: 7px 6px;
+  border-radius: 12px;
+  background: var(--color-surface-alt)
+}
+
+.set-number {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--color-surface);
+  font-weight: 800!important
+}
+
+.set-row input {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 7px 4px;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 750
+}
+
+.set-remove {
+  min-width: 32px;
+  width: 32px;
+  min-height: 32px!important;
+  padding: 0!important;
+  color: var(--color-danger)!important
+}
+
+.add-set-button {
+  width: 100%;
+  min-height: 44px;
+  border-style: dashed!important
+}
+
+
+.photo-view-grid {
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 7px
+}
+
+@media(max-width:430px) {
+
+  .module-toolbar {
+    align-items: center
+  }
+
+  .photo-view-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr))
+  }
+
+  .sets-list {
+    overflow-x: auto
+  }
+
+  .sets-header,
+  .set-row {
+    min-width: max-content;
+    grid-template-columns: 32px repeat(var(--track-count,4),70px) 32px
+  }
+}

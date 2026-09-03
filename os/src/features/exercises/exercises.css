@@ -1,0 +1,717 @@
+/*
+ * Regulile de mai jos descriu ecranul Exercises direct, pe clasele lui.
+ * Până acum, cele care desenau cardurile erau scrise `.target-exercise-library
+ * .exercise-card` — dar `.target-exercise-library` nu e randat nicăieri în
+ * TSX, deci niciuna nu se aplica. De-asta pill-urile de Tracks ieșeau ca text
+ * simplu, lipit: „RepsWeight (kg)".
+ */
+
+/*
+ * Antetul fiecărei secțiuni din formular: „Basics" pe un rând, explicația sub.
+ * N-avea nicio regulă, iar `<span>` și `<small>` sunt amândouă inline — de
+ * aceea se citea „BasicsName and classification", într-un singur cuvânt.
+ */
+.exercise-form-section-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px
+}
+
+.exercise-form-section-heading span {
+  font-size: .82rem;
+  font-weight: 800;
+  color: var(--color-text)
+}
+
+.exercise-form-section-heading small {
+  font-size: .68rem;
+  color: var(--color-text-secondary)
+}
+
+.exercise-library-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 1px 2px 2px
+}
+
+.exercise-library-header h1 {
+  margin: 0;
+  font-size: 1.34rem;
+  line-height: 1.1
+}
+
+.exercise-library-header p {
+  margin: 5px 0 0;
+  color: var(--color-text-secondary);
+  font-size: .76rem
+}
+
+.exercise-filter-button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0;
+  border: 1px solid var(--color-border)!important;
+  border-radius: 12px!important;
+  background: var(--color-surface)!important;
+  color: var(--color-text)!important;
+  font-size: 1rem
+}
+
+.target-exercise-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface)
+}
+
+.target-exercise-search span {
+  color: var(--color-text-secondary);
+  font-size: 1.35rem;
+  line-height: 1
+}
+
+.target-exercise-search input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  outline: 0;
+  font-size: .88rem
+}
+
+.exercise-category-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 1px 1px 4px;
+  scrollbar-width: none
+}
+
+.exercise-category-scroll::-webkit-scrollbar {
+  display: none
+}
+
+.exercise-category-scroll button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 7px 13px;
+  border: 1px solid var(--color-border)!important;
+  border-radius: 999px!important;
+  background: var(--color-surface)!important;
+  color: var(--color-text-secondary)!important;
+  font-size: .74rem;
+  font-weight: 750;
+  box-shadow: none!important
+}
+
+.exercise-category-scroll button.active {
+  border-color: #1c2230!important;
+  background: #1c2230!important;
+  color: #fff!important
+}
+
+.exercise-library-count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 2px 0
+}
+
+.exercise-library-count strong {
+  font-size: .88rem
+}
+
+.exercise-library-count span {
+  color: var(--color-text-secondary);
+  font-size: .72rem
+}
+
+.exercise-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px
+}
+
+.exercise-card {
+  padding: 12px 13px;
+  border-radius: 15px;
+  box-shadow: 0 3px 12px rgba(16,24,40,.035)
+}
+
+.exercise-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px
+}
+
+.exercise-card-copy {
+  min-width: 0
+}
+
+.exercise-category {
+  display: inline-block;
+  margin-bottom: 4px;
+  color: #ff6656;
+  font-size: .65rem;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: .04em
+}
+
+.exercise-card h3 {
+  margin: 0 0 7px;
+  font-size: .92rem
+}
+
+.track-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px
+}
+
+.track-pills span {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #f3f5f8;
+  color: var(--color-text-secondary);
+  font-size: .64rem;
+  font-weight: 700
+}
+
+.exercise-detail-trigger {
+  min-height: 32px!important;
+  padding: 5px 9px!important;
+  border: 0!important;
+  background: transparent!important;
+  color: #7c8798!important;
+  font-size: .68rem!important
+}
+
+.exercise-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 10px
+}
+
+.exercise-card-actions button {
+  min-height: 32px;
+  padding: 6px 9px;
+  font-size: .69rem
+}
+
+.exercise-card-detail-open {
+  padding: 0!important;
+  overflow: hidden
+}
+
+.exercise-target-detail {
+  background: #fff
+}
+
+.exercise-detail-hero {
+  padding: 15px 14px 18px;
+  background: #111a2d;
+  color: #fff
+}
+
+.exercise-detail-hero-top {
+  display: grid;
+  grid-template-columns: 32px 1fr 32px;
+  align-items: center;
+  gap: 6px
+}
+
+.exercise-detail-hero-top button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  min-height: 32px!important;
+  padding: 0!important;
+  border: 0!important;
+  background: transparent!important;
+  color: #fff!important;
+  font-size: 1.45rem!important
+}
+
+.exercise-detail-hero-top strong {
+  text-align: center;
+  font-size: .86rem
+}
+
+.exercise-detail-hero-top>span {
+  text-align: center;
+  font-size: 1.2rem
+}
+
+
+
+
+
+.exercise-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 14px
+}
+
+.exercise-meta-grid>div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 11px;
+  border: 1px solid #e7eaf0;
+  border-radius: 11px
+}
+
+.exercise-meta-grid span {
+  color: #8a94a5;
+  font-size: .59rem
+}
+
+.exercise-meta-grid strong {
+  font-size: .72rem
+}
+
+.exercise-detail-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0 14px;
+  border-bottom: 1px solid #e7eaf0
+}
+
+.exercise-detail-tabs button {
+  min-height: 38px!important;
+  padding: 8px 0!important;
+  border: 0!important;
+  border-radius: 0!important;
+  background: transparent!important;
+  color: #8b94a3!important;
+  font-size: .69rem!important;
+  box-shadow: none!important
+}
+
+.exercise-detail-tabs button.active {
+  border-bottom: 2px solid #121b2d!important;
+  color: #121b2d!important
+}
+
+.exercise-detail-instructions {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 14px
+}
+
+.exercise-detail-instructions p {
+  display: grid;
+  grid-template-columns: 23px 1fr;
+  gap: 9px;
+  align-items: start;
+  margin: 0;
+  color: #4f5a6b;
+  font-size: .69rem;
+  line-height: 1.5
+}
+
+.exercise-detail-instructions p span {
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  background: #ff6258;
+  color: #fff;
+  font-size: .59rem;
+  font-weight: 800
+}
+
+.exercise-muscle-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  padding: 14px
+}
+
+.exercise-muscle-panel>div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f6f7fa
+}
+
+.exercise-muscle-panel span {
+  color: #8b95a5;
+  font-size: .61rem
+}
+
+.exercise-muscle-panel strong {
+  font-size: .76rem
+}
+
+.exercise-add-workout-cta {
+  width: calc(100% - 28px);
+  margin: 0 14px 10px;
+  min-height: 46px!important;
+  border-color: #ff6258!important;
+  background: #ff6258!important;
+  color: #fff!important;
+  border-radius: 11px!important;
+  font-size: .74rem!important;
+  font-weight: 800!important
+}
+
+.exercise-detail-management {
+  display: flex;
+  gap: 8px;
+  padding: 0 14px 14px
+}
+
+.exercise-detail-management button {
+  flex: 1;
+  min-height: 36px!important;
+  font-size: .68rem!important
+}
+
+.exercise-fab {
+  position: fixed;
+  right: max(20px,calc((100vw - 480px)/2 + 20px));
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  z-index: 12;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  min-height: 54px;
+  padding: 0;
+  border: 0!important;
+  border-radius: 50%!important;
+  background: #ff6555!important;
+  color: #fff!important;
+  font-size: 1.7rem;
+  font-weight: 400;
+  box-shadow: 0 10px 24px rgba(255,101,85,.32)!important
+}
+
+
+
+@media(max-width:430px) {
+
+  .exercise-library-header h1 {
+    font-size: 1.28rem
+  }
+
+  .exercise-fab {
+    right: 18px;
+    bottom: calc(80px + env(safe-area-inset-bottom))
+  }
+
+  .exercise-meta-grid {
+    gap: 6px;
+    padding: 11px
+  }
+
+  .exercise-detail-instructions,
+  .exercise-muscle-panel {
+    padding: 11px
+  }
+
+  .exercise-visual-placeholder {
+    min-height: 165px
+  }
+}
+
+
+/* Muscle map beside the exercise name, in place of the old placeholder circle. */
+.exercise-visual {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.exercise-visual-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.exercise-visual-copy strong {
+  font-size: 0.95rem;
+}
+
+.exercise-visual-copy span {
+  font-size: 0.76rem;
+  opacity: 0.75;
+}
+
+.exercise-muscle-panel .body-map {
+  margin-bottom: 12px;
+}
+
+
+/* --- mutate din redesign.css: formularul si selectorul de Tracks --- */
+
+.exercise-library-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px
+}
+
+/* .exercise-card-list și .exercise-card sunt definite în exercises-target.css,
+   singura foaie care descrie ecranul Exercises. */
+
+.exercise-card>form {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent
+}
+
+/*
+ * `index.css` dă oricărui `form` un `display: flex; flex-wrap: wrap`. Un
+ * formular fără reguli proprii devine deci un rând care se împachetează, iar
+ * secțiunile lui — care sunt flex items cu `flex: 0 1 auto` — se strâng la
+ * lățimea conținutului. Pe telefon, cardul rămânea gol pe ~40% în dreapta.
+ * Secțiunile se stivuiesc, pe toată lățimea.
+ */
+.exercise-editor-form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%
+}
+
+.exercise-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface-alt)
+}
+
+.exercise-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 10px
+}
+
+.exercise-form-grid .field-wide {
+  grid-column: 1/-1
+}
+
+.track-selector {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 8px
+}
+
+.track-option {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface)
+}
+
+.track-option>label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  min-height: 48px;
+  padding: 9px
+}
+
+/*
+ * Numele track-ului și unitatea lui. `<strong>` și `<small>` n-aveau nicio
+ * regulă: rămâneau inline într-un span care nu se putea micșora, iar la lățime
+ * de telefon numele se suprapunea peste unitate („Weight (kg)" peste „kg").
+ * Pe coloană nu au cum să se ciocnească, oricât de lung e numele.
+ */
+.track-option>label>span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0
+}
+
+.track-option>label>span strong {
+  font-size: .8rem;
+  /* `break-word`, nu `anywhere`: rupe doar un cuvânt care chiar nu încape, nu
+     orice cuvânt de îndată ce spațiul se strânge. Cu `anywhere`, un container
+     strivit ducea la o literă pe rând, pe verticală. */
+  overflow-wrap: break-word
+}
+
+.track-option>label>span small {
+  color: var(--color-text-secondary);
+  font-size: .64rem
+}
+
+.track-delete {
+  width: 40px;
+  min-width: 40px;
+  min-height: 48px!important;
+  padding: 0!important;
+  border-left: 1px solid var(--color-border)!important;
+  color: var(--color-danger)!important
+}
+
+.new-field-row {
+  display: grid;
+  grid-template-columns: minmax(0,1.4fr) minmax(0,.8fr) auto auto;
+  gap: 7px;
+  /* Mutate din index.css, unde aceeași clasă era definită a doua oară cu alte
+     coloane. Foaia asta se încărca după, deci coloanele de aici câștigau și
+     cele de acolo nu făceau nimic — în afară de aceste două declarații. */
+  width: 100%;
+  margin-top: 8px
+}
+
+.new-field-row input {
+  width: 100%
+}
+
+@media(max-width:430px) {
+
+  .exercise-form-grid,
+  .track-selector {
+    grid-template-columns: 1fr
+  }
+
+  .exercise-form-grid .field-wide {
+    grid-column: auto
+  }
+
+  .new-field-row {
+    grid-template-columns: 1fr 1fr
+  }
+}
+
+/* --- Etapa 4: căutare, favorite, thumbnail, FAB --- */
+
+/*
+ * Bara de căutare și butonul de filtru, pe același rând. Butonul are lățime
+ * fixă și nu se micșorează; câmpul ia restul — invers ar strânge input-ul la
+ * câteva zeci de pixeli de îndată ce apare o etichetă mai lungă.
+ */
+.exercise-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px
+}
+
+.exercise-search-row .target-exercise-search {
+  flex: 1;
+  min-width: 0
+}
+
+.exercise-filter-button {
+  flex: 0 0 auto;
+  color: var(--color-text-secondary)!important
+}
+
+.exercise-filter-button.active {
+  border-color: var(--color-accent)!important;
+  background: var(--color-accent-soft)!important;
+  color: var(--color-accent)!important
+}
+
+/* Iconița lupei, în interiorul câmpului. */
+.target-exercise-search span {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--color-text-secondary)
+}
+
+/* Safari desenează un „×" propriu în `input[type=search]`, peste al nostru. */
+.target-exercise-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none
+}
+
+/*
+ * Rândul din listă: thumbnail | text | steluță. Textul e singurul care se
+ * micșorează (`minmax(0,1fr)`), ca un nume lung să nu împingă steluța afară.
+ */
+.exercise-card-top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px
+}
+
+.exercise-card-thumb {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  flex: 0 0 auto
+}
+
+/* Gol când exercițiul nu numește niciun mușchi: rândul se strânge la loc. */
+.exercise-card-thumb:empty {
+  display: none
+}
+
+.exercise-card-thumb .body-figure svg {
+  max-width: 46px
+}
+
+.exercise-favourite {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  min-height: 36px!important;
+  padding: 0!important;
+  border: 0!important;
+  background: transparent!important;
+  color: #c3c9d4!important;
+  box-shadow: none!important
+}
+
+.exercise-favourite.is-favourite {
+  color: #f5b301!important
+}
+
+.exercise-detail-hero-top .exercise-favourite {
+  color: #7d8798!important
+}
+
+.exercise-detail-hero-top .exercise-favourite.is-favourite {
+  color: #ffc960!important
+}
+
+/* Panoul de creare, deschis de FAB. */
+.exercise-create-panel {
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card)
+}

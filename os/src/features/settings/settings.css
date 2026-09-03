@@ -1,0 +1,252 @@
+/*
+ * Singura foaie de stil a ecranului Settings.
+ *
+ * Înainte, regulile lui erau în trei fișiere: `settings-target.css` (încărcat
+ * global din `main.tsx`), plus resturi moarte în `index.css` și `redesign.css`.
+ * Acum se încarcă din modul, ca la Home și Exercises, iar testul de alături
+ * blochează întoarcerea la mai multe surse.
+ */
+
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 14px;
+}
+
+/* --- cardul de profil ---------------------------------------------------- */
+
+.settings-profile-card {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: linear-gradient(135deg, #fff6f3, #fff);
+}
+
+.settings-avatar {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #1b2130;
+  color: #fff;
+  font-weight: 850;
+  /* Fotografia intră în același cerc ca inițialele, oricât de dreptunghiulară
+     ar fi poza aleasă. */
+  object-fit: cover;
+}
+
+.settings-profile-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.settings-profile-copy strong {
+  font-size: 0.94rem;
+}
+
+/* Numele lipsă e scris mai șters: e o invitație, nu o valoare. */
+.settings-profile-copy strong.is-placeholder {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.settings-profile-copy span {
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+}
+
+.settings-profile-edit {
+  padding: 7px 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.settings-profile-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: -8px;
+  padding: 15px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+}
+
+.settings-avatar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-save {
+  background: var(--color-surface-strong);
+  color: #fff;
+  font-weight: 800;
+}
+
+/* --- secțiuni și rânduri ------------------------------------------------- */
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-section > h2 {
+  margin: 0 2px;
+  font-size: 0.82rem;
+}
+
+.settings-list {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+}
+
+.settings-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 62px;
+  padding: 11px 13px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.settings-list > *:last-child .settings-row,
+.settings-list > .settings-row:last-child {
+  border-bottom: 0;
+}
+
+.settings-row > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.settings-row strong {
+  font-size: 0.82rem;
+}
+
+.settings-row div span {
+  color: var(--color-text-secondary);
+  font-size: 0.69rem;
+  line-height: 1.35;
+}
+
+.settings-row-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: #f3f5f8;
+  color: #202532;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.settings-chevron {
+  color: #a2a8b3;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+/*
+ * Un rând care e buton trebuie să arate ca rândurile din jur, nu ca un buton.
+ * Stilul general de buton din `index.css` îi dădea chenar, colțuri și umbră
+ * proprii — de aici resetul, singurul `!important` rămas pe ecranul ăsta.
+ */
+.settings-row-button {
+  width: 100%;
+  border: 0 !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--color-text) !important;
+  text-align: left;
+  box-shadow: none !important;
+}
+
+.settings-status-pill {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #f2f3f5;
+  color: var(--color-text-secondary);
+  font-size: 0.65rem;
+  font-weight: 750;
+}
+
+/* --- alegerea unităților ------------------------------------------------- */
+
+.settings-choice {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--color-surface-alt);
+}
+
+.settings-choice button {
+  padding: 6px 11px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 0.7rem;
+  font-weight: 800;
+  box-shadow: none !important;
+}
+
+.settings-choice button.is-selected {
+  background: var(--color-surface-strong) !important;
+  color: #fff !important;
+}
+
+/* --- panoul de import ---------------------------------------------------- */
+
+.settings-import-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 13px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+}
+
+.settings-import-panel strong {
+  font-size: 0.82rem;
+}
+
+.settings-import-panel p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+/* Avertismentul e singurul lucru de pe ecran care anunță o pierdere; scris ca
+   restul, s-ar citi la fel de repede ca o notă de subsol. */
+.settings-import-panel .settings-import-warning {
+  color: var(--color-text);
+  font-weight: 600;
+}

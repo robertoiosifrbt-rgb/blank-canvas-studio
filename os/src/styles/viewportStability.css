@@ -1,0 +1,22 @@
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body,
+#root,
+.app-shell {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@supports (width: 100dvw) {
+  body,
+  #root,
+  .app-shell {
+    width: 100dvw;
+  }
+}

@@ -1,0 +1,67 @@
+/*
+ * Singura sursă pentru culori, raze, umbre și spațiere.
+ *
+ * Valorile sunt cele din `docs/DESIGN_TARGET.md`, citite din mockup. Orice
+ * culoare sau colț rotunjit nou folosește un token de aici — nu o valoare
+ * scrisă direct în CSS-ul unui modul.
+ *
+ * Înainte, paleta era definită în două locuri: `index.css` o declara, iar
+ * `target-shell.css` o suprascria integral. Blocul de dark mode din
+ * `target-shell.css` redeclara valorile *light*, deci tema închisă era deja
+ * dezactivată pe jumătate — rămâneau doar umbrele și culorile de
+ * eroare/succes în varianta închisă, peste o interfață altfel deschisă.
+ *
+ * Target-ul vizual e integral deschis, deci aplicația e acum explicit
+ * light-only: `color-scheme: light`, o singură paletă, fără bloc
+ * `prefers-color-scheme`. Dacă vrem cândva temă închisă, se face ca decizie
+ * proprie, cu paletă gândită pentru ea, nu ca rest de implementare.
+ */
+
+:root {
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+  font-synthesis: none;
+
+  /* Suprafețe */
+  --color-bg: #f7f8fb;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f5f7fa;
+  --color-surface-strong: #10192b;
+
+  /* Text */
+  --color-text: #171b25;
+  --color-text-secondary: #7f8694;
+  --color-border: #eceef2;
+
+  /* Accent */
+  --color-accent: #ff6553;
+  --color-accent-soft: #fff0ed;
+  --color-accent-contrast: #ffffff;
+
+  /* Stare */
+  --color-danger: #dc4338;
+  --color-success: #2e9b63;
+
+  /* Formă */
+  --radius-xl: 24px;
+  --radius-lg: 18px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  /* Pentru pastile: mai mare decât orice înălțime, deci capetele ies rotunde.
+     Lipsea, iar `var(--radius-full)` fără fallback nu e o eroare — e pur și
+     simplu ignorat, deci chips-urile de categorie ieșeau pătrate. */
+  --radius-full: 999px;
+  --shadow-card: 0 5px 18px rgba(16, 24, 40, 0.055);
+  --shadow-floating: 0 -3px 20px rgba(16, 24, 40, 0.07);
+
+  /* Spațiere */
+  --page-gutter: 14px;
+  --tap-size: 44px;
+}
+
+/*
+ * De reconciliat pe parcurs, când ecranele sunt refăcute (etapele 1–6):
+ * `DESIGN_TARGET.md` cere `#22B573` pentru pozitiv, iar `--color-success` e
+ * încă `#2e9b63`. Nu se schimbă acum — etapa 0 nu are voie să modifice
+ * aspectul; se aliniază la ecranul care îl folosește.
+ */
