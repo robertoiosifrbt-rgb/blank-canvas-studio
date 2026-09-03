@@ -1,7 +1,17 @@
 import { getDeviceToken } from './push';
 
 const STATE_API_URL = 'https://xmhvkgoxhoiuiigimied.supabase.co/functions/v1/state-api';
-const STORAGE_KEYS = ['tasks', 'taskGroups', 'calendarEvents', 'eventCategories', 'userCalendars', 'achuTasksImportedV1', 'achuGroupsImportedV1'];
+const STORAGE_KEYS = [
+  'tasks',
+  'taskGroups',
+  'calendarEvents',
+  'eventCategories',
+  'userCalendars',
+  'achuTasksImportedV1',
+  'achuGroupsImportedV1',
+  'life-os-state-v1',
+  'lifeosPreferences',
+];
 let saveTimer: number | undefined;
 
 const callStateApi = async (body: unknown) => {
