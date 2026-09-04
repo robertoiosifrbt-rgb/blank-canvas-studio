@@ -218,7 +218,7 @@
 }
 
 .exercise-target-detail {
-  background: #fff
+  background: var(--color-surface)
 }
 
 .exercise-detail-hero {
@@ -305,8 +305,8 @@
 }
 
 .exercise-detail-tabs button.active {
-  border-bottom: 2px solid #121b2d!important;
-  color: #121b2d!important
+  border-bottom: 2px solid var(--color-text)!important;
+  color: var(--color-text)!important
 }
 
 .exercise-detail-instructions {
@@ -322,7 +322,7 @@
   gap: 9px;
   align-items: start;
   margin: 0;
-  color: #4f5a6b;
+  color: var(--color-text-secondary);
   font-size: .69rem;
   line-height: 1.5
 }

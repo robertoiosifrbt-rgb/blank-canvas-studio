@@ -75,7 +75,7 @@
   margin: 0 12px;
   overflow: hidden;
   border-radius: 14px;
-  background: #fff;
+  background: var(--color-surface);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
 }
 

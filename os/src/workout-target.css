@@ -330,9 +330,9 @@ button.session-card-header {
   gap: 9px;
   /* vezi regula de sub bloc pentru cazul „în editare" */
   padding: 12px!important;
-  border: 1px solid #e2e6ee!important;
+  border: 1px solid var(--color-border)!important;
   border-radius: 14px!important;
-  background: #f7f8fb!important
+  background: var(--color-surface-alt)!important
 }
 
 /*
@@ -352,8 +352,8 @@ button.session-card-header {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: #fff;
-  color: #8791a3;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
   font-size: .68rem;
   font-weight: 800;
   border: 1px solid #e0e5ed
@@ -384,9 +384,9 @@ button.session-card-header {
 .target-add-exercise {
   margin-top: 12px;
   padding: 14px!important;
-  border: 1px solid #e1e6ee!important;
+  border: 1px solid var(--color-border)!important;
   border-radius: 16px!important;
-  background: #fff!important
+  background: var(--color-surface)!important
 }
 
 .target-add-exercise-heading {
