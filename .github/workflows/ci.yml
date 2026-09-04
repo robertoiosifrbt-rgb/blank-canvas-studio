@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# CI nu primește niciun secret și nicio variabilă de mediu către Supabase.
+# Nici CI, nici un deployment care nu e producție nu ating baza de producție.
+# Testul de RLS pe o bază Supabase locală și efemeră intră aici odată cu
+# schema, la pasul 3 — nu există schemă, deci nu există încă ce să testeze.
+
+jobs:
+  verifica:
+    name: lint, tipuri, teste, build, structură, așezare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: lint
+        run: npm run lint
+
+      - name: typecheck
+        run: npm run typecheck
+
+      - name: teste
+        run: npm test
+
+      - name: build
+        run: npm run build
+
+      - name: structură
+        run: npm run check:structure
+
+      - name: browser pentru verificarea așezării
+        run: npx playwright install --with-deps chromium
+
+      - name: așezare la lățime de telefon
+        run: npm run check:layout
