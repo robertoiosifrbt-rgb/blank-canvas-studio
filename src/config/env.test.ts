@@ -35,4 +35,10 @@ describe('readSupabaseConfig', () => {
       /VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY/,
     )
   })
+
+  it('says a redeploy is needed, which is the part people miss', () => {
+    // The values are inlined by Vite at build time. Setting them in Vercel
+    // changes nothing until a new build runs, and the screen has to say so.
+    expect(() => readSupabaseConfig({})).toThrow(/redeploy/)
+  })
 })
