@@ -2,9 +2,12 @@
 // Pornește aplicația la lățime de telefon și cade dacă ceva iese din ecran,
 // dacă un text stă sub bara de status sau dacă o zonă apăsabilă e prea mică.
 //
-// La final se verifică singur, cu patru elemente stricate intenționat. Un
-// verificator care nu poate demonstra că prinde o greșeală e o verificare
-// verde care nu verifică nimic.
+// Verifică și ecranul de intrare, și ecranele de după autentificare — deci are
+// nevoie de un cont pe Supabase local. Fără el se oprește: un verificator care
+// sare în silence peste jumătate din aplicație e o verificare verde care nu
+// verifică nimic.
+//
+// La final se verifică singur, cu patru elemente stricate intenționat.
 
 import { spawn } from 'node:child_process'
 import { chromium } from 'playwright'
@@ -20,7 +23,23 @@ import {
 
 const PORT = Number(process.env.PORT_VERIFICARE ?? 4319)
 const BAZA = `http://127.0.0.1:${PORT}`
-const CĂI = ['/azi', '/calendar', '/', '/o-cale-care-nu-există']
+const EMAIL = process.env.VERIFICARE_EMAIL
+const PAROLA = process.env.VERIFICARE_PAROLA
+
+if (!EMAIL || !PAROLA) {
+  console.error(
+    'Lipsesc VERIFICARE_EMAIL și VERIFICARE_PAROLA. Ecranele aplicației stau\n' +
+      'după autentificare, deci verificarea are nevoie de un cont pe Supabase\n' +
+      'local. Nu se folosesc niciodată credențiale de producție.',
+  )
+  process.exit(1)
+}
+
+/** Ecranul dinaintea contului. */
+const CĂI_PUBLICE = ['/intrare']
+/** Ecranele de după cont. Ultima nu există: trebuie să aibă ieșire. */
+const CĂI_PRIVATE = ['/azi', '/calendar', '/', '/o-cale-care-nu-există']
+
 const ARGUMENTE = {
   zonaMinimă: ZONA_MINIMĂ,
   siguranță: SIGURANȚĂ,
@@ -30,8 +49,7 @@ const ARGUMENTE = {
 async function așteaptăServerul(încercări = 60) {
   for (let i = 0; i < încercări; i += 1) {
     try {
-      const răspuns = await fetch(BAZA)
-      if (răspuns.ok) return
+      if ((await fetch(BAZA)).ok) return
     } catch {
       // serverul nu s-a ridicat încă
     }
@@ -50,15 +68,31 @@ function porneșteServerul() {
   return proces
 }
 
-/** Deschide o cale, simulează marginile telefonului, întoarce ce a găsit. */
-async function inspecteazăCalea(pagină, cale, dimensiune) {
-  await pagină.setViewportSize({
-    width: dimensiune.lățime,
-    height: dimensiune.înălțime,
-  })
+/** Deschide o cale și așteaptă un ecran adevărat, nu starea de încărcare. */
+async function deschide(pagină, cale) {
   await pagină.goto(`${BAZA}${cale}`, { waitUntil: 'networkidle' })
+  await pagină.waitForSelector('.shell, .intrare', { timeout: 15000 })
   await pagină.addStyleTag({ content: cssSiguranță() })
-  return pagină.evaluate(inspectează, ARGUMENTE)
+}
+
+async function intrăÎnCont(pagină) {
+  await deschide(pagină, '/intrare')
+  await pagină.fill('input[name="email"]', EMAIL)
+  await pagină.fill('input[name="parola"]', PAROLA)
+  await pagină.click('.intrare-buton')
+  try {
+    await pagină.waitForSelector('.shell', { timeout: 20000 })
+  } catch {
+    // Dacă formularul a spus de ce, ăla e motivul adevărat.
+    const spus = await pagină
+      .locator('.intrare-mesaj-eroare')
+      .first()
+      .textContent()
+      .catch(() => null)
+    throw new Error(
+      `nu s-a putut intra în cont cu ${EMAIL}: ${spus ?? 'ecranul a rămas la intrare'}`,
+    )
+  }
 }
 
 const abateri = []
@@ -72,39 +106,63 @@ try {
       ? { executablePath: process.env.CHROMIUM_EXECUTABLE }
       : {}),
   })
-  const pagină = await browser.newPage()
 
   for (const dimensiune of LĂȚIMI) {
-    for (const cale of CĂI) {
-      const { abateri: găsite, numărate } = await inspecteazăCalea(
-        pagină,
-        cale,
-        dimensiune,
-      )
-      const unde = `${cale} @ ${dimensiune.lățime}px`
+    // Context nou la fiecare lățime: fiecare rundă pleacă fără sesiune salvată.
+    const context = await browser.newContext({
+      viewport: { width: dimensiune.lățime, height: dimensiune.înălțime },
+    })
+    const pagină = await context.newPage()
 
-      if (numărate.text === 0) {
-        abateri.push({ unde, fel: 'gol', element: '-', detaliu: 'niciun text pe ecran' })
-      }
-      if (numărate.apăsabile === 0) {
-        abateri.push({
-          unde,
-          fel: 'gol',
-          element: '-',
-          detaliu: 'nicio zonă apăsabilă pe ecran',
-        })
-      }
-      for (const abatere of găsite) abateri.push({ unde, ...abatere })
-      console.log(
-        `  ${unde}: ${găsite.length} abateri, ${numărate.text} texte, ${numărate.apăsabile} zone apăsabile`,
-      )
+    const căi = [...CĂI_PUBLICE]
+    for (const cale of căi) {
+      await deschide(pagină, cale)
+      adună(await pagină.evaluate(inspectează, ARGUMENTE), cale, dimensiune)
     }
-  }
 
-  // Auto-verificare: trei greșeli puse anume, care trebuie prinse toate trei.
-  await pagină.setViewportSize({ width: 320, height: 568 })
-  await pagină.goto(`${BAZA}/azi`, { waitUntil: 'networkidle' })
-  await pagină.addStyleTag({ content: cssSiguranță() })
+    await intrăÎnCont(pagină)
+    for (const cale of CĂI_PRIVATE) {
+      await deschide(pagină, cale)
+      adună(await pagină.evaluate(inspectează, ARGUMENTE), cale, dimensiune)
+    }
+
+    if (dimensiune === LĂȚIMI[0]) await autoVerifică(pagină)
+    await context.close()
+  }
+} catch (motiv) {
+  // O cădere a verificatorului e o abatere raportată, nu o urmă de stivă.
+  abateri.push({
+    unde: 'verificare',
+    fel: 'căzut',
+    element: '-',
+    detaliu: motiv instanceof Error ? motiv.message : String(motiv),
+  })
+} finally {
+  await browser?.close()
+  server.kill('SIGTERM')
+}
+
+function adună({ abateri: găsite, numărate }, cale, dimensiune) {
+  const unde = `${cale} @ ${dimensiune.lățime}px`
+  if (numărate.text === 0) {
+    abateri.push({ unde, fel: 'gol', element: '-', detaliu: 'niciun text pe ecran' })
+  }
+  if (numărate.apăsabile === 0) {
+    abateri.push({
+      unde,
+      fel: 'gol',
+      element: '-',
+      detaliu: 'nicio zonă apăsabilă pe ecran',
+    })
+  }
+  for (const abatere of găsite) abateri.push({ unde, ...abatere })
+  console.log(
+    `  ${unde}: ${găsite.length} abateri, ${numărate.text} texte, ${numărate.apăsabile} zone apăsabile`,
+  )
+}
+
+/** Patru greșeli puse anume, care trebuie prinse toate patru. */
+async function autoVerifică(pagină) {
   await pagină.evaluate(() => {
     const strică = document.createElement('div')
     strică.id = 'canar'
@@ -123,14 +181,11 @@ try {
         unde: 'auto-verificare',
         fel: 'orb',
         element: fel,
-        detaliu: `verificatorul nu a prins o greșeală de tip "${fel}"`,
+        detaliu: `verificatorul nu a prins o greșeală de tip „${fel}"`,
       })
     }
   }
   console.log(`  auto-verificare: a prins ${[...feluri].join(', ')}`)
-} finally {
-  await browser?.close()
-  server.kill('SIGTERM')
 }
 
 if (abateri.length === 0) {

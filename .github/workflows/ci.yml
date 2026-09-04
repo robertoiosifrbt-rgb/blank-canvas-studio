@@ -4,14 +4,12 @@ on:
   push:
   pull_request:
 
-# CI nu primește niciun secret și nicio variabilă de mediu către Supabase.
-# Nici CI, nici un deployment care nu e producție nu ating baza de producție.
-# Testul de RLS pe o bază Supabase locală și efemeră intră aici odată cu
-# schema, la pasul 3 — nu există schemă, deci nu există încă ce să testeze.
+# Niciun job nu primește URL-ul sau cheile bazei de producție. Ce are nevoie de
+# o bază folosește Supabase local, ridicat și stins în același job.
 
 jobs:
   verifica:
-    name: lint, tipuri, teste, build, structură, așezare
+    name: lint, tipuri, teste, build, structură
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,14 +30,73 @@ jobs:
       - name: teste
         run: npm test
 
+      # Fără variabile de mediu, intenționat: build-ul nu are voie să depindă
+      # de configurație. Ea se citește la rulare.
       - name: build
         run: npm run build
 
       - name: structură
         run: npm run check:structure
 
+  baza-locala:
+    name: RLS și așezare pe Supabase local
+    runs-on: ubuntu-latest
+    env:
+      VERIFICARE_EMAIL: verificare@local.test
+      VERIFICARE_PAROLA: parola-doar-pentru-verificare
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Supabase local, efemer
+        run: supabase start
+
+      - name: cheile și adresele locale
+        run: |
+          eval "$(supabase status -o env)"
+          {
+            echo "DATABASE_URL=$DB_URL"
+            echo "VITE_SUPABASE_URL=$API_URL"
+            echo "VITE_SUPABASE_PUBLISHABLE_KEY=${PUBLISHABLE_KEY:-$ANON_KEY}"
+            echo "CHEIE_ADMIN=${SECRET_KEY:-$SERVICE_ROLE_KEY}"
+          } >> "$GITHUB_ENV"
+
+      # Cea mai periculoasă parte din schemă, și singura ale cărei greșeli nu
+      # se văd ca un ecran urât, ci ca datele tale citite de altcineva.
+      - name: RLS, negative și pozitive
+        run: npm run check:rls
+
+      - name: contul cu care se verifică așezarea
+        run: |
+          curl -sS --fail-with-body \
+            -X POST "$VITE_SUPABASE_URL/auth/v1/admin/users" \
+            -H "apikey: $CHEIE_ADMIN" \
+            -H "Authorization: Bearer $CHEIE_ADMIN" \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"$VERIFICARE_EMAIL\",\"password\":\"$VERIFICARE_PAROLA\",\"email_confirm\":true}" \
+            > /dev/null
+
+      - name: build pe valorile locale
+        run: npm run build
+
       - name: browser pentru verificarea așezării
         run: npx playwright install --with-deps chromium
 
+      # Verifică și ecranul de intrare, și ecranele de după autentificare —
+      # intră în cont prin formular, ca un om.
       - name: așezare la lățime de telefon
         run: npm run check:layout
+
+      - name: stinge Supabase local
+        if: always()
+        run: supabase stop --no-backup

@@ -1,0 +1,11 @@
+/* Importat de exact un .tsx din acest director: Poarta.tsx */
+
+.poarta-așteptare {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--safe-top) + var(--space-4)) var(--space-4)
+    calc(var(--safe-bottom) + var(--space-4));
+  color: var(--text-dim);
+}
