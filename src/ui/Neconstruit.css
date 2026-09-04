@@ -1,0 +1,18 @@
+/* Importat de exact un .tsx din acest director: Neconstruit.tsx */
+
+.neconstruit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5) 0;
+  max-width: 34rem;
+}
+
+.neconstruit-text {
+  font-size: var(--text-m);
+}
+
+.neconstruit-stare {
+  color: var(--text-dim);
+  font-size: var(--text-s);
+}
