@@ -260,6 +260,35 @@ export interface Fuel {
 }
 
 /**
+ * O cheltuială cu mașina: reparație, asigurare, ITP, cauciucuri, spălare.
+ *
+ * `businessPct` spune cât din ea e de business. O asigurare pe o mașină
+ * folosită și personal nu e cheltuială de business în întregime, iar
+ * trecută integral ți-ar strica socoteala pe care o arăți la taxe.
+ *
+ * O cheltuială care acoperă o perioadă — asigurarea pe un an — nu cade toată
+ * pe ziua în care ai plătit-o. Se împarte pe zilele pe care le acoperă, iar
+ * fiecare tură ia partea zilei ei.
+ */
+export interface CarExpense {
+  id: string
+  mod: string
+  date: string
+  vehicle?: string
+  /** Reparație, asigurare, ITP, cauciucuri, service, spălare, altele. */
+  category?: string
+  what?: string
+  amount: number
+  /** Cât la sută e de business, ca fracție. Lipsă înseamnă tot. */
+  businessPct?: number
+  /** Prima și ultima zi acoperită, la cheltuielile care se întind. */
+  from?: string
+  to?: string
+  notes?: string
+  createdAt?: string
+}
+
+/**
  * O tură de livrări.
  *
  * Ce scrii tu stă aici; cifrele care ies din ele nu se salvează, se calculează
@@ -381,6 +410,7 @@ export interface OsData {
   vehicles: Record<string, Vehicle>
   workdays: Record<string, Workday>
   fuel: Record<string, Fuel>
+  carCosts: Record<string, CarExpense>
   docs: Record<string, Doc>
   finance: FinanceByMonth
   settings: OsSettings
@@ -388,6 +418,7 @@ export interface OsData {
 
 export const emptyOsData = (): OsData => ({
   modules: {}, goals: {}, tasks: {}, habits: {},
-  notes: {}, debts: {}, orgs: {}, vehicles: {}, workdays: {}, fuel: {}, docs: {}, finance: {},
+  notes: {}, debts: {}, orgs: {}, vehicles: {}, workdays: {}, fuel: {},
+  carCosts: {}, docs: {}, finance: {},
   settings: { currency: '£' },
 })

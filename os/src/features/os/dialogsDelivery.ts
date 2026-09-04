@@ -1,7 +1,10 @@
 import type { DialogSpec } from './Dialog'
 import { DEFAULT_RATES, totalsOf } from './delivery'
 import { money, num, today, uid, ym } from './format'
-import type { DeliveryRates, Fuel, OsData, Vehicle, Workday } from './types'
+import type { CarExpense, DeliveryRates, Fuel, OsData, Vehicle, Workday } from './types'
+
+const CAR_CATEGORIES = ['Reparație', 'Service', 'Asigurare', 'ITP', 'Cauciucuri',
+  'Taxă de drum', 'Spălare', 'Rovinietă', 'Leasing', 'Altele']
 
 type Update = (change: (draft: OsData) => void) => void
 
@@ -156,9 +159,10 @@ export function deliveryDialogs(data: OsData, update: Update) {
             items.push({ id: `wd-in-${day.id}`, date: day.date, type: 'in',
               amount: totals.gross, cat: 'Livrări', note: `Tură ${day.date}` })
           }
-          /* Fără combustibil: ăla intră în Finanțe de la pompă, cu suma
-             adevărată. Aici e doar o estimare, bună pentru judecata turei. */
-          const costsWithoutFuel = totals.totalExpenses - totals.fuel
+          /* Fără combustibil și fără cheltuielile cu mașina: alea intră în
+             Finanțe la locul lor, cu sumele adevărate. Aici sunt doar
+             împărțite pe zile, ca să se vadă cât a costat tura. */
+          const costsWithoutFuel = totals.directCosts - totals.fuel + num(day.expenses) + num(day.recurring)
           if (costsWithoutFuel > 0) {
             items.push({ id: `wd-out-${day.id}`, date: day.date, type: 'out',
               amount: costsWithoutFuel, cat: 'Livrări', note: `Costuri tură ${day.date}` })
@@ -228,5 +232,62 @@ export function deliveryDialogs(data: OsData, update: Update) {
     },
   })
 
-  return { vehicle, settings, workday, finish, fuel }
+  const carCost = (mod: string, existing?: CarExpense): DialogSpec => ({
+    title: existing ? `Cheltuiala din ${existing.date}` : 'Cheltuială cu mașina',
+    note: 'Dacă acoperă o perioadă — asigurare, taxă anuală — pune și datele. ' +
+      'Se împarte pe zilele acoperite, în loc să cadă toată într-una.',
+    fields: [
+      { key: 'date', label: 'Ziua plății', type: 'date', value: existing?.date ?? today() },
+      { key: 'category', label: 'Ce fel', type: 'select', value: existing?.category ?? '',
+        options: CAR_CATEGORIES.map(c => ({ value: c, label: c })) },
+      { key: 'what', label: 'Ce anume', value: existing?.what ?? '', placeholder: 'ex: plăcuțe față' },
+      { key: 'amount', label: `Cât ai plătit (${currency})`, type: 'number',
+        value: existing ? String(existing.amount) : '' },
+      { key: 'businessPct', label: 'Cât la sută e de business', type: 'number',
+        value: String(Math.round((existing?.businessPct ?? 1) * 100)) },
+      { key: 'vehicle', label: 'Mașina', type: 'select', value: existing?.vehicle ?? '', options: [
+        { value: '', label: '— niciuna —' },
+        ...Object.values(data.vehicles).map(v => ({ value: v.id, label: v.name })),
+      ] },
+      { key: 'from', label: 'Acoperă din (opțional)', type: 'date', value: existing?.from ?? '' },
+      { key: 'to', label: 'Până la (opțional)', type: 'date', value: existing?.to ?? '' },
+      { key: 'notes', label: 'Note', type: 'textarea', value: existing?.notes ?? '' },
+    ],
+    submit(values) {
+      if (!values.date) return 'Pune ziua.'
+      if (num(values.amount) <= 0) return 'Scrie cât ai plătit.'
+      if (!values.from !== !values.to) return 'Pune amândouă datele perioadei, sau niciuna.'
+      if (values.from && values.to && values.to < values.from) return 'Perioada se termină înainte să înceapă.'
+      const id = existing?.id ?? `c${uid()}`
+      const month = ym(values.date)
+      update(draft => {
+        draft.carCosts[id] = {
+          id, mod, date: values.date,
+          category: values.category || undefined,
+          what: values.what || undefined,
+          amount: num(values.amount),
+          businessPct: values.businessPct ? num(values.businessPct) / 100 : undefined,
+          vehicle: values.vehicle || undefined,
+          from: values.from || undefined,
+          to: values.to || undefined,
+          notes: values.notes || undefined,
+          createdAt: existing?.createdAt ?? new Date().toISOString(),
+        }
+
+        /* În Finanțe intră suma întreagă, în ziua plății: atât ai scos din
+           buzunar, atunci. Împărțirea pe zile e o socoteală de business, nu
+           o mișcare de bani. */
+        for (const key of Object.keys(draft.finance)) {
+          draft.finance[key].items = draft.finance[key].items.filter(item => item.id !== `car-${id}`)
+        }
+        draft.finance[month] ??= { items: [] }
+        draft.finance[month].items.push({
+          id: `car-${id}`, date: values.date, type: 'out', amount: num(values.amount),
+          cat: 'Mașină', note: values.what || values.category || 'Cheltuială mașină',
+        })
+      })
+    },
+  })
+
+  return { vehicle, settings, workday, finish, fuel, carCost }
 }

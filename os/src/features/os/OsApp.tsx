@@ -198,6 +198,15 @@ export function OsApp() {
         onFinish={d => open(drive.finish(d))}
         onVehicle={v => open(drive.vehicle(v))} onSettings={() => open(drive.settings())}
         onFuel={f => open(drive.fuel(view, f))}
+        onCarCost={c => open(drive.carCost(view, c))}
+        onDropCarCost={c => open(core.confirm(`Ștergi cheltuiala din ${c.date}?`,
+          'Dispare și din Finanțe, iar turele pe care cădea se recalculează fără ea.',
+          () => update(draft => {
+            delete draft.carCosts[c.id]
+            for (const month of Object.keys(draft.finance)) {
+              draft.finance[month].items = draft.finance[month].items.filter(i => i.id !== `car-${c.id}`)
+            }
+          })))}
         onDropFuel={f => open(core.confirm(`Ștergi alimentarea din ${f.date}?`,
           'Dispare și din Finanțe, iar consumul se recalculează fără ea.',
           () => update(draft => {

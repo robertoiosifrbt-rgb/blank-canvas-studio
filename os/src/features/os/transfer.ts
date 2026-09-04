@@ -9,7 +9,7 @@ import { emptyOsData, type OsData } from './types'
  */
 
 const BAGS = ['modules', 'goals', 'tasks', 'habits', 'notes', 'debts', 'orgs',
-  'vehicles', 'workdays', 'fuel', 'docs'] as const
+  'vehicles', 'workdays', 'fuel', 'carCosts', 'docs'] as const
 
 export interface ImportResult {
   data: OsData
@@ -79,6 +79,7 @@ const NAMES: Record<string, [string, string]> = {
   vehicles: ['mașină', 'mașini'],
   workdays: ['tură', 'ture'],
   fuel: ['alimentare', 'alimentări'],
+  carCosts: ['cheltuială cu mașina', 'cheltuieli cu mașina'],
   docs: ['document', 'documente'],
   finance: ['mișcare', 'mișcări'],
 }

@@ -1,4 +1,5 @@
 import { num } from './format'
+import { carCostsOf, dailyShare, directOn, businessPart } from './carCosts'
 import { fuelRate } from './fuelChain'
 import type { DeliveryRates, OsData, Vehicle, Workday } from './types'
 
@@ -61,7 +62,10 @@ export interface DayTotals {
   perMile: number
   fuel: number
   directCosts: number
+  /** Cheltuieli ale zilei, plus cele directe cu mașina din ziua aia. */
   expenses: number
+  /** Partea din cheltuielile întinse care cade pe ziua asta. */
+  recurring: number
   totalExpenses: number
   profit: number
   netPerHour: number
@@ -101,9 +105,20 @@ export function totalsOf(data: OsData, day: Workday): DayTotals {
   const platform = num(day.uber) + num(day.deliveroo) + num(day.justEat) + num(day.otherPlatform)
   const gross = platform + num(day.tips) + num(day.bonuses)
 
+  /*
+   * Cheltuielile cu mașina intră singure în ziua lor: cele directe în ziua în
+   * care au fost, cele întinse cu partea zilei. Scrise de mână pe tură, ar fi
+   * trebuit ținute minte și împărțite tot de tine — și n-ar fi fost.
+   */
+  const carCosts = carCostsOf(data, day.mod)
+  const carDirect = directOn(carCosts, day.date).reduce((sum, item) => sum + businessPart(item), 0)
+  const spread = dailyShare(carCosts, day.date)
+
   const fuel = businessKm * fuelPerKm
   const directCosts = fuel + num(day.parking) + num(day.tolls) + num(day.otherCost)
-  const totalExpenses = directCosts + num(day.expenses) + num(day.recurring)
+  const expenses = num(day.expenses) + carDirect
+  const recurring = num(day.recurring) + spread
+  const totalExpenses = directCosts + expenses + recurring
   const profit = gross - totalExpenses
 
   /* Rezervele nu se pun din pierdere: la o zi în minus n-ai din ce. */
@@ -117,7 +132,7 @@ export function totalsOf(data: OsData, day: Workday): DayTotals {
     hours, totalKm, businessKm, businessMiles,
     platform, gross,
     perHour: div(gross, hours), perKm: div(gross, businessKm), perMile: div(gross, businessMiles),
-    fuel, directCosts, expenses: num(day.expenses), totalExpenses,
+    fuel, directCosts, expenses, recurring, totalExpenses,
     profit, netPerHour: div(profit, hours),
     taxReserve, niReserve, vehicleReserve, reserves,
     available, availablePerHour: div(available, hours),

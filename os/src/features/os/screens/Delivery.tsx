@@ -2,7 +2,8 @@ import { Head, Section, Tile } from '../parts'
 import { money } from '../format'
 import { daysOf, summarise, totalsOf, vehicleName } from '../delivery'
 import { fuelOf, fuelRate, intervalsOf, pricePerLitre } from '../fuelChain'
-import type { Fuel, OsData, Vehicle, Workday } from '../types'
+import { businessPart, carCostsOf } from '../carCosts'
+import type { CarExpense, Fuel, OsData, Vehicle, Workday } from '../types'
 
 /**
  * Livrări: ziua de lucru, cu ce a rămas din ea.
@@ -21,6 +22,8 @@ export interface DeliveryActions {
   onSettings: () => void
   onFuel: (item?: Fuel) => void
   onDropFuel: (item: Fuel) => void
+  onCarCost: (item?: CarExpense) => void
+  onDropCarCost: (item: CarExpense) => void
 }
 
 export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData; mod: string }) {
@@ -36,6 +39,7 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
 
       <div className="os-chips" style={{ marginBottom: 14 }}>
         <button className="os-chip" onClick={() => on.onFuel()}>Alimentare</button>
+        <button className="os-chip" onClick={() => on.onCarCost()}>Cheltuială mașină</button>
         <button className="os-chip" onClick={() => on.onVehicle()}>Mașină nouă</button>
         <button className="os-chip" onClick={on.onSettings}>Procente și costuri</button>
       </div>
@@ -87,6 +91,7 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
             <div className="os-hero-facts">
               <div><b>{money(t.gross, currency)}</b><span>brut</span></div>
               <div><b>{money(t.fuel, currency)}</b><span>combustibil</span></div>
+              {t.recurring ? <div><b>{money(t.recurring, currency)}</b><span>partea zilei</span></div> : null}
               <div><b>{money(t.totalExpenses, currency)}</b><span>cheltuieli</span></div>
               <div><b>{money(t.reserves, currency)}</b><span>rezerve</span></div>
               {t.hours ? <div><b>{money(t.perHour, currency)}</b><span>brut/oră</span></div> : null}
@@ -164,6 +169,30 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
               </div>
             )
           })}
+        </>
+      ) : null}
+
+      {carCostsOf(data, mod).length ? (
+        <>
+          <Section title="Cheltuieli cu mașina" />
+          <div className="os-doc-files">
+            {carCostsOf(data, mod).map(item => (
+              <span className="os-doc-file" key={item.id}>
+                <button className="os-doc-open" onClick={() => on.onCarCost(item)}>
+                  {item.date}
+                  <em>{item.category ?? 'cheltuială'}</em>
+                  {item.what ? <em>{item.what}</em> : null}
+                  <em>{money(item.amount, currency)}</em>
+                  {item.businessPct !== undefined && item.businessPct < 1
+                    ? <em>{Math.round(item.businessPct * 100)}% business = {money(businessPart(item), currency)}</em>
+                    : null}
+                  {item.from && item.to ? <em>{item.from} → {item.to}</em> : null}
+                </button>
+                <button className="os-icon del" aria-label="Șterge cheltuiala"
+                  onClick={() => on.onDropCarCost(item)}>🗑</button>
+              </span>
+            ))}
+          </div>
         </>
       ) : null}
 
