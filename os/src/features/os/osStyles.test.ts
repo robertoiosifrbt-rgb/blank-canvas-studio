@@ -39,3 +39,18 @@ describe('stilurile globale ale aplicației de sală', () => {
     }
   })
 })
+
+/* Aplicația de sală e randată în interiorul `.os-shell`, deci orice regulă
+   scrisă ca `.os-shell <element>` cade și peste ea. Așa a ajuns un checkbox
+   al sălii lat cât rândul: `.os-shell input{width:100%}`. Regulile OS-ului se
+   scriu pe clasele lui. */
+describe('stilurile OS-ului nu ies din OS', () => {
+  const SHEETS = ['osTokens.css', 'osLayout.css', 'osComponents.css', 'osScreens.css', 'osGym.css']
+  const LEAK = /\.os-shell\s+[a-z]/
+
+  it.each(SHEETS)('%s nu stilează elemente prin `.os-shell`', file => {
+    const css = readFileSync(`src/features/os/${file}`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    const offenders = css.split('\n').filter(line => LEAK.test(line.split('{')[0]))
+    expect(offenders).toEqual([])
+  })
+})

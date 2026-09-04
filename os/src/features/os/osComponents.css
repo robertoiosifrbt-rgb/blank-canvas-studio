@@ -11,9 +11,13 @@
 .os-icon.del:hover{background:var(--os-bad-soft);color:var(--os-bad)}
 .os-fld{display:flex;flex-direction:column;gap:5px}
 .os-fld>span{font-family:var(--os-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--os-ink-3)}
-.os-shell input,.os-shell select,.os-shell textarea{width:100%;padding:9px 11px;background:var(--os-surface);
+/* Numai câmpurile OS-ului, nu orice `input` din pagină.
+   Scrisă ca `.os-shell input`, regula prindea și bifele aplicației de sală,
+   care e randată înăuntru: un checkbox lat cât rândul, iar textul de lângă el
+   fără loc. Aceeași formă de greșeală ca la grila de obiceiuri. */
+.os-fld input,.os-fld select,.os-fld textarea,.os-in{width:100%;padding:9px 11px;background:var(--os-surface);
   border:1px solid var(--os-line-strong);border-radius:8px;font:inherit;font-size:14px;color:var(--os-ink)}
-.os-shell textarea{min-height:90px;resize:vertical}
+.os-fld textarea{min-height:90px;resize:vertical}
 
 .os-card{background:var(--os-surface);border:1px solid var(--os-line);border-radius:var(--os-radius)}
 .os-card.pad{padding:16px 18px}

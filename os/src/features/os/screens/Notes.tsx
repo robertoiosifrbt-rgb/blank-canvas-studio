@@ -30,7 +30,7 @@ export function Notes({ data, mod, search, onSearch, onAdd, onOpen }: {
 
       {all.length ? (
         <div className="os-bar">
-          <input type="text" placeholder="Caută în însemnări…" value={search}
+          <input className="os-in" type="text" placeholder="Caută în însemnări…" value={search}
             onChange={e => onSearch(e.target.value)} />
         </div>
       ) : null}

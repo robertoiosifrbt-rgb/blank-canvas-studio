@@ -106,7 +106,7 @@ export function SettingsScreen({ data, mode, error, token, photos, onCurrency, o
         <div>
           <b>Cod de sincronizare</b>
           <span className="os-muted">Pune același cod pe telefon și pe laptop ca să vezi aceleași date.</span>
-          <input type="text" spellCheck={false} defaultValue={token}
+          <input className="os-in" type="text" spellCheck={false} defaultValue={token}
             onBlur={e => onToken(e.target.value)} />
         </div>
 
