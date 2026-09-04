@@ -1,7 +1,8 @@
 import { GoalHeroes } from '../GoalHero'
 import { Row, Rows, Section, Tile } from '../parts'
 import { MONTHS_L, dayLabel, money, today, ym, zile } from '../format'
-import { monthTotals, remainingDebt } from '../goals'
+import { monthTotals } from '../goals'
+import { isSettled, remaining } from '../debts'
 import type { OsData } from '../types'
 
 const DAYS = ['duminică', 'luni', 'marți', 'miercuri', 'joi', 'vineri', 'sâmbătă']
@@ -15,8 +16,12 @@ export function Today({ data, onGoals, onTick }:
 
   const habits = Object.values(data.habits)
   const doneToday = habits.filter(h => h.log?.[day]).length
-  const debts = Object.values(data.debts).filter(d => remainingDebt(d) > 0)
-  const debtLeft = debts.reduce((sum, d) => sum + remainingDebt(d), 0)
+  /* Aceleași plăți ca în Datorii: cele din Finanțe, marcate cu datoria. Dacă
+     s-ar socoti altfel aici, două ecrane ar spune două cifre despre aceiași
+     bani. Ce ți se datorează ție nu intră: nu e de plată. */
+  const debts = Object.values(data.debts)
+    .filter(d => d.direction !== 'owed' && !isSettled(d) && remaining(data, d) > 0)
+  const debtLeft = debts.reduce((sum, d) => sum + remaining(data, d), 0)
   const tasks = Object.values(data.tasks)
     .filter(t => !t.done && t.due && t.due <= day)
     .sort((a, b) => (a.due ?? '').localeCompare(b.due ?? ''))
@@ -100,7 +105,7 @@ export function Today({ data, onGoals, onTick }:
                 <Row key={d.id} stripe={cls} title={d.name}
                   sub={`${days < 0 ? `restanță de ${zile(Math.abs(days))}`
                     : days === 0 ? 'scadent azi' : `în ${zile(days)}`} · ${dayLabel(d.due ?? '')}`}
-                  amount={money(remainingDebt(d), currency)} />
+                  amount={money(remaining(data, d), currency)} />
               )
             })}
           </Rows>

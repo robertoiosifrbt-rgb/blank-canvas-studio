@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { allRefs, currentHolder, currentRef, nextDue, openFollowUps, paidOn, paymentsFor, progress, remaining } from './debts'
+import {
+  allRefs, currentHolder, currentRef, isSettled, nextDate, nextDue, openFollowUps, paidOn,
+  paymentsFor, progress, remaining, summariseDebts,
+} from './debts'
 import { emptyOsData, type Debt, type OsData } from './types'
 
 const debt = (extra: Partial<Debt> = {}): Debt =>
@@ -131,5 +134,83 @@ describe('referințele unei datorii', () => {
   it('dacă nu se știe a cui e, o dă pe prima', () => {
     const d = debt({ refs: [{ id: 'r1', value: 'UNU' }, { id: 'r2', value: 'DOI' }] })
     expect(currentRef(d)).toBe('UNU')
+  })
+})
+
+describe('situația datoriilor', () => {
+  function board(): OsData {
+    const data = withPayments([
+      { date: '2026-09-04', amount: 120 },
+      { date: '2026-08-04', amount: 100 },
+    ])
+    data.debts.d1 = debt({ due: '2026-08-20' })
+    data.debts.d2 = debt({ id: 'd2', name: 'Client', direction: 'owed', total: 500, due: '2026-09-10' })
+    data.debts.d3 = debt({ id: 'd3', name: 'Card vechi', total: 300, status: 'Plătită' })
+    data.finance['2026-09'].items.push({
+      id: 'in1', date: '2026-09-03', type: 'in', amount: 50, debt: 'd2',
+    })
+    return data
+  }
+
+  const list = (data: OsData): Debt[] => Object.values(data.debts)
+
+  it('ține despărțit ce datorezi de ce ți se datorează', () => {
+    const s = summariseDebts(board(), list(board()), '2026-09-04')
+    expect(s.owe).toBe(780)
+    expect(s.oweCount).toBe(1)
+    expect(s.owed).toBe(450)
+    expect(s.owedCount).toBe(1)
+  })
+
+  it('nu numără datoriile închise', () => {
+    const s = summariseDebts(board(), list(board()), '2026-09-04')
+    expect(s.oweCount).toBe(1)
+  })
+
+  it('spune cât a ieșit și cât a intrat luna asta', () => {
+    const s = summariseDebts(board(), list(board()), '2026-09-04')
+    expect(s.paidMonth).toBe(120)
+    expect(s.gotMonth).toBe(50)
+  })
+
+  it('numără restanțele separat de ce vine', () => {
+    const s = summariseDebts(board(), list(board()), '2026-09-04')
+    expect(s.overdue).toBe(1)
+    expect(s.soon).toBe(1)
+  })
+
+  it('dă cea mai apropiată zi cu ceva de făcut', () => {
+    const s = summariseDebts(board(), list(board()), '2026-09-04')
+    expect(s.next).toBe('2026-08-20')
+  })
+
+  it('nu se sperie de nimic', () => {
+    const s = summariseDebts(emptyOsData(), [], '2026-09-04')
+    expect(s.owe).toBe(0)
+    expect(s.overdue).toBe(0)
+    expect(s.next).toBeUndefined()
+  })
+})
+
+describe('ziua următoare a unei datorii', () => {
+  it('o ia pe cea mai apropiată dintre plan și termen', () => {
+    const d = debt({
+      due: '2026-09-20',
+      plans: [{ id: 'p1', amount: 50, every: 'month', status: 'Activ', next: '2026-09-10' }],
+    })
+    expect(nextDate(d, new Date('2026-09-04T12:00:00'))).toBe('2026-09-10')
+  })
+
+  it('nu inventează una când nu e niciuna', () => {
+    expect(nextDate(debt())).toBeUndefined()
+  })
+})
+
+describe('datoria închisă', () => {
+  it('e cea plătită, stinsă sau închisă', () => {
+    expect(isSettled(debt({ status: 'Plătită' }))).toBe(true)
+    expect(isSettled(debt({ status: 'Stinsă' }))).toBe(true)
+    expect(isSettled(debt({ status: 'Activă' }))).toBe(false)
+    expect(isSettled(debt({ status: 'Plan de plată' }))).toBe(false)
   })
 })

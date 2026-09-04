@@ -1,9 +1,12 @@
-import { Head, Section } from '../parts'
-import { money, today } from '../format'
+import { useState } from 'react'
+import { Head, Section, Tile } from '../parts'
+import { dayLabel, money, today } from '../format'
 import { itemsUnder } from '../modules'
 import {
-  activePlan, allRefs, currentHolder, everyLabel, nextDue, paymentsFor, progress, remaining,
+  activePlan, allRefs, currentHolder, everyLabel, isSettled, nextDue, paymentsFor, progress,
+  remaining, summariseDebts,
 } from '../debts'
+import { searchDebts } from '../debtSearch'
 import type { Debt, DebtAction, DebtHolder, DebtPlan, DebtRef, DocFile, OsData } from '../types'
 
 /**
@@ -23,8 +26,7 @@ const HEAT: Record<string, number> = {
 }
 
 const heat = (debt: Debt): number => HEAT[debt.stage ?? ''] ?? 0
-const settled = (debt: Debt): boolean =>
-  ['Plătită', 'Stinsă', 'Închisă'].includes(debt.status)
+const settled = isSettled
 
 function byUrgency(a: Debt, b: Debt): number {
   if (settled(a) !== settled(b)) return settled(a) ? 1 : -1
@@ -57,18 +59,23 @@ export function Debts({ data, mod, busy, ...on }: DebtsActions & {
   busy: string | null
 }) {
   const currency = data.settings.currency
-  const list = itemsUnder(data, data.debts, mod).sort(byUrgency)
-  const owe = list.filter(d => d.direction !== 'owed' && !settled(d))
-  const total = owe.reduce((sum, debt) => sum + remaining(data, debt), 0)
+  const [query, setQuery] = useState('')
+  const all = itemsUnder(data, data.debts, mod).sort(byUrgency)
+  const sum = summariseDebts(data, all)
+
+  /* Situația e a tuturor datoriilor, nu a celor găsite: ea spune cum stai,
+     nu ce cauți. Lista de dedesubt se strânge la ce se potrivește. */
+  const list = searchDebts(data, all, query)
+  const searching = query.trim().length > 0
 
   const head = (
-    <Head title="Datorii" sub={owe.length
-      ? `${money(total, currency)} de plată, pe ${owe.length} ${owe.length === 1 ? 'datorie' : 'datorii'}.`
+    <Head title="Datorii" sub={sum.oweCount
+      ? `${money(sum.owe, currency)} de plată, pe ${sum.oweCount} ${sum.oweCount === 1 ? 'datorie' : 'datorii'}.`
       : 'Cine ține fiecare datorie, cu ce referință, în ce stadiu.'}
       action={<button className="os-btn" onClick={on.onAdd}>Datorie nouă</button>} />
   )
 
-  if (list.length === 0) {
+  if (all.length === 0) {
     return (
       <>
         {head}
@@ -86,6 +93,35 @@ export function Debts({ data, mod, busy, ...on }: DebtsActions & {
       <div className="os-chips" style={{ marginBottom: 14 }}>
         <button className="os-chip" onClick={on.onNewOrg}>Organizație nouă</button>
       </div>
+
+      <div className="os-tiles">
+        <Tile lead label="De plată" value={money(sum.owe, currency)}
+          sub={`${sum.oweCount} ${sum.oweCount === 1 ? 'datorie' : 'datorii'}`} tone="bad" />
+        {sum.owedCount ? (
+          <Tile label="Mi se datorează" value={money(sum.owed, currency)}
+            sub={`${sum.owedCount} ${sum.owedCount === 1 ? 'datorie' : 'datorii'}`} tone="good" />
+        ) : null}
+        <Tile label="Plătit luna asta" value={money(sum.paidMonth, currency)}
+          sub={sum.gotMonth ? `încasat ${money(sum.gotMonth, currency)}` : 'din Finanțe'} />
+        <Tile label={sum.overdue ? 'Restanțe' : 'Următoarea zi'}
+          value={sum.overdue ? String(sum.overdue) : sum.next ? dayLabel(sum.next) : '—'}
+          sub={sum.overdue
+            ? `${sum.soon} ${sum.soon === 1 ? 'scadență' : 'scadențe'} în două săptămâni`
+            : sum.soon ? `${sum.soon} în două săptămâni` : 'nimic scadent'}
+          tone={sum.overdue ? 'bad' : undefined} />
+      </div>
+
+      <input className="os-in" type="search" value={query} style={{ margin: '14px 0' }}
+        aria-label="Caută prin datorii"
+        placeholder="Caută: firmă, referință, stadiu…"
+        onChange={e => setQuery(e.target.value)} />
+
+      {searching && list.length === 0 ? (
+        <div className="os-empty">
+          <h3>Nimic pentru „{query}”</h3>
+          <p>Caută după numele firmei, o referință de pe scrisoare, stadiul sau ce ai scris în jurnal.</p>
+        </div>
+      ) : null}
 
       {list.map(debt => {
         const left = remaining(data, debt)

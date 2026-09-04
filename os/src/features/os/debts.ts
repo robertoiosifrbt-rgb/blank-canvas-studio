@@ -1,4 +1,4 @@
-import { iso, num } from './format'
+import { iso, num, today, ym } from './format'
 import type { Debt, DebtHolder, DebtPlan, DebtRef, Movement, OsData, PlanEvery } from './types'
 
 /**
@@ -120,6 +120,75 @@ export function nextDue(plan: DebtPlan, from = new Date()): string | undefined {
     date.setDate(date.getDate() + step)
   }
   return iso(date)
+}
+
+/** Închisă în vreun fel: plătită, stinsă, închisă. Nu mai e de plată. */
+export const isSettled = (debt: Debt): boolean =>
+  ['Plătită', 'Stinsă', 'Închisă'].includes(debt.status)
+
+/**
+ * Următoarea zi în care ai ceva de făcut pe datoria asta.
+ *
+ * Poate veni din planul activ sau din termenul scris pe datorie. Se ia cea
+ * mai apropiată: aia e ziua care contează, indiferent de unde vine.
+ */
+export function nextDate(debt: Debt, from = new Date()): string | undefined {
+  const plan = activePlan(debt)
+  const dates = [plan ? nextDue(plan, from) : undefined, debt.due].filter(Boolean) as string[]
+  return dates.sort()[0]
+}
+
+/**
+ * Situația, pe tot ce ai.
+ *
+ * Ce datorezi și ce ți se datorează stau despărțite — adunate, ar da o cifră
+ * care nu înseamnă nimic. Restanțele se numără separat de ce vine, pentru că
+ * numai una din ele te costă acum.
+ */
+export interface DebtSummary {
+  /** Cât mai ai de plătit, pe datoriile neînchise. */
+  owe: number
+  oweCount: number
+  /** Cât ți se mai datorează ție. */
+  owed: number
+  owedCount: number
+  /** Cât ai plătit la datorii luna asta, din Finanțe. */
+  paidMonth: number
+  /** Cât ai încasat luna asta din ce ți se datorează. */
+  gotMonth: number
+  /** Datorii cu termenul trecut. */
+  overdue: number
+  /** Datorii cu termenul în următoarele două săptămâni. */
+  soon: number
+  /** Cea mai apropiată zi cu ceva de făcut. */
+  next?: string
+}
+
+const DAY = 86_400_000
+
+export function summariseDebts(data: OsData, list: Debt[], from = today()): DebtSummary {
+  const open = list.filter(debt => !isSettled(debt))
+  const mine = open.filter(debt => debt.direction !== 'owed')
+  const theirs = open.filter(debt => debt.direction === 'owed')
+  const horizon = iso(new Date(new Date(`${from}T12:00:00`).getTime() + 14 * DAY))
+
+  const month = data.finance[ym(from)]?.items ?? []
+  const ids = new Set(list.map(debt => debt.id))
+  const moved = month.filter(item => item.debt && ids.has(item.debt))
+
+  const dates = open.map(debt => nextDate(debt, new Date(`${from}T12:00:00`))).filter(Boolean) as string[]
+
+  return {
+    owe: mine.reduce((sum, debt) => sum + remaining(data, debt), 0),
+    oweCount: mine.length,
+    owed: theirs.reduce((sum, debt) => sum + remaining(data, debt), 0),
+    owedCount: theirs.length,
+    paidMonth: moved.filter(item => item.type === 'out').reduce((sum, item) => sum + num(item.amount), 0),
+    gotMonth: moved.filter(item => item.type === 'in').reduce((sum, item) => sum + num(item.amount), 0),
+    overdue: dates.filter(date => date < from).length,
+    soon: dates.filter(date => date >= from && date <= horizon).length,
+    next: dates.sort()[0],
+  }
 }
 
 /** Zilele de follow-up rămase din jurnal, fără cele trecute. */

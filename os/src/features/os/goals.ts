@@ -167,10 +167,4 @@ export function facts(data: OsData, g: Goal, isAnchor: boolean, currency: string
   return out
 }
 
-export const remainingDebt = (d: { total: number; payments?: { amount: number }[] }): number =>
-  Math.max(0, num(d.total) - (d.payments ?? []).reduce((sum, p) => sum + num(p.amount), 0))
-
-export const paidDebt = (d: { payments?: { amount: number }[] }): number =>
-  (d.payments ?? []).reduce((sum, p) => sum + num(p.amount), 0)
-
 export const todayIso = today
