@@ -31,13 +31,27 @@ const minutes = (time: string): number => {
   return (h || 0) * 60 + (m || 0)
 }
 
-/** Orele lucrate, minus pauza. O tură care trece de miezul nopții e o tură. */
-export function hoursOf(day: Workday): number {
-  if (!day.from || !day.to) return 0
-  const start = minutes(day.from)
-  let end = minutes(day.to)
+/** Un interval, minus pauza. Unul care trece de miezul nopții e tot unul. */
+export function spanHours(from?: string, to?: string, breakMinutes?: number): number {
+  if (!from || !to) return 0
+  const start = minutes(from)
+  let end = minutes(to)
   if (end <= start) end += 1440
-  return Math.max(0, (end - start) / 60 - num(day.breakMinutes) / 60)
+  return Math.max(0, (end - start) / 60 - num(breakMinutes) / 60)
+}
+
+/**
+ * Orele lucrate: primul interval plus celelalte ieșiri ale zilei.
+ *
+ * Se adună numai timpul stat pe drum. Pauza dintre prânz și seară nu e oră
+ * lucrată, așa că nu intră; dacă ar intra, câștigul pe oră ar ieși mai mic
+ * decât e și ai crede că tura n-a meritat.
+ */
+export function hoursOf(day: Workday): number {
+  return (day.periods ?? []).reduce(
+    (sum, p) => sum + spanHours(p.from, p.to, p.breakMinutes),
+    spanHours(day.from, day.to, day.breakMinutes),
+  )
 }
 
 /**

@@ -289,6 +289,21 @@ export interface CarExpense {
 }
 
 /**
+ * O bucată din tură: de când până când, minus pauza.
+ *
+ * Ziua de livrări rar e dintr-o bucată. Ieși la prânz, te oprești, ieși iar
+ * seara. Dacă ai scrie 11:00–22:00, orele ar ieși cu patru mai multe decât
+ * ai stat pe drum, iar câștigul pe oră — singura cifră după care știi dacă
+ * merită tura — ar ieși mai mic decât e.
+ */
+export interface WorkPeriod {
+  id: string
+  from: string
+  to: string
+  breakMinutes?: number
+}
+
+/**
  * O tură de livrări.
  *
  * Ce scrii tu stă aici; cifrele care ies din ele nu se salvează, se calculează
@@ -299,9 +314,13 @@ export interface Workday {
   id: string
   mod: string
   date: string
+  /** Primul interval al turei: ora de plecare. */
   from?: string
+  /** Ora la care s-a închis primul interval. */
   to?: string
   breakMinutes?: number
+  /** Celelalte ieșiri din aceeași zi. Orele lor se adună la ale primului. */
+  periods?: WorkPeriod[]
   vehicle?: string
   odoStart?: number
   odoEnd?: number

@@ -29,6 +29,34 @@ describe('orele unei ture', () => {
   it('nu ies negative dintr-o pauză mai lungă decât tura', () => {
     expect(hoursOf(day({ from: '10:00', to: '11:00', breakMinutes: 120 }))).toBe(0)
   })
+
+  it('adună și celelalte ieșiri ale zilei', () => {
+    expect(hoursOf(day({
+      from: '11:00', to: '14:00',
+      periods: [{ id: 'p1', from: '17:00', to: '22:00' }],
+    }))).toBe(8)
+  })
+
+  it('nu numără pauza dintre prânz și seară', () => {
+    /* 11–14 și 17–22 înseamnă opt ore de lucru, nu unsprezece: cele trei
+       ore de acasă nu s-au muncit. */
+    const split = hoursOf(day({
+      from: '11:00', to: '14:00',
+      periods: [{ id: 'p1', from: '17:00', to: '22:00' }],
+    }))
+    expect(split).toBeLessThan(hoursOf(day({ from: '11:00', to: '22:00' })))
+  })
+
+  it('scad pauza fiecărui interval în parte', () => {
+    expect(hoursOf(day({
+      from: '11:00', to: '14:00', breakMinutes: 30,
+      periods: [{ id: 'p1', from: '17:00', to: '22:00', breakMinutes: 15 }],
+    }))).toBe(7.25)
+  })
+
+  it('socotesc intervalele și fără primul, dacă lipsește', () => {
+    expect(hoursOf(day({ periods: [{ id: 'p1', from: '17:00', to: '22:00' }] }))).toBe(5)
+  })
 })
 
 describe('socoteala unei ture', () => {

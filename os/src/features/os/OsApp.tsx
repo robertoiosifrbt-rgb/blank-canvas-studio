@@ -199,6 +199,10 @@ export function OsApp() {
         onVehicle={v => open(drive.vehicle(v))} onSettings={() => open(drive.settings())}
         onFuel={f => open(drive.fuel(view, f))}
         onCarCost={c => open(drive.carCost(view, c))}
+        onPeriod={(d, p) => open(drive.period(d, p))}
+        onDropPeriod={(d, p) => update(draft => {
+          draft.workdays[d.id].periods = (draft.workdays[d.id].periods ?? []).filter(x => x.id !== p.id)
+        })}
         onDropCarCost={c => open(core.confirm(`Ștergi cheltuiala din ${c.date}?`,
           'Dispare și din Finanțe, iar turele pe care cădea se recalculează fără ea.',
           () => update(draft => {

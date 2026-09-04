@@ -149,3 +149,33 @@ describe('alimentările', () => {
     expect(run(dialogs(data).fuel('livrari'), { date: '2026-09-02', litres: '0' })).toMatch(/litri/)
   })
 })
+
+describe('intervalele unei ture', () => {
+  it('se adaugă la zi și intră în ore', () => {
+    const data = ready()
+    run(dialogs(data).period(data.workdays.w1), { from: '19:00', to: '22:00' })
+    expect(data.workdays.w1.periods).toHaveLength(1)
+    expect(totalsOf(data, data.workdays.w1).hours).toBe(11)
+  })
+
+  it('modificate, nu se dublează', () => {
+    const data = ready()
+    run(dialogs(data).period(data.workdays.w1), { from: '19:00', to: '22:00' })
+    const saved = data.workdays.w1.periods![0]
+    run(dialogs(data).period(data.workdays.w1, saved), { to: '23:00' })
+    expect(data.workdays.w1.periods).toHaveLength(1)
+    expect(data.workdays.w1.periods![0].to).toBe('23:00')
+  })
+
+  it('stau în ordinea orelor, oricum le-ai scris', () => {
+    const data = ready()
+    run(dialogs(data).period(data.workdays.w1), { from: '20:00', to: '22:00' })
+    run(dialogs(data).period(data.workdays.w1), { from: '18:30', to: '19:30' })
+    expect(data.workdays.w1.periods!.map(p => p.from)).toEqual(['18:30', '20:00'])
+  })
+
+  it('cer amândouă orele', () => {
+    const data = ready()
+    expect(run(dialogs(data).period(data.workdays.w1), { from: '19:00', to: '' })).toMatch(/ora/)
+  })
+})

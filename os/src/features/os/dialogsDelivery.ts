@@ -1,7 +1,7 @@
 import type { DialogSpec } from './Dialog'
 import { DEFAULT_RATES, totalsOf } from './delivery'
 import { money, num, today, uid, ym } from './format'
-import type { CarExpense, DeliveryRates, Fuel, OsData, Vehicle, Workday } from './types'
+import type { CarExpense, DeliveryRates, Fuel, OsData, Vehicle, Workday, WorkPeriod } from './types'
 
 const CAR_CATEGORIES = ['Reparație', 'Service', 'Asigurare', 'ITP', 'Cauciucuri',
   'Taxă de drum', 'Spălare', 'Rovinietă', 'Leasing', 'Altele']
@@ -176,6 +176,37 @@ export function deliveryDialogs(data: OsData, update: Update) {
     }
   }
 
+  /**
+   * O ieșire în plus, în aceeași zi.
+   *
+   * Tura de prânz și cea de seară sunt aceeași zi de lucru, dar nu același
+   * interval. Scrise separat, orele ies câte au fost și câștigul pe oră
+   * rămâne adevărat.
+   */
+  const period = (day: Workday, existing?: WorkPeriod): DialogSpec => ({
+    title: existing ? 'Modifică intervalul' : `Alt interval în ${day.date}`,
+    fields: [
+      { key: 'from', label: 'De la', value: existing?.from ?? '', placeholder: '17:00' },
+      { key: 'to', label: 'Până la', value: existing?.to ?? '', placeholder: '22:00' },
+      { key: 'breakMinutes', label: 'Pauză (minute)', type: 'number',
+        value: existing?.breakMinutes === undefined ? '' : String(existing.breakMinutes) },
+    ],
+    submit(values) {
+      if (!values.from || !values.to) return 'Pune și ora de început, și cea de sfârșit.'
+      const id = existing?.id ?? `p${uid()}`
+      update(draft => {
+        const target = draft.workdays[day.id]
+        const periods = (target.periods ?? []).filter(p => p.id !== id)
+        periods.push({
+          id, from: values.from, to: values.to,
+          breakMinutes: values.breakMinutes ? num(values.breakMinutes) : undefined,
+        })
+        periods.sort((a, b) => a.from.localeCompare(b.from))
+        target.periods = periods
+      })
+    },
+  })
+
   const fuel = (mod: string, existing?: Fuel): DialogSpec => ({
     title: existing ? `Alimentarea din ${existing.date}` : 'Alimentare',
     note: 'Bifează „plin" când umpli rezervorul. Consumul se poate socoti numai între două plinuri.',
@@ -289,5 +320,5 @@ export function deliveryDialogs(data: OsData, update: Update) {
     },
   })
 
-  return { vehicle, settings, workday, finish, fuel, carCost }
+  return { vehicle, settings, workday, finish, period, fuel, carCost }
 }

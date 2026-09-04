@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { Head, Section, Tile } from '../parts'
 import { money } from '../format'
-import { daysOf, summarise, totalsOf, vehicleName } from '../delivery'
-import { fuelOf, fuelRate, intervalsOf, pricePerLitre } from '../fuelChain'
-import { businessPart, carCostsOf } from '../carCosts'
-import type { CarExpense, Fuel, OsData, Vehicle, Workday } from '../types'
+import { daysOf, spanHours, summarise, totalsOf, vehicleName } from '../delivery'
+import { fuelRate, intervalsOf, pricePerLitre } from '../fuelChain'
+import { businessPart } from '../carCosts'
+import { searchCarCosts, searchDays, searchFuel } from '../deliverySearch'
+import type { CarExpense, Fuel, OsData, Vehicle, Workday, WorkPeriod } from '../types'
 
 /**
  * Livrări: ziua de lucru, cu ce a rămas din ea.
@@ -23,14 +25,25 @@ export interface DeliveryActions {
   onFuel: (item?: Fuel) => void
   onDropFuel: (item: Fuel) => void
   onCarCost: (item?: CarExpense) => void
+  onPeriod: (day: Workday, period?: WorkPeriod) => void
+  onDropPeriod: (day: Workday, period: WorkPeriod) => void
   onDropCarCost: (item: CarExpense) => void
 }
 
 export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData; mod: string }) {
   const currency = data.settings.currency
-  const days = daysOf(data, mod)
+  const [query, setQuery] = useState('')
   const month = new Date().toISOString().slice(0, 7)
-  const sum = summarise(data, days.filter(day => day.date.startsWith(month)))
+  const sum = summarise(data, daysOf(data, mod).filter(day => day.date.startsWith(month)))
+
+  /* Cât timp cauți, listele arată doar ce se potrivește — turele, alimentările
+     și cheltuielile deodată. Totalurile lunii rămân ale lunii: ele spun cum
+     stai, nu ce cauți. */
+  const days = searchDays(data, mod, query)
+  const fuels = searchFuel(data, query)
+  const carCosts = searchCarCosts(data, mod, query)
+  const searching = query.trim().length > 0
+  const nothing = searching && !days.length && !fuels.length && !carCosts.length
 
   return (
     <>
@@ -44,7 +57,19 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
         <button className="os-chip" onClick={on.onSettings}>Procente și costuri</button>
       </div>
 
-      {sum.days ? (
+      <input className="os-in" type="search" value={query} style={{ marginBottom: 14 }}
+        aria-label="Caută prin livrări"
+        placeholder="Caută: o zi, o mașină, o cheltuială…"
+        onChange={e => setQuery(e.target.value)} />
+
+      {nothing ? (
+        <div className="os-empty">
+          <h3>Nimic pentru „{query}”</h3>
+          <p>Caută după zi, mașină, felul cheltuielii sau ce ai scris în note.</p>
+        </div>
+      ) : null}
+
+      {sum.days > 0 && !searching ? (
         <>
           <Section title="Luna asta" />
           <div className="os-tiles">
@@ -63,7 +88,7 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
 
       <Section title={days.length ? 'Ture' : ''} />
 
-      {days.length === 0 ? (
+      {days.length === 0 ? (searching ? null :
         <div className="os-empty">
           <h3>Nicio tură încă</h3>
           <p>Pune orele, kilometrii și câștigul. Restul — combustibil, taxe, ce rămâne — se socotește singur.</p>
@@ -80,6 +105,7 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
                   day.archived ? 'istoric' : '',
                   day.done ? '' : 'neterminată',
                   day.from && day.to ? `${day.from}–${day.to}` : '',
+                  day.periods?.length ? `+${day.periods.length} ${day.periods.length === 1 ? 'interval' : 'intervale'}` : '',
                   t.hours ? `${t.hours.toFixed(1)} h` : '',
                   t.businessKm ? `${Math.round(t.businessKm)} km` : '',
                   car,
@@ -115,10 +141,27 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
 
             {day.notes ? <p className="os-note-text">{day.notes}</p> : null}
 
+            {day.periods?.length ? (
+              <div className="os-doc-files">
+                {day.periods.map(p => (
+                  <span className="os-doc-file" key={p.id}>
+                    <button className="os-doc-open" onClick={() => on.onPeriod(day, p)}>
+                      {p.from}–{p.to}
+                      {p.breakMinutes ? <em>pauză {p.breakMinutes} min</em> : null}
+                      <em>{spanHours(p.from, p.to, p.breakMinutes).toFixed(1)} h</em>
+                    </button>
+                    <button className="os-icon del" aria-label="Șterge intervalul"
+                      onClick={() => on.onDropPeriod(day, p)}>🗑</button>
+                  </span>
+                ))}
+              </div>
+            ) : null}
+
             <div className="os-hero-acts">
               {day.done
                 ? <button className="os-btn ghost sm" onClick={() => on.onReopen(day)}>Redeschide</button>
                 : <button className="os-btn sm" onClick={() => on.onFinish(day)}>Închide tura</button>}
+              <button className="os-btn ghost sm" onClick={() => on.onPeriod(day)}>Alt interval</button>
               <button className="os-btn ghost sm" onClick={() => on.onEdit(day)}>Modifică</button>
               <button className="os-icon del" onClick={() => on.onDelete(day)} aria-label="Șterge">🗑</button>
             </div>
@@ -126,13 +169,14 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
         )
       })}
 
-      {fuelOf(data).length ? (
+      {fuels.length ? (
         <>
           <Section title="Alimentări" />
           {Object.values(data.vehicles).map(car => {
             const rate = fuelRate(data, car.id)
             const last = intervalsOf(data, car.id).slice(-1)[0]
-            if (!fuelOf(data, car.id).length) return null
+            const mine = fuels.filter(item => item.vehicle === car.id)
+            if (!mine.length) return null
             return (
               <div className="os-card pad os-doc" key={car.id}>
                 <div className="os-doc-head">
@@ -152,7 +196,7 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
                   </div>
                 ) : null}
                 <div className="os-doc-files">
-                  {fuelOf(data, car.id).slice(0, 6).map(item => (
+                  {mine.slice(0, searching ? mine.length : 6).map(item => (
                     <span className="os-doc-file" key={item.id}>
                       <button className="os-doc-open" onClick={() => on.onFuel(item)}>
                         {item.date}
@@ -172,11 +216,11 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
         </>
       ) : null}
 
-      {carCostsOf(data, mod).length ? (
+      {carCosts.length ? (
         <>
           <Section title="Cheltuieli cu mașina" />
           <div className="os-doc-files">
-            {carCostsOf(data, mod).map(item => (
+            {carCosts.map(item => (
               <span className="os-doc-file" key={item.id}>
                 <button className="os-doc-open" onClick={() => on.onCarCost(item)}>
                   {item.date}
@@ -196,7 +240,7 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
         </>
       ) : null}
 
-      {Object.keys(data.vehicles).length ? (
+      {Object.keys(data.vehicles).length > 0 && !searching ? (
         <>
           <Section title="Mașini" />
           <div className="os-doc-files">
