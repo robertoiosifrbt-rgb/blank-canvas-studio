@@ -8,6 +8,8 @@
 .os-nav button{display:flex;align-items:center;gap:10px;border:0;background:none;cursor:pointer;
   padding:8px 10px;padding-left:calc(10px + var(--d,0) * 13px);border-radius:8px;
   color:var(--os-ink-2);font:inherit;font-size:14px;font-weight:500;text-align:left}
+.os-nav button svg{flex:0 0 auto;opacity:.85}
+.os-nav button.on svg{opacity:1}
 .os-nav button:hover{background:var(--os-surface-2);color:var(--os-ink)}
 .os-nav button.on{background:var(--os-accent-soft);color:var(--os-accent-ink);font-weight:600}
 .os-nav button.only-mob{display:none}
@@ -45,7 +47,8 @@
   .os-nav button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
   .os-nav button:not(.mob):not(.only-mob){display:none}
   .os-nav button.only-mob{display:flex}
-  .os-main{padding:18px 14px calc(88px + env(safe-area-inset-bottom,0px))}
+  .os-main{padding:calc(env(safe-area-inset-top,0px) + 18px) 14px
+    calc(88px + env(safe-area-inset-bottom,0px))}
   .os-head{flex-direction:column;align-items:stretch;gap:13px}
   .os-head h1{font-size:22px}
   .os-head .os-btn{width:100%;justify-content:center;padding:12px 14px}

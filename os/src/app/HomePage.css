@@ -254,14 +254,21 @@
   padding: 13px 14px;
   border: 0;
   border-radius: var(--radius-md);
-  background: #edf7ff;
+  /*
+   * Nuanța cardului, amestecată peste suprafața aplicației, nu o culoare
+   * fixă. Scrise direct — #edf7ff și celelalte — erau deschise oricât de
+   * închisă ar fi fost tema, iar textul, care își ia culoarea din tokeni,
+   * ajungea alb pe alb. Așa iese pastelul de dinainte pe temă deschisă și un
+   * card închis colorat pe temă închisă, dintr-o singură declarație.
+   */
+  background: color-mix(in srgb, #397ad8 10%, var(--color-surface));
   color: var(--color-text);
   text-align: left;
 }
 
-.target-quick-grid button:nth-child(2) { background: #fff4e8; }
-.target-quick-grid button:nth-child(3) { background: #f2efff; }
-.target-quick-grid button:nth-child(4) { background: #ffeded; }
+.target-quick-grid button:nth-child(2) { background: color-mix(in srgb, #d98b1f 10%, var(--color-surface)); }
+.target-quick-grid button:nth-child(3) { background: color-mix(in srgb, #6757cf 10%, var(--color-surface)); }
+.target-quick-grid button:nth-child(4) { background: color-mix(in srgb, #e65555 10%, var(--color-surface)); }
 
 .target-quick-grid button span {
   display: grid;
@@ -277,7 +284,7 @@
 }
 
 .target-quick-grid button:nth-child(1) span { color: #397ad8; }
-.target-quick-grid button:nth-child(2) span { color: #171b25; }
+.target-quick-grid button:nth-child(2) span { color: var(--color-text); }
 .target-quick-grid button:nth-child(3) span { color: #6757cf; }
 .target-quick-grid button:nth-child(4) span { color: #e65555; }
 

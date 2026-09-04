@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { GymScreens } from '../../app/App'
 import type { Page as GymPage } from '../../app/App'
 import { Dialog, type DialogSpec } from './Dialog'
+import { OsIcon } from './OsIcon'
 import { GoalStrips } from './GoalHero'
 import { coreDialogs } from './dialogsCore'
 import { goalDialogs } from './dialogsGoals'
@@ -164,13 +165,15 @@ export function OsApp() {
           {tree.map(m => (
             <button key={m.id} className={`${view === m.id ? 'on ' : ''}${PINNED.includes(m.id) ? 'mob' : ''}`}
               style={{ ['--d' as string]: m.depth }} onClick={() => go(m.id)}>
-              <span>{m.name}</span>
+              <OsIcon name={m.kind} /><span>{m.name}</span>
             </button>
           ))}
           <button className={`only-mob${PINNED.includes(view) ? '' : ' on'}`} onClick={() => setSheet(true)}>
-            <span>Mai mult</span>
+            <OsIcon name="more" /><span>Mai mult</span>
           </button>
-          <button className={view === '__set' ? 'on' : ''} onClick={() => go('__set')}><span>Setări</span></button>
+          <button className={view === '__set' ? 'on' : ''} onClick={() => go('__set')}>
+            <OsIcon name="settings" /><span>Setări</span>
+          </button>
         </nav>
       </aside>
 
