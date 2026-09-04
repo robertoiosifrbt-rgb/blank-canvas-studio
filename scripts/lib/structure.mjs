@@ -5,8 +5,28 @@ import posix from 'node:path/posix'
 /** One file, one responsibility. */
 export const LINE_LIMIT = 300
 
-/** The root of the code. The checker never receives a list of folders. */
-export const ROOT = 'src'
+/**
+ * The root of the code: the repository itself.
+ *
+ * Not `src/`. The plan says a checker starts at the root of the code and sees
+ * everything, because a rule imposed on a subset is a rule that goes green
+ * without checking anything — and that is exactly what happened while this
+ * started at `src/`: a 315-line file sat in `scripts/` for hours, over the
+ * limit, invisible, because the checker never looked at its own tools.
+ */
+export const ROOT = '.'
+
+/**
+ * What is not code. This is an ignore list, not a list of folders to check:
+ * anything new is walked by default, and only these are stepped over.
+ */
+export const NOT_CODE = [
+  'node_modules',
+  'dist',
+  '.git',
+  'coverage',
+  '.vercel',
+]
 
 /** The only file allowed to import global CSS. */
 export const ENTRY = 'src/main.tsx'
@@ -14,7 +34,7 @@ export const ENTRY = 'src/main.tsx'
 /** The only two CSS files the entry is allowed to import. */
 export const ENTRY_CSS = ['src/styles/tokens.css', 'src/styles/reset.css']
 
-const CODE_EXTENSIONS = ['.ts', '.tsx']
+const CODE_EXTENSIONS = ['.ts', '.tsx', '.mjs', '.js']
 
 /**
  * Walks everything under the root, recursively, and returns every file found.
@@ -26,6 +46,7 @@ export function readTree(root, io = { readdirSync, readFileSync }) {
 
   const descend = (dir) => {
     for (const entry of io.readdirSync(dir, { withFileTypes: true })) {
+      if (NOT_CODE.includes(entry.name)) continue
       const full = path.join(dir, entry.name)
       if (entry.isDirectory()) {
         descend(full)

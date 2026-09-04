@@ -9,7 +9,7 @@ const files = readTree(ROOT)
 const problems = check(files)
 
 if (problems.length === 0) {
-  console.log(`Structure is fine: ${files.length} files checked under ${ROOT}/`)
+  console.log(`Structure is fine: ${files.length} files checked from the repository root`)
   process.exit(0)
 }
 
