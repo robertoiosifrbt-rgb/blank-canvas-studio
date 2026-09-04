@@ -1,4 +1,10 @@
 /* Imported exclusively from main.tsx. */
+/* Tells the browser both themes exist, so its own form controls — the date
+   picker above all — are drawn to match instead of staying stubbornly light. */
+:root {
+  color-scheme: light dark;
+}
+
 *,
 *::before,
 *::after {
@@ -18,6 +24,8 @@ body {
   font-family: var(--font);
   font-size: var(--text-m);
   line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   -webkit-text-size-adjust: 100%;
 }
 

@@ -23,9 +23,9 @@
 .error-detail {
   margin: 0;
   padding: var(--space-3);
-  background: var(--bg-raised);
+  background: var(--danger-wash);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-s);
   color: var(--danger);
   font-size: var(--text-s);
   /* A long message must not push the screen sideways. */
@@ -39,7 +39,9 @@
   min-width: var(--tap);
   padding: 0 var(--space-5);
   border-radius: var(--radius);
-  background: var(--accent);
-  color: #12100e;
-  font-weight: 600;
+  border: 1px solid var(--accent-strong);
+  background: linear-gradient(180deg, var(--accent-strong), var(--accent));
+  box-shadow: var(--shadow-soft);
+  color: var(--accent-ink);
+  font-weight: 650;
 }

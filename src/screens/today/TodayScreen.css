@@ -18,9 +18,12 @@
 }
 
 .group-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: var(--text-s);
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-weight: 650;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-dim);
 }
@@ -40,8 +43,13 @@
   min-height: var(--tap);
   padding: var(--space-3);
   text-align: left;
-  border: 1px dashed var(--line);
+  border: 1px dashed var(--line-strong);
   border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+
+.group-summary:active {
+  transform: translateY(1px);
 }
 
 .group-count {

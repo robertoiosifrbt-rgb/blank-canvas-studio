@@ -32,8 +32,9 @@ export function ItemRow({ item, today, unsaved, onOpen }: Props) {
       type="button"
       onClick={() => onOpen(item)}
     >
+      {/* A ring while it is open, a tick once it is done. */}
       <span className="row-mark" aria-hidden="true">
-        {item.state === 'done' ? '✓' : '·'}
+        {item.state === 'done' ? '✓' : ''}
       </span>
       <span className="row-text">
         <span className="row-title">{item.title}</span>
