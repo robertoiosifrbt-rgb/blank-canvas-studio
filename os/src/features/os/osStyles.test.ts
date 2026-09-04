@@ -77,3 +77,24 @@ describe('titlurile OS-ului', () => {
     expect([...coloured].filter(([, has]) => !has).map(([name]) => name)).toEqual([])
   })
 })
+
+/* Straturile decid între declarații pentru aceeași proprietate. O proprietate
+   pe care OS-ul n-o declară deloc nu e o competiție — se aplică ce spune
+   stratul de jos. Așa a ajuns titlul „Azi" negru pe negru, și tot așa a ajuns
+   fereastra de dialog așezată pe orizontală: e un `<form>`, iar aplicația de
+   sală dă `form{display:flex;flex-wrap:wrap;align-items:end}`.
+
+   Deci, pentru fiecare element pe care sala îl stilează și OS-ul îl
+   folosește, OS-ul își spune singur proprietățile. */
+describe('elementele pe care le stilează și sala', () => {
+  const css = readFileSync('src/features/os/osScreens.css', 'utf8')
+  const rule = (selector: string): string =>
+    css.split('\n').join(' ').match(new RegExp(`\\${selector}\\s*\\{([^}]*)\\}`))?.[1] ?? ''
+
+  it('fereastra de dialog își declară aranjarea, fiind un <form>', () => {
+    const modal = rule('.os-modal')
+    for (const property of ['display', 'flex-direction', 'flex-wrap', 'align-items', 'gap', 'margin']) {
+      expect(modal).toContain(`${property}:`)
+    }
+  })
+})

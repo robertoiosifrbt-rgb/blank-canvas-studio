@@ -83,7 +83,11 @@
 
 .os-veil{position:fixed;inset:0;background:rgba(12,20,16,.55);display:flex;align-items:flex-start;
   justify-content:center;padding:5vh 16px;z-index:50;overflow-y:auto}
-.os-modal{background:var(--os-surface);border:1px solid var(--os-line);border-radius:14px;width:100%;max-width:460px}
+/* Aranjarea e spusă, nu lăsată pe seama implicitului.
+   Fereastra e un `<form>`, iar aplicația de sală stilează `form` — cap, corp
+   și butoane ajungeau așezate pe orizontală, cu titlul căzut sub câmpuri. */
+.os-modal{display:flex;flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:0;margin:0;
+  background:var(--os-surface);border:1px solid var(--os-line);border-radius:14px;width:100%;max-width:460px}
 .os-modal header{padding:17px 20px 0}
 .os-modal header h3{margin:0;font-size:17px;font-weight:700;color:var(--os-ink)}
 .os-modal .body{padding:16px 20px;display:flex;flex-direction:column;gap:13px}

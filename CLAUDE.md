@@ -31,6 +31,23 @@ pe lângă, nici un task pe lângă, nici un câmp „că poate o să trebuiasc�
 Dacă pare că mai trebuie ceva, se întreabă înainte, nu se livrează și se
 explică după.
 
+## Verificarea nu se termină la teste
+
+`npm test` verifică logica, `npm run build` verifică tipurile. Niciunul n-a
+prins vreodată un titlu de culoarea fundalului, o fereastră cu titlul sub
+câmpuri, sau un element ieșit din ecran — alea s-au văzut pe telefonul lui
+Roberto, adică prea târziu, și de fiecare dată l-au costat o rundă.
+
+Așezarea se măsoară într-un browser adevărat, la dimensiunea unui telefon:
+
+    npm run build
+    npm install --no-save playwright
+    node scripts/layout-check.mjs
+
+Scriptul nu judecă frumusețea. Prinde ce face un ecran inutilizabil. Se
+extinde cu fiecare astfel de greșeală găsită: dacă ceva a scăpat până pe
+telefon, întâi se adaugă verificarea care l-ar fi prins, apoi se repară.
+
 ## Regula principală — codul stă în module
 
 **Un fișier = o singură responsabilitate. Maxim 300 de linii.**
