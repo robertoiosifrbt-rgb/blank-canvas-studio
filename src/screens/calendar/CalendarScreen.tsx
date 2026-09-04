@@ -5,7 +5,7 @@ import type { CalendarDay, Item } from '../../repository/items'
 import { useScreen } from '../../items/context'
 import { formatMonth, formatWeekday, monthOf, shiftMonth } from '../../ui/dates'
 import { ItemRow } from '../../ui/ItemRow'
-import { monthGrid, openingDay } from './month'
+import { awayFromToday, monthGrid, openingDay } from './month'
 import './CalendarScreen.css'
 
 /** Monday first, the way the week is read here. */
@@ -35,6 +35,13 @@ export function CalendarScreen() {
     setMonth(next)
     setSelected(openingDay(next, today))
   }
+
+  const backToToday = () => {
+    setMonth(monthOf(today))
+    setSelected(today)
+  }
+
+  const away = awayFromToday(month, selected, today)
 
   const chosen: CalendarDay | undefined = days.find((day) => day.day === selected)
 
@@ -110,6 +117,12 @@ export function CalendarScreen() {
           </button>
         ))}
       </div>
+
+      {away && (
+        <button className="month-today" type="button" onClick={backToToday}>
+          Back to today
+        </button>
+      )}
 
       <section className={`day${selected === today ? ' day-today' : ''}`}>
         <h2 className="day-heading">{formatWeekday(selected, today)}</h2>

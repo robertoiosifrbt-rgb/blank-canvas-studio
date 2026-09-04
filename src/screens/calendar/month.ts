@@ -75,6 +75,20 @@ export function monthGrid(
   return weeks
 }
 
+/**
+ * Whether the screen has wandered off today, in the month or in the day.
+ *
+ * The way back is only offered when there is somewhere to come back from: a
+ * control that does nothing is wasted width on a phone.
+ */
+export function awayFromToday(
+  month: string,
+  selected: string,
+  today: string,
+): boolean {
+  return month !== monthOf(today) || selected !== today
+}
+
 /** The day to open a month on: today when it falls in it, otherwise the 1st. */
 export function openingDay(month: string, today: string): string {
   if (monthOf(today) === month) return today
