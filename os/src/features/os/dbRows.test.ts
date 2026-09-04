@@ -35,7 +35,8 @@ function full(): OsData {
   data.debts.d2 = { id: 'd2', mod: 'm1', name: 'Client', direction: 'owed', total: 500, status: 'Activă' }
   data.finance['2026-09'] = { items: [
     { id: 'mv1', date: '2026-09-02', type: 'out', amount: 50, cat: 'Datorii', debt: 'd1' },
-    { id: 'mv2', date: '2026-09-03', type: 'in', amount: 120, cat: 'Livrări' },
+    { id: 'mv2', date: '2026-09-03', type: 'in', amount: 119.5, gross: 120, cat: 'Livrări',
+      account: 'bank', from: 'uber' },
   ] }
   data.docs.dc1 = {
     id: 'dc1', mod: 'm1', title: 'Scrisoare DWP', from: 'DWP', date: '2026-08-20',
@@ -43,9 +44,14 @@ function full(): OsData {
     files: [{ id: 'df1', name: 'dwp.pdf', type: 'application/pdf', size: 900 }],
   }
   data.vehicles.v1 = { id: 'v1', name: 'Corsa', plate: 'AB12 CDE', fuelPerKm: 0.11 }
+  data.accounts.bank = { id: 'bank', name: 'Monzo business', kind: 'bank' }
+  data.accounts.uber = {
+    id: 'uber', name: 'Uber Eats', kind: 'platform', cashOutFee: 0.5,
+    payout: { day: 3, at: '23:59' }, payTo: 'bank',
+  }
   data.workdays.w1 = {
     id: 'w1', mod: 'm2', date: '2026-09-01', from: '11:00', to: '14:00', breakMinutes: 15,
-    vehicle: 'v1', odoStart: 1000, odoEnd: 1120, personalKm: 10, uber: 60, tips: 8,
+    vehicle: 'v1', odoStart: 1000, odoEnd: 1120, personalKm: 10, earnings: { uber: 60 }, tips: 8,
     parking: 4, expenses: 2, toDebt: 30, debt: 'd1', done: true, archived: true,
     rates: { taxPct: 0.2, niPct: 0.06, fuelPerKm: 0.12, vehPerKm: 0.05 },
     periods: [{ id: 'p1', from: '17:00', to: '22:00', breakMinutes: 10 }],
@@ -77,6 +83,8 @@ describe('traducerea în rânduri', () => {
     const rows = toRows(full())
     expect(Object.keys(rows.workdays)).toEqual(['w1'])
     expect(Object.keys(rows.work_periods)).toEqual(['p1'])
+    expect(Object.keys(rows.accounts).sort()).toEqual(['bank', 'uber'])
+    expect(Object.keys(rows.workday_earnings)).toEqual(['w1:uber'])
     expect(Object.keys(rows.movements).sort()).toEqual(['mv1', 'mv2'])
     expect(Object.keys(rows.habit_ticks).sort()).toEqual(['h1:2026-09-01', 'h1:2026-09-02'])
     expect(Object.keys(rows.debt_actions)).toEqual(['aa1'])

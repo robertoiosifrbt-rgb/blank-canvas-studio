@@ -1,6 +1,6 @@
 import { emptyOsData, type OsData } from './types'
 import type {
-  CarExpense, Contribution, Debt, DebtAction, DebtHolder, DebtPlan, DebtRef, Doc, DocFile,
+  Account, CarExpense, Contribution, Debt, DebtAction, DebtHolder, DebtPlan, DebtRef, Doc, DocFile,
   Fuel, Goal, Habit, Movement, Note, Org, OsModule, OsSettings, Reading, Task, Vehicle,
   Workday, WorkPeriod,
 } from './types'
@@ -32,7 +32,7 @@ export const TABLES = [
   'tasks', 'habits', 'habit_ticks', 'notes', 'orgs',
   'debts', 'debt_holders', 'debt_refs', 'debt_plans', 'debt_actions', 'debt_files',
   'movements', 'docs', 'doc_files',
-  'vehicles', 'workdays', 'work_periods', 'fuel', 'car_costs',
+  'vehicles', 'accounts', 'workdays', 'workday_earnings', 'work_periods', 'fuel', 'car_costs',
 ] as const
 
 export type Table = typeof TABLES[number]
@@ -156,6 +156,7 @@ export function toRows(data: OsData): Rows {
       put('movements', item.id, {
         date: item.date, kind: item.type, amount: item.amount,
         cat: n(item.cat), note: n(item.note), debt_id: n(item.debt),
+        account_id: n(item.account), from_account: n(item.from), gross: n(item.gross),
       })
     }
   }
@@ -178,6 +179,14 @@ export function toRows(data: OsData): Rows {
     })
   }
 
+  for (const a of Object.values(data.accounts)) {
+    put('accounts', a.id, {
+      name: a.name, kind: a.kind, cash_out_fee: n(a.cashOutFee),
+      payout_day: n(a.payout?.day), payout_at: n(a.payout?.at),
+      pay_to: n(a.payTo), notes: n(a.notes), created_at: n(a.createdAt),
+    })
+  }
+
   for (const day of Object.values(data.workdays)) {
     put('workdays', day.id, {
       mod: day.mod, date: day.date, from_time: n(day.from), to_time: n(day.to),
@@ -193,6 +202,11 @@ export function toRows(data: OsData): Rows {
       rate_fuel_per_km: n(day.rates?.fuelPerKm), rate_veh_per_km: n(day.rates?.vehPerKm),
       created_at: n(day.createdAt),
     })
+    for (const [account, amount] of Object.entries(day.earnings ?? {})) {
+      put('workday_earnings', `${day.id}:${account}`, {
+        workday_id: day.id, account_id: account, amount,
+      })
+    }
     for (const p of day.periods ?? []) {
       put('work_periods', p.id, {
         workday_id: day.id, from_time: p.from, to_time: p.to, break_minutes: n(p.breakMinutes),
@@ -409,6 +423,9 @@ export function fromRows(rows: Rows): OsData {
     item.cat = opt<string>(row.cat)
     item.note = opt<string>(row.note)
     item.debt = opt<string>(row.debt_id)
+    item.account = opt<string>(row.account_id)
+    item.from = opt<string>(row.from_account)
+    item.gross = numOpt(row.gross)
     const month = item.date.slice(0, 7)
     data.finance[month] ??= { items: [] }
     data.finance[month].items.push(prune(item) as Movement)
@@ -433,6 +450,20 @@ export function fromRows(rows: Rows): OsData {
   for (const row of list(rows, 'doc_files')) {
     const doc = data.docs[row.doc_id as string]
     if (doc) (doc.files ??= []).push(fileOf(row))
+  }
+
+  for (const row of list(rows, 'accounts')) {
+    const account: Account = {
+      id: row.id as string, name: row.name as string, kind: row.kind as Account['kind'],
+    }
+    account.cashOutFee = numOpt(row.cash_out_fee)
+    if (row.payout_day !== null && row.payout_day !== undefined) {
+      account.payout = { day: Number(row.payout_day), at: (row.payout_at as string) ?? '23:59' }
+    }
+    account.payTo = opt<string>(row.pay_to)
+    account.notes = opt<string>(row.notes)
+    account.createdAt = opt<string>(row.created_at)
+    data.accounts[account.id] = prune(account) as Account
   }
 
   for (const row of list(rows, 'vehicles')) {
@@ -477,6 +508,12 @@ export function fromRows(rows: Rows): OsData {
     }
     day.createdAt = opt<string>(row.created_at)
     data.workdays[day.id] = prune(day) as Workday
+  }
+
+  for (const row of list(rows, 'workday_earnings')) {
+    const day = data.workdays[row.workday_id as string]
+    if (!day) continue
+    ;(day.earnings ??= {})[row.account_id as string] = Number(row.amount)
   }
 
   for (const row of list(rows, 'work_periods')) {

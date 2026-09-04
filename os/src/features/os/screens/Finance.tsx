@@ -1,6 +1,7 @@
 import { Row, Rows, Section, Tile } from '../parts'
 import { MONTHS, MONTHS_L, dayLabel, money, num, ym } from '../format'
 import { monthTotals } from '../goals'
+import { accountBalance, accountsOf } from '../accounts'
 import type { OsData } from '../types'
 
 export function Finance({ data, month, onMonth, onAdd, onDelete }: {
@@ -58,6 +59,24 @@ export function Finance({ data, month, onMonth, onAdd, onDelete }: {
           sub={totals.bal >= 0 ? 'ai rămas pe plus' : 'ai ieșit pe minus'}
           tone={totals.bal < 0 ? 'bad' : 'good'} />
       </div>
+
+      {accountsOf(data).filter(a => a.kind !== 'platform').length ? (
+        <>
+          <Section title="Conturi" />
+          {/* Soldul unui cont e al tuturor lunilor, nu doar al celei privite:
+              banii din august nu dispar fiindcă te uiți la septembrie. */}
+          <div className="os-tiles">
+            {accountsOf(data).filter(a => a.kind !== 'platform').map(account => {
+              const balance = accountBalance(data, account.id)
+              return (
+                <Tile key={account.id} label={account.name} value={money(balance, currency)}
+                  sub={account.kind === 'bank' ? 'în bancă' : 'în buzunar'}
+                  tone={balance < 0 ? 'bad' : undefined} />
+              )
+            })}
+          </div>
+        </>
+      ) : null}
 
       {series.some(s => s.inc || s.out) ? (
         <>

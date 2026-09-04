@@ -1,5 +1,6 @@
 import { num } from './format'
 import { carCostsOf, dailyShare, directOn, businessPart } from './carCosts'
+import { platformTotal } from './accounts'
 import { fuelRate } from './fuelChain'
 import type { DeliveryRates, OsData, Vehicle, Workday } from './types'
 
@@ -116,7 +117,7 @@ export function totalsOf(data: OsData, day: Workday): DayTotals {
   const businessKm = Math.max(0, totalKm - num(day.personalKm))
   const businessMiles = businessKm * KM_TO_MILE
 
-  const platform = num(day.uber) + num(day.deliveroo) + num(day.justEat) + num(day.otherPlatform)
+  const platform = platformTotal(day)
   const gross = platform + num(day.tips) + num(day.bonuses)
 
   /*

@@ -16,7 +16,14 @@ import { emptyOsData, type OsData } from './types'
  * cere ca fiecare câmp trimis să aibă coloana lui acolo.
  */
 
-const sql = readFileSync('../supabase/migrations/20260904_roberto_os_tables.sql', 'utf8')
+const sql = ['20260904_roberto_os_tables.sql', '20260904b_accounts.sql']
+  .map(name => readFileSync(`../supabase/migrations/${name}`, 'utf8')).join('\n')
+
+/** Coloanele adăugate după, cu `alter table`. */
+function addedTo(table: string): string[] {
+  return [...sql.matchAll(new RegExp(`alter table public\\.${table} add column if not exists (\\w+)`, 'g'))]
+    .map(match => match[1])
+}
 
 /** Coloanele unui tabel, citite din `create table`. */
 function columnsOf(table: string): Set<string> {
@@ -28,7 +35,7 @@ function columnsOf(table: string): Set<string> {
     .filter(line => line && !line.startsWith('--'))
     .filter(line => !/^(primary key|foreign key|unique|constraint|check)\b/i.test(line))
     .map(line => line.split(/\s+/)[0])
-  return new Set(names)
+  return new Set([...names, ...addedTo(table)])
 }
 
 /** O stare cu câte ceva peste tot, ca fiecare câmp să apuce să fie trimis. */
@@ -58,18 +65,26 @@ function full(): OsData {
     actions: [{ id: 'a', date: '2026-01-01', kind: 'k', summary: 's', outcome: 'o', followUp: '2026-01-02', org: 'o1' }],
     files: [{ id: 'f', name: 'n', type: 't', size: 1 }],
   }
-  data.finance['2026-01'] = { items: [{ id: 'mv', date: '2026-01-01', type: 'out', amount: 1, cat: 'c', note: 'n', debt: 'd1' }] }
+  data.finance['2026-01'] = { items: [{
+    id: 'mv', date: '2026-01-01', type: 'out', amount: 1, cat: 'c', note: 'n', debt: 'd1',
+    account: 'bank', from: 'plat', gross: 2,
+  }] }
   data.docs.dc1 = {
     id: 'dc1', mod: 'm1', title: 't', from: 'f', date: '2026-01-01', ref: 'r', amount: 1,
     due: '2026-01-02', note: 'n', debt: 'd1', done: false, createdAt: 'acum',
     files: [{ id: 'df', name: 'n', type: 't', size: 1 }],
   }
   data.vehicles.v1 = { id: 'v1', name: 'v', plate: 'p', fuelPerKm: 1, notes: 'n', createdAt: 'acum' }
+  data.accounts.bank = { id: 'bank', name: 'Monzo', kind: 'bank', createdAt: 'acum' }
+  data.accounts.plat = {
+    id: 'plat', name: 'Uber', kind: 'platform', cashOutFee: 0.5,
+    payout: { day: 3, at: '23:59' }, payTo: 'bank', notes: 'n', createdAt: 'acum',
+  }
   data.workdays.w1 = {
     id: 'w1', mod: 'm1', date: '2026-01-01', from: '10:00', to: '18:00', breakMinutes: 1, vehicle: 'v1',
     odoStart: 1, odoEnd: 2, personalKm: 1, uber: 1, deliveroo: 1, justEat: 1, otherPlatform: 1, tips: 1,
     bonuses: 1, parking: 1, tolls: 1, otherCost: 1, expenses: 1, recurring: 1, toDebt: 1, debt: 'd1',
-    notes: 'n', done: true, archived: true, createdAt: 'acum',
+    notes: 'n', done: true, archived: true, createdAt: 'acum', earnings: { plat: 10 },
     rates: { taxPct: 0.2, niPct: 0.06, fuelPerKm: 0.12, vehPerKm: 0.05 },
     periods: [{ id: 'p1', from: '17:00', to: '22:00', breakMinutes: 1 }],
   }

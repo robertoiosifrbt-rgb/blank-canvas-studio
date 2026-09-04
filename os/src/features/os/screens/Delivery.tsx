@@ -5,7 +5,9 @@ import { daysOf, spanHours, summarise, totalsOf, vehicleName } from '../delivery
 import { fuelRate, intervalsOf, pricePerLitre } from '../fuelChain'
 import { businessPart } from '../carCosts'
 import { searchCarCosts, searchDays, searchFuel } from '../deliverySearch'
-import type { CarExpense, Fuel, OsData, Vehicle, Workday, WorkPeriod } from '../types'
+import { accountsOf, accountBalance, nextPayout, platformBalance } from '../accounts'
+import { dayLabel } from '../format'
+import type { Account, CarExpense, Fuel, OsData, Vehicle, Workday, WorkPeriod } from '../types'
 
 /**
  * Livrări: ziua de lucru, cu ce a rămas din ea.
@@ -27,6 +29,8 @@ export interface DeliveryActions {
   onCarCost: (item?: CarExpense) => void
   onPeriod: (day: Workday, period?: WorkPeriod) => void
   onDropPeriod: (day: Workday, period: WorkPeriod) => void
+  onAccount: (account?: Account) => void
+  onCashOut: (account: Account) => void
   onDropCarCost: (item: CarExpense) => void
 }
 
@@ -53,6 +57,7 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
       <div className="os-chips" style={{ marginBottom: 14 }}>
         <button className="os-chip" onClick={() => on.onFuel()}>Alimentare</button>
         <button className="os-chip" onClick={() => on.onCarCost()}>Cheltuială mașină</button>
+        <button className="os-chip" onClick={() => on.onAccount()}>Cont nou</button>
         <button className="os-chip" onClick={() => on.onVehicle()}>Mașină nouă</button>
         <button className="os-chip" onClick={on.onSettings}>Procente și costuri</button>
       </div>
@@ -67,6 +72,52 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
           <h3>Nimic pentru „{query}”</h3>
           <p>Caută după zi, mașină, felul cheltuielii sau ce ai scris în note.</p>
         </div>
+      ) : null}
+
+      {!searching && accountsOf(data).length ? (
+        <>
+          <Section title="Conturi" />
+          {accountsOf(data, 'platform').map(account => {
+            const balance = platformBalance(data, account.id)
+            const when = account.payout ? nextPayout(account.payout) : undefined
+            const bank = account.payTo ? data.accounts[account.payTo] : undefined
+            return (
+              <div className="os-card pad os-doc" key={account.id}>
+                <div className="os-doc-head">
+                  <div>
+                    <b>{account.name}</b>
+                    <span className="os-muted">{[
+                      when && bank ? `plătește ${dayLabel(when)} la ${account.payout?.at} în ${bank.name}` : '',
+                      when && !bank ? `plătește ${dayLabel(when)}, dar n-are unde — pune contul bancar` : '',
+                      !account.payout ? 'nu plătește singură' : '',
+                      account.cashOutFee ? `scos pe loc: ${money(account.cashOutFee, currency)}` : '',
+                    ].filter(Boolean).join(' · ')}</span>
+                  </div>
+                  <span className="os-doc-amount">{money(balance, currency)}</span>
+                </div>
+                <div className="os-hero-acts">
+                  <button className="os-btn sm" disabled={balance <= 0}
+                    onClick={() => on.onCashOut(account)}>Scoate banii</button>
+                  <button className="os-btn ghost sm" onClick={() => on.onAccount(account)}>Modifică</button>
+                </div>
+              </div>
+            )
+          })}
+
+          {accountsOf(data).filter(a => a.kind !== 'platform').length ? (
+            <div className="os-doc-files">
+              {accountsOf(data).filter(a => a.kind !== 'platform').map(account => (
+                <span className="os-doc-file" key={account.id}>
+                  <button className="os-doc-open" onClick={() => on.onAccount(account)}>
+                    {account.name}
+                    <em>{account.kind === 'bank' ? 'bancă' : 'cash'}</em>
+                    <em>{money(accountBalance(data, account.id), currency)}</em>
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </>
       ) : null}
 
       {sum.days > 0 && !searching ? (

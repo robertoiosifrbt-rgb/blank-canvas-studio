@@ -24,6 +24,7 @@ import { Tasks } from './screens/Tasks'
 import { Today } from './screens/Today'
 import { SignIn } from './screens/SignIn'
 import { deviceToken, setDeviceToken } from './cloud'
+import { SEED, duePayouts } from './accounts'
 import { DEFAULT_ALERTS, buildAlarms } from './alerts'
 import { enablePush, pushState, syncAlarms, type PushState } from './push'
 import { resolveGoals } from './goalSources'
@@ -94,6 +95,33 @@ export function OsApp() {
   /* Starea notificărilor se citește o dată, la deschidere: nu se schimbă
      singură, ci doar când apeși tu butonul. */
   useEffect(() => { void pushState().then(setPush) }, [])
+
+  /**
+   * Conturile de livrări și plățile care s-au făcut între timp.
+   *
+   * Conturile se pun o singură dată, când modulul e gol: cele trei platforme
+   * cu ziua și ora la care plătesc fiecare, plus cash-ul.
+   *
+   * Plățile săptămânale se fac fără tine, deci aplicația le scrie când le
+   * vine ora. Id-ul lor e făcut din cont și din ziua plății, așa că a doua
+   * deschidere a aplicației nu le mai scrie o dată.
+   */
+  useEffect(() => {
+    if (!ready) return
+    const seeding = Object.keys(stored.accounts).length === 0
+    const due = seeding ? [] : duePayouts(stored)
+    if (!seeding && due.length === 0) return
+    update(draft => {
+      if (seeding) for (const account of SEED) draft.accounts[account.id] = { ...account }
+      for (const movement of due) {
+        const month = movement.date.slice(0, 7)
+        draft.finance[month] ??= { items: [] }
+        if (!draft.finance[month].items.some(item => item.id === movement.id)) {
+          draft.finance[month].items.push(movement)
+        }
+      }
+    })
+  }, [stored, ready, update])
 
   /**
    * Alarmele se recalculează din date și se trimit întregi.
@@ -200,6 +228,8 @@ export function OsApp() {
         onVehicle={v => open(drive.vehicle(v))} onSettings={() => open(drive.settings())}
         onFuel={f => open(drive.fuel(view, f))}
         onCarCost={c => open(drive.carCost(view, c))}
+        onAccount={a => open(drive.account(a))}
+        onCashOut={a => open(drive.cashOut(a))}
         onPeriod={(d, p) => open(drive.period(d, p))}
         onDropPeriod={(d, p) => update(draft => {
           draft.workdays[d.id].periods = (draft.workdays[d.id].periods ?? []).filter(x => x.id !== p.id)

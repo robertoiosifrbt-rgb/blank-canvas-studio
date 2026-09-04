@@ -1,7 +1,12 @@
 import type { DialogSpec } from './Dialog'
 import { DEFAULT_RATES, totalsOf } from './delivery'
 import { money, num, today, uid, ym } from './format'
-import type { CarExpense, DeliveryRates, Fuel, OsData, Vehicle, Workday, WorkPeriod } from './types'
+import { CASH, accountsOf, earningsOf, platformBalance } from './accounts'
+import type {
+  Account, CarExpense, DeliveryRates, Fuel, OsData, Vehicle, Workday, WorkPeriod,
+} from './types'
+
+const DAYS = ['duminică', 'luni', 'marți', 'miercuri', 'joi', 'vineri', 'sâmbătă']
 
 const CAR_CATEGORIES = ['Reparație', 'Service', 'Asigurare', 'ITP', 'Cauciucuri',
   'Taxă de drum', 'Spălare', 'Rovinietă', 'Leasing', 'Altele']
@@ -57,6 +62,108 @@ export function deliveryDialogs(data: OsData, update: Update) {
     },
   })
 
+  /**
+   * Un cont: o platformă, o bancă, sau buzunarul.
+   *
+   * La platforme se scrie și când plătesc singure — ziua, ora și contul în
+   * care intră banii. Alea nu sunt bătute în cuie nicăieri: dacă Deliveroo
+   * mută plata de marți pe miercuri, o schimbi aici.
+   */
+  const account = (existing?: Account): DialogSpec => {
+    const banks = accountsOf(data, 'bank')
+    return {
+      title: existing ? `Modifică „${existing.name}”` : 'Cont nou',
+      fields: [
+        { key: 'name', label: 'Cum îi zici', value: existing?.name ?? '', placeholder: 'ex: Stuart, Monzo' },
+        { key: 'kind', label: 'Ce fel de cont', type: 'select', value: existing?.kind ?? 'platform', options: [
+          { value: 'platform', label: 'Platformă de livrări' },
+          { value: 'bank', label: 'Cont bancar' },
+          { value: 'cash', label: 'Cash' },
+        ] },
+        { key: 'cashOutFee', label: `Comision la scoaterea pe loc (${currency})`, type: 'number',
+          value: existing?.cashOutFee === undefined ? '' : String(existing.cashOutFee) },
+        { key: 'payDay', label: 'Plătește singură în ziua de', type: 'select',
+          value: existing?.payout ? String(existing.payout.day) : '', options: [
+            { value: '', label: '— nu plătește singură —' },
+            ...DAYS.map((name, index) => ({ value: String(index), label: name })),
+          ] },
+        { key: 'payAt', label: 'La ora', value: existing?.payout?.at ?? '', placeholder: '13:00' },
+        { key: 'payTo', label: 'Banii intră în', type: 'select', value: existing?.payTo ?? '', options: [
+          { value: '', label: banks.length ? '— niciun cont —' : '— n-ai încă niciun cont bancar —' },
+          ...banks.map(bank => ({ value: bank.id, label: bank.name })),
+        ] },
+        { key: 'notes', label: 'Note', type: 'textarea', value: existing?.notes ?? '' },
+      ],
+      submit(values) {
+        if (!values.name) return 'Dă-i un nume.'
+        const kind = (values.kind || 'platform') as Account['kind']
+        if (kind === 'platform' && values.payDay && !values.payAt) return 'Pune și ora la care plătește.'
+        const id = existing?.id ?? `a${uid()}`
+        update(draft => {
+          draft.accounts[id] = {
+            id, name: values.name, kind,
+            cashOutFee: kind === 'platform' && values.cashOutFee ? num(values.cashOutFee) : undefined,
+            payout: kind === 'platform' && values.payDay
+              ? { day: Number(values.payDay), at: values.payAt || '23:59' }
+              : undefined,
+            payTo: kind === 'platform' ? values.payTo || undefined : undefined,
+            notes: values.notes || undefined,
+            createdAt: existing?.createdAt ?? new Date().toISOString(),
+          }
+        })
+      },
+    }
+  }
+
+  /**
+   * Scoaterea banilor pe loc.
+   *
+   * De pe platformă pleacă suma întreagă; în bancă ajunge mai puțin, cu
+   * comisionul. Se scriu amândouă — altfel comisionul ar dispărea din
+   * socoteală și n-ai ști niciodată cât te-a costat graba.
+   */
+  const cashOut = (from: Account): DialogSpec => {
+    const balance = platformBalance(data, from.id)
+    const fee = num(from.cashOutFee)
+    const banks = accountsOf(data, 'bank')
+    return {
+      title: `Scoți banii de pe ${from.name}`,
+      note: fee > 0
+        ? `Ai ${money(balance, currency)}. Scoaterea pe loc costă ${money(fee, currency)}.`
+        : `Ai ${money(balance, currency)}.`,
+      ok: 'Scoate banii',
+      fields: [
+        { key: 'amount', label: `Cât scoți (${currency})`, type: 'number', value: balance.toFixed(2) },
+        { key: 'to', label: 'În ce cont', type: 'select', value: from.payTo ?? banks[0]?.id ?? '', options:
+          banks.map(bank => ({ value: bank.id, label: bank.name })) },
+        { key: 'date', label: 'Ziua', type: 'date', value: today() },
+      ],
+      submit(values) {
+        const amount = num(values.amount)
+        if (amount <= 0) return 'Scrie cât scoți.'
+        if (amount > balance + 0.001) return `N-ai atât pe ${from.name}. Ai ${money(balance, currency)}.`
+        if (!values.to) return 'Fă întâi un cont bancar, ca să aibă unde intra.'
+        const id = `out-${uid()}`
+        const month = ym(values.date)
+        update(draft => {
+          draft.finance[month] ??= { items: [] }
+          draft.finance[month].items.push({
+            id, date: values.date, type: 'in', amount: amount - fee, gross: amount,
+            cat: 'Livrări', note: `Scos de pe ${from.name}`,
+            account: values.to, from: from.id,
+          })
+          if (fee > 0) {
+            draft.finance[month].items.push({
+              id: `${id}-fee`, date: values.date, type: 'out', amount: fee,
+              cat: 'Comisioane', note: `Scoatere pe loc ${from.name}`, account: values.to,
+            })
+          }
+        })
+      },
+    }
+  }
+
+
   const workday = (mod: string, existing?: Workday): DialogSpec => ({
     title: existing ? `Tura din ${existing.date}` : 'Tură nouă',
     fields: [
@@ -75,10 +182,13 @@ export function deliveryDialogs(data: OsData, update: Update) {
         value: existing?.odoEnd === undefined ? '' : String(existing.odoEnd) },
       { key: 'personalKm', label: 'Din care personali', type: 'number',
         value: existing?.personalKm === undefined ? '' : String(existing.personalKm) },
-      { key: 'uber', label: 'Uber Eats', type: 'number', value: existing?.uber === undefined ? '' : String(existing.uber) },
-      { key: 'deliveroo', label: 'Deliveroo', type: 'number', value: existing?.deliveroo === undefined ? '' : String(existing.deliveroo) },
-      { key: 'justEat', label: 'Just Eat', type: 'number', value: existing?.justEat === undefined ? '' : String(existing.justEat) },
-      { key: 'otherPlatform', label: 'Altă platformă', type: 'number', value: existing?.otherPlatform === undefined ? '' : String(existing.otherPlatform) },
+      /* Câte un câmp pe platformă, luate din conturi. Adaugi un cont nou,
+         apare aici singur — nu mai e nimic bătut în cod. */
+      ...accountsOf(data, 'platform').map(account => {
+        const had = existing ? earningsOf(existing)[account.id] : undefined
+        return { key: `earn:${account.id}`, label: account.name, type: 'number' as const,
+          value: had === undefined ? '' : String(had) }
+      }),
       { key: 'tips', label: 'Bacșiș', type: 'number', value: existing?.tips === undefined ? '' : String(existing.tips) },
       { key: 'bonuses', label: 'Bonusuri', type: 'number', value: existing?.bonuses === undefined ? '' : String(existing.bonuses) },
       { key: 'parking', label: 'Parcare', type: 'number', value: existing?.parking === undefined ? '' : String(existing.parking) },
@@ -94,8 +204,13 @@ export function deliveryDialogs(data: OsData, update: Update) {
     submit(values) {
       if (!values.date) return 'Pune ziua.'
       const id = existing?.id ?? `w${uid()}`
-      const numbers = ['breakMinutes', 'odoStart', 'odoEnd', 'personalKm', 'uber', 'deliveroo',
-        'justEat', 'otherPlatform', 'tips', 'bonuses', 'parking', 'tolls', 'otherCost'] as const
+      const numbers = ['breakMinutes', 'odoStart', 'odoEnd', 'personalKm',
+        'tips', 'bonuses', 'parking', 'tolls', 'otherCost'] as const
+      const earnings: Record<string, number> = {}
+      for (const account of accountsOf(data, 'platform')) {
+        const written = values[`earn:${account.id}`]
+        if (written) earnings[account.id] = num(written)
+      }
       update(draft => {
         const day: Workday = {
           ...(existing ?? {}),
@@ -103,6 +218,7 @@ export function deliveryDialogs(data: OsData, update: Update) {
           from: values.from || undefined,
           to: values.to || undefined,
           vehicle: values.vehicle || undefined,
+          earnings,
           notes: values.notes || undefined,
           archived: values.archived === 'da' ? true : undefined,
           done: existing?.done ?? false,
@@ -127,11 +243,16 @@ export function deliveryDialogs(data: OsData, update: Update) {
     const totals = totalsOf(data, day)
     const money_ = `Brut ${money(totals.gross, currency)}, cheltuieli ${money(totals.totalExpenses, currency)}, ` +
       `rezerve ${money(totals.reserves, currency)}. Rămâne ${money(totals.available, currency)}.`
+    /* Se spune unde se duc banii, ca să nu-i cauți în Finanțe și să crezi că
+       s-au pierdut: pe platforme stau până în ziua lor de plată. */
+    const whereTo = totals.platform > 0
+      ? ` ${money(totals.platform, currency)} rămân pe platforme până plătesc ele.`
+      : ''
     return {
       title: `Închizi tura din ${day.date}?`,
       note: day.archived
         ? `${money_} Fiind intrare veche, nu se scrie nimic în Finanțe.`
-        : money_,
+        : money_ + whereTo,
       ok: 'Închide tura',
       /* Fără nicio datorie, întrebarea n-are răspuns: ar cere o sumă pentru
          un loc care nu există, iar tura ar rămâne cu o cifră care nu înseamnă
@@ -158,9 +279,18 @@ export function deliveryDialogs(data: OsData, update: Update) {
 
           draft.finance[month] ??= { items: [] }
           const items = draft.finance[month].items
-          if (totals.gross > 0) {
+
+          /* Câștigul de pe platforme NU intră în Finanțe. El rămâne pe Uber,
+             pe Deliveroo, pe Just Eat — bani câștigați, dar nu bani pe care
+             îi ai. Intră abia când platforma îi trimite în bancă.
+
+             Bacșișul și bonusurile sunt altceva: alea le-ai luat pe loc, deci
+             se scriu acum, în contul de cash. */
+          const inHand = num(day.tips) + num(day.bonuses)
+          if (inHand > 0) {
             items.push({ id: `wd-in-${day.id}`, date: day.date, type: 'in',
-              amount: totals.gross, cat: 'Livrări', note: `Tură ${day.date}` })
+              amount: inHand, cat: 'Livrări', note: `Bacșiș și bonusuri, tura ${day.date}`,
+              account: CASH })
           }
           /* Fără combustibil și fără cheltuielile cu mașina: alea intră în
              Finanțe la locul lor, cu sumele adevărate. Aici sunt doar
@@ -168,11 +298,13 @@ export function deliveryDialogs(data: OsData, update: Update) {
           const costsWithoutFuel = totals.directCosts - totals.fuel + num(day.expenses) + num(day.recurring)
           if (costsWithoutFuel > 0) {
             items.push({ id: `wd-out-${day.id}`, date: day.date, type: 'out',
-              amount: costsWithoutFuel, cat: 'Livrări', note: `Costuri tură ${day.date}` })
+              amount: costsWithoutFuel, cat: 'Livrări', note: `Costuri tură ${day.date}`,
+              account: CASH })
           }
           if (values.debt && num(values.toDebt) > 0) {
             items.push({ id: `wd-debt-${day.id}`, date: day.date, type: 'out',
-              amount: num(values.toDebt), cat: 'Datorii', note: `Din tura ${day.date}`, debt: values.debt })
+              amount: num(values.toDebt), cat: 'Datorii', note: `Din tura ${day.date}`,
+              debt: values.debt, account: CASH })
           }
         })
       },
@@ -323,5 +455,5 @@ export function deliveryDialogs(data: OsData, update: Update) {
     },
   })
 
-  return { vehicle, settings, workday, finish, period, fuel, carCost }
+  return { vehicle, settings, workday, finish, period, fuel, carCost, account, cashOut }
 }

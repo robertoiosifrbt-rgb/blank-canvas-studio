@@ -205,6 +205,20 @@ export interface Movement {
   /** Datoria pe care o plătește, dacă e o plată. Legătura într-un singur sens:
       banii sunt scriși o dată, aici, iar datoria se uită la ei. */
   debt?: string
+  /** Contul prin care au trecut: banca sau cash-ul. Lipsă la cele vechi. */
+  account?: string
+  /**
+   * Platforma de pe care au venit, la banii scoși de pe Uber sau Deliveroo.
+   *
+   * Cu ea știe platforma cât i-a mai rămas: mișcarea e scrisă o dată, în
+   * Finanțe, iar soldul platformei se uită la ea.
+   */
+  from?: string
+  /**
+   * Cât a plecat de pe platformă, când nu e același lucru cu ce a intrat în
+   * bancă. La scoaterea pe loc pleacă tot, dar ajunge mai puțin cu comisionul.
+   */
+  gross?: number
 }
 
 /** Finanțele stau grupate pe luni — o fișă pe lună, oricâte mișcări. */
@@ -303,6 +317,43 @@ export interface WorkPeriod {
   breakMinutes?: number
 }
 
+
+/**
+ * Când pleacă banii de pe o platformă către bancă.
+ *
+ * Uber, Deliveroo și Just Eat plătesc singure, o dată pe săptămână, la o zi
+ * și o oră știute. Până atunci banii sunt câștigați, dar nu-i ai — iar dacă
+ * i-ai socoti ca și cum i-ai avea, ai cheltui bani care încă n-au venit.
+ */
+export interface PayoutRule {
+  /** Ziua în care plătesc: 0 duminică, 1 luni … 6 sâmbătă. */
+  day: number
+  /** Ora, ca `13:00`. */
+  at: string
+}
+
+/**
+ * Un cont: o platformă de livrări, un cont bancar, sau banii din buzunar.
+ *
+ * Platformele țin banii câștigați până în ziua de plată. Banca și cash-ul țin
+ * bani adevărați, deci mișcările lor sunt în Finanțe. Soldul nu se salvează
+ * nicăieri: se socotește din ce s-a scris, ca să nu existe două adevăruri.
+ */
+export interface Account {
+  id: string
+  name: string
+  /** `platform` — Uber, Deliveroo. `bank` — Monzo. `cash` — buzunarul. */
+  kind: 'platform' | 'bank' | 'cash'
+  /** Doar la platforme: cât costă scoaterea banilor pe loc. */
+  cashOutFee?: number
+  /** Doar la platforme: când plătesc singure. Lipsă înseamnă că nu plătesc. */
+  payout?: PayoutRule
+  /** Doar la platforme: contul bancar în care intră banii. */
+  payTo?: string
+  notes?: string
+  createdAt?: string
+}
+
 /**
  * O tură de livrări.
  *
@@ -325,9 +376,20 @@ export interface Workday {
   odoStart?: number
   odoEnd?: number
   personalKm?: number
+  /**
+   * Cât a câștigat fiecare platformă, pe id de cont.
+   *
+   * Turele scrise înainte de conturi n-au harta asta; pentru ele se citesc
+   * câmpurile de mai jos. Așa istoricul rămâne întreg fără să fie rescris.
+   */
+  earnings?: Record<string, number>
+  /** @deprecated Ținut pentru turele scrise înainte de conturi. */
   uber?: number
+  /** @deprecated */
   deliveroo?: number
+  /** @deprecated */
   justEat?: number
+  /** @deprecated */
   otherPlatform?: number
   tips?: number
   bonuses?: number
@@ -427,6 +489,7 @@ export interface OsData {
   debts: Record<string, Debt>
   orgs: Record<string, Org>
   vehicles: Record<string, Vehicle>
+  accounts: Record<string, Account>
   workdays: Record<string, Workday>
   fuel: Record<string, Fuel>
   carCosts: Record<string, CarExpense>
@@ -437,7 +500,7 @@ export interface OsData {
 
 export const emptyOsData = (): OsData => ({
   modules: {}, goals: {}, tasks: {}, habits: {},
-  notes: {}, debts: {}, orgs: {}, vehicles: {}, workdays: {}, fuel: {},
+  notes: {}, debts: {}, orgs: {}, vehicles: {}, accounts: {}, workdays: {}, fuel: {},
   carCosts: {}, docs: {}, finance: {},
   settings: { currency: '£' },
 })

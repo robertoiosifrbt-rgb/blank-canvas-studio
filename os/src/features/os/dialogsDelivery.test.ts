@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { deliveryDialogs } from './dialogsDelivery'
 import { DEFAULT_RATES, daysOf, summarise, totalsOf } from './delivery'
+import { CASH, SEED, UBER, platformBalance } from './accounts'
 import { emptyOsData, type OsData, type Workday } from './types'
 
 function run(spec: { fields: Array<{ key: string; value?: string }>
@@ -15,25 +16,45 @@ const dialogs = (data: OsData) => deliveryDialogs(data, change => change(data))
 
 function ready(): OsData {
   const data = emptyOsData()
+  for (const account of SEED) data.accounts[account.id] = { ...account }
+  data.accounts.bank = { id: 'bank', name: 'Monzo', kind: 'bank' }
   data.settings.delivery = DEFAULT_RATES
   data.debts.d1 = { id: 'd1', mod: 'datorii', name: 'Card', direction: 'owe', total: 900, status: 'Activă' }
   const day: Workday = {
     id: 'w1', mod: 'livrari', date: '2026-09-01', from: '10:00', to: '18:00',
-    odoStart: 0, odoEnd: 100, uber: 90, parking: 5, done: false,
+    odoStart: 0, odoEnd: 100, earnings: { [UBER]: 90 }, parking: 5, done: false,
   }
   data.workdays.w1 = day
   return data
 }
 
 describe('închiderea unei ture', () => {
-  it('scrie brutul ca venit și cheltuielile ca cheltuială, o dată fiecare', () => {
+  it('lasă câștigul pe platformă, unde chiar se află', () => {
+    const data = ready()
+    run(dialogs(data).finish(data.workdays.w1), { toDebt: '0' })
+    const items = data.finance['2026-09'].items
+    /* Cei 90 de pe Uber nu-s bani pe care îi ai: stau pe Uber până plătește. */
+    expect(items.some(i => i.type === 'in' && i.amount === 90)).toBe(false)
+    expect(platformBalance(data, UBER)).toBe(90)
+  })
+
+  it('scrie bacșișul în cash, că ăla e în buzunar', () => {
+    const data = ready()
+    data.workdays.w1.tips = 8
+    data.workdays.w1.bonuses = 2
+    run(dialogs(data).finish(data.workdays.w1), { toDebt: '0' })
+    const income = data.finance['2026-09'].items.filter(i => i.type === 'in')
+    expect(income).toHaveLength(1)
+    expect(income[0].amount).toBe(10)
+    expect(income[0].account).toBe(CASH)
+  })
+
+  it('scrie cheltuielile turei, fără combustibil', () => {
     const data = ready()
     const totals = totalsOf(data, data.workdays.w1)
     run(dialogs(data).finish(data.workdays.w1), { toDebt: '0' })
-    const items = data.finance['2026-09'].items
-    expect(items.filter(i => i.type === 'in')).toHaveLength(1)
-    expect(items.find(i => i.type === 'in')?.amount).toBeCloseTo(totals.gross, 6)
-    expect(items.find(i => i.type === 'out')?.amount).toBeCloseTo(totals.totalExpenses - totals.fuel, 6)
+    const out = data.finance['2026-09'].items.find(i => i.type === 'out')
+    expect(out?.amount).toBeCloseTo(totals.totalExpenses - totals.fuel, 6)
   })
 
   it('nu duce combustibilul în registru: el intră de la pompă', () => {
@@ -192,11 +213,11 @@ describe('închiderea fără nicio datorie', () => {
     expect(dialogs(data).finish(data.workdays.w1).fields.map(f => f.key)).toEqual(['toDebt', 'debt'])
   })
 
-  it('închide tura la fel, cu banii în Finanțe', () => {
+  it('închide tura la fel, cu banii pe platformă', () => {
     const data = ready()
     delete data.debts.d1
     run(dialogs(data).finish(data.workdays.w1))
     expect(data.workdays.w1.done).toBe(true)
-    expect(data.finance['2026-09'].items.some(i => i.type === 'in' && i.amount === 90)).toBe(true)
+    expect(platformBalance(data, UBER)).toBe(90)
   })
 })
