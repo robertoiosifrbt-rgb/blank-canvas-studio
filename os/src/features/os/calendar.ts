@@ -1,5 +1,6 @@
 import { iso, num, today } from './format'
 import { activePlan, currentHolder, everyLabel, nextDue, remaining } from './debts'
+import { totalsOf } from './delivery'
 import { gymMeasurements, gymSessions } from './gymBridge'
 import type { OsData } from './types'
 
@@ -24,7 +25,7 @@ export function monthGrid(key: string): DayCell[] {
   return out
 }
 
-export type DayKind = 'task' | 'debt' | 'money' | 'habit' | 'goal' | 'gym' | 'doc'
+export type DayKind = 'task' | 'debt' | 'money' | 'habit' | 'goal' | 'gym' | 'doc' | 'work'
 export type DayClass = 'acc' | 'good' | 'bad' | 'warn' | 'ochre'
 
 export interface DayItem {
@@ -55,6 +56,7 @@ export const LAYERS: Array<{ kind: DayKind; name: string }> = [
   { kind: 'money', name: 'Bani' },
   { kind: 'goal', name: 'Obiective' },
   { kind: 'habit', name: 'Obiceiuri' },
+  { kind: 'work', name: 'Livrări' },
   { kind: 'gym', name: 'Sală' },
 ]
 
@@ -136,6 +138,20 @@ export function dayItems(data: OsData, date: string): DayItem[] {
         amount: d.amount, goto: d.mod,
         lines: [d.ref ? `ref. ${d.ref}` : '', d.note ?? ''].filter(Boolean) as string[],
       })
+
+  /* Tura de livrări: ce a rămas din ea, nu ce a intrat. Brutul e cifra care
+     înșală, iar în calendar ai loc pentru una singură. */
+  for (const day of Object.values(data.workdays ?? {})) {
+    if (day.date !== date) continue
+    const t = totalsOf(data, day)
+    out.push({
+      kind: 'work', cls: day.done ? 'good' : 'acc',
+      title: 'Tură livrări', sub: day.done ? `${t.hours.toFixed(1)} h · ${Math.round(t.businessKm)} km` : 'neterminată',
+      amount: t.available, inflow: true, goto: day.mod,
+      lines: [`brut ${t.gross.toFixed(2)}`, `cheltuieli ${t.totalExpenses.toFixed(2)}`,
+        `rezerve ${t.reserves.toFixed(2)}`],
+    })
+  }
 
   for (const s of gymSessions())
     if (s.date === date) out.push({ kind: 'gym', cls: 'acc', title: s.name, sub: 'antrenament' })

@@ -8,6 +8,12 @@ export interface Field {
   value?: string
   placeholder?: string
   options?: { value: string; label: string }[]
+  /**
+   * Sugestii pentru un câmp de text liber: apar pe măsură ce scrii, dar poți
+   * scrie și altceva. Un `select` te-ar obliga să alegi din ce există; aici
+   * numele nou e cazul obișnuit, nu excepția.
+   */
+  suggest?: string[]
 }
 
 export interface DialogSpec {
@@ -62,11 +68,20 @@ export function Dialog({ spec, onClose, onError }:
                 <textarea ref={i === 0 ? first as never : undefined} value={values[f.key]}
                   placeholder={f.placeholder} onChange={e => set(f.key, e.target.value)} />
               ) : (
-                <input ref={i === 0 ? first as never : undefined} type={f.type ?? 'text'}
-                  inputMode={f.type === 'number' ? 'decimal' : undefined}
-                  step={f.type === 'number' ? '0.01' : undefined}
-                  value={values[f.key]} placeholder={f.placeholder}
-                  onChange={e => set(f.key, e.target.value)} />
+                <>
+                  <input ref={i === 0 ? first as never : undefined} type={f.type ?? 'text'}
+                    inputMode={f.type === 'number' ? 'decimal' : undefined}
+                    step={f.type === 'number' ? '0.01' : undefined}
+                    list={f.suggest?.length ? `${f.key}-sug` : undefined}
+                    autoComplete="off"
+                    value={values[f.key]} placeholder={f.placeholder}
+                    onChange={e => set(f.key, e.target.value)} />
+                  {f.suggest?.length ? (
+                    <datalist id={`${f.key}-sug`}>
+                      {f.suggest.map(item => <option key={item} value={item} />)}
+                    </datalist>
+                  ) : null}
+                </>
               )}
             </label>
           ))}

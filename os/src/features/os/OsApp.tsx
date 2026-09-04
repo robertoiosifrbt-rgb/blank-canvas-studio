@@ -6,12 +6,14 @@ import { OsIcon } from './OsIcon'
 import { GoalStrips } from './GoalHero'
 import { coreDialogs } from './dialogsCore'
 import { debtDialogs } from './dialogsDebts'
+import { deliveryDialogs } from './dialogsDelivery'
 import { goalDialogs } from './dialogsGoals'
 import { today, ym } from './format'
 import { childrenOf, moduleById, moduleTree, pathOf } from './modules'
 import { CalendarScreen } from './screens/CalendarScreen'
 import type { DayKind } from './calendar'
 import { Debts } from './screens/Debts'
+import { Delivery } from './screens/Delivery'
 import { Docs } from './screens/Docs'
 import { Finance } from './screens/Finance'
 import { Goals } from './screens/Goals'
@@ -76,6 +78,7 @@ export function OsApp() {
   const goals = useMemo(() => goalDialogs(data, update), [data, update])
   const core = useMemo(() => coreDialogs(data, update), [data, update])
   const owed = useMemo(() => debtDialogs(data, update), [data, update])
+  const drive = useMemo(() => deliveryDialogs(data, update), [data, update])
   const phone = typeof window !== 'undefined' && window.matchMedia('(max-width:860px)').matches
 
   const open = (spec: DialogSpec) => { setProblem(null); setDialog(spec) }
@@ -190,6 +193,30 @@ export function OsApp() {
         onDelete={h => open(core.confirm(`Ștergi „${h.name}”?`,
           'Se pierde tot istoricul de bife. Nu se poate anula.',
           () => update(draft => { delete draft.habits[h.id] })))} />
+      case 'delivery': return <Delivery data={data} mod={view}
+        onAdd={() => open(drive.workday(view))} onEdit={d => open(drive.workday(view, d))}
+        onFinish={d => open(drive.finish(d))}
+        onVehicle={v => open(drive.vehicle(v))} onSettings={() => open(drive.settings())}
+        onReopen={d => open(core.confirm(`Redeschizi tura din ${d.date}?`,
+          'Se scot din Finanțe banii scriși la închiderea ei. Îi pui la loc când o închizi din nou.',
+          () => update(draft => {
+            draft.workdays[d.id].done = false
+            /* Mișcările scrise de tura asta poartă id-ul ei, deci se pot lua
+               înapoi exact — nu ghicim după sumă și dată. */
+            for (const month of Object.keys(draft.finance)) {
+              draft.finance[month].items = draft.finance[month].items
+                .filter(item => !item.id.endsWith(`-${d.id}`))
+            }
+          })))}
+        onDelete={d => open(core.confirm(`Ștergi tura din ${d.date}?`,
+          'Dispare cu tot cu mișcările pe care le-a scris în Finanțe. Nu se poate anula.',
+          () => update(draft => {
+            delete draft.workdays[d.id]
+            for (const month of Object.keys(draft.finance)) {
+              draft.finance[month].items = draft.finance[month].items
+                .filter(item => !item.id.endsWith(`-${d.id}`))
+            }
+          })))} />
       case 'docs': return <Docs data={data} mod={view} busy={busyDoc}
         onAdd={() => open(core.doc(view))} onOpen={d => open(core.doc(view, d))}
         onToggle={d => update(draft => { draft.docs[d.id].done = !draft.docs[d.id].done })}

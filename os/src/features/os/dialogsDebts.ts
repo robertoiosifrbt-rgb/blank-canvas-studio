@@ -33,7 +33,8 @@ export function debtDialogs(data: OsData, update: Update) {
          datorie cu o firmă; drumul obișnuit nu trebuie să treacă prin trei
          ferestre. Restul referințelor se adaugă după, de pe card. */
       ...(existing ? [] : [
-        { key: 'org', label: 'Cine ți-o cere', placeholder: 'ex: Lowell, DWP' },
+        { key: 'org', label: 'Cine ți-o cere', placeholder: 'ex: Lowell, DWP',
+          suggest: Object.values(data.orgs).map(o => o.name).sort() },
         { key: 'ref', label: 'Referința lor', placeholder: 'ex: SY361954C' },
       ]),
       { key: 'notes', label: 'Note', type: 'textarea', value: existing?.notes ?? '' },

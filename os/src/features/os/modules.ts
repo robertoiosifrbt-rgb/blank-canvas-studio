@@ -11,6 +11,9 @@ export const BUILTIN: OsModule[] = [
   { id: 'obiceiuri', name: 'Obiceiuri', kind: 'habits' },
   { id: 'jurnal', name: 'Jurnal', kind: 'notes' },
   { id: 'documente', name: 'Documente', kind: 'docs' },
+  { id: 'business', name: 'Business', kind: 'hub' },
+  { id: 'pfa', name: 'Self-employed', kind: 'hub', parent: 'business' },
+  { id: 'livrari', name: 'Food delivery', kind: 'delivery', parent: 'pfa' },
   { id: 'health', name: 'Health', kind: 'hub' },
   { id: 'gym', name: 'Gym', kind: 'gym', parent: 'health' },
 ]

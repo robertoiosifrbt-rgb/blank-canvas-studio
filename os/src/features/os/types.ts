@@ -219,11 +219,77 @@ export interface OsModule {
   createdAt?: string
 }
 
+/** O mașină folosită la livrări. Consumul stă aici: mașinile beau diferit. */
+export interface Vehicle {
+  id: string
+  name: string
+  plate?: string
+  /** Costul cu combustibilul, pe kilometru. */
+  fuelPerKm?: number
+  notes?: string
+  createdAt?: string
+}
+
+/**
+ * O tură de livrări.
+ *
+ * Ce scrii tu stă aici; cifrele care ies din ele nu se salvează, se calculează
+ * la fiecare privire. Singura excepție sunt procentele: ziua le păstrează pe
+ * cele de atunci, ca o schimbare de azi să nu rescrie luna trecută.
+ */
+export interface Workday {
+  id: string
+  mod: string
+  date: string
+  from?: string
+  to?: string
+  breakMinutes?: number
+  vehicle?: string
+  odoStart?: number
+  odoEnd?: number
+  personalKm?: number
+  uber?: number
+  deliveroo?: number
+  justEat?: number
+  otherPlatform?: number
+  tips?: number
+  bonuses?: number
+  parking?: number
+  tolls?: number
+  otherCost?: number
+  /** Cheltuieli ale zilei, în afara celor de mai sus. */
+  expenses?: number
+  /** Partea din cheltuielile lunare care cade pe ziua asta. */
+  recurring?: number
+  /** Cât ai trimis efectiv către datorii din ziua asta. */
+  toDebt?: number
+  /** Datoria către care s-a dus, dacă a fost una anume. */
+  debt?: string
+  notes?: string
+  /** `false` cât timp o completezi. Zilele neterminate nu intră în totaluri. */
+  done?: boolean
+  /** Procentele cu care a fost calculată, înghețate la terminare. */
+  rates?: DeliveryRates
+  createdAt?: string
+}
+
+/** Procentele și costurile pe kilometru, cu care se calculează o zi. */
+export interface DeliveryRates {
+  /** Cât pui deoparte pentru taxe, ca fracție: 0.2 înseamnă 20%. */
+  taxPct: number
+  niPct: number
+  fuelPerKm: number
+  /** Cât pui deoparte pentru mașină, pe kilometru. */
+  vehPerKm: number
+}
+
 export interface OsSettings {
   currency: string
   seeded?: boolean
   /** Cu câte zile înainte și la ce oră sună notificările. */
   alerts?: { lead: number; hour: number }
+  /** Procentele folosite la livrări, cele curente. */
+  delivery?: DeliveryRates
 }
 
 /** Un fișier atașat unui document: cât să-l poți arăta și regăsi. */
@@ -274,6 +340,8 @@ export interface OsData {
   notes: Record<string, Note>
   debts: Record<string, Debt>
   orgs: Record<string, Org>
+  vehicles: Record<string, Vehicle>
+  workdays: Record<string, Workday>
   docs: Record<string, Doc>
   finance: FinanceByMonth
   settings: OsSettings
@@ -281,6 +349,6 @@ export interface OsData {
 
 export const emptyOsData = (): OsData => ({
   modules: {}, goals: {}, tasks: {}, habits: {},
-  notes: {}, debts: {}, orgs: {}, docs: {}, finance: {},
+  notes: {}, debts: {}, orgs: {}, vehicles: {}, workdays: {}, docs: {}, finance: {},
   settings: { currency: '£' },
 })
