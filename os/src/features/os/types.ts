@@ -231,6 +231,35 @@ export interface Vehicle {
 }
 
 /**
+ * O alimentare.
+ *
+ * Doar ce citești de pe bon și de pe bord. Consumul, prețul pe litru și
+ * costul pe kilometru nu se scriu: ies din lanțul de alimentări, la fiecare
+ * privire. Scrise, s-ar învechi în tăcere de fiecare dată când corectezi o
+ * cifră mai veche.
+ */
+export interface Fuel {
+  id: string
+  mod: string
+  date: string
+  vehicle?: string
+  /** Kilometrajul de pe bord, la pompă. Fără el, alimentarea nu spune nimic. */
+  odometer?: number
+  litres?: number
+  cost?: number
+  /**
+   * Plin, sau parțial.
+   *
+   * Consumul se poate socoti numai între două plinuri: doar atunci știi că
+   * rezervorul a pornit și s-a terminat în același punct. Alimentările
+   * parțiale dintre ele se adună la interval.
+   */
+  full?: boolean
+  notes?: string
+  createdAt?: string
+}
+
+/**
  * O tură de livrări.
  *
  * Ce scrii tu stă aici; cifrele care ies din ele nu se salvează, se calculează
@@ -351,6 +380,7 @@ export interface OsData {
   orgs: Record<string, Org>
   vehicles: Record<string, Vehicle>
   workdays: Record<string, Workday>
+  fuel: Record<string, Fuel>
   docs: Record<string, Doc>
   finance: FinanceByMonth
   settings: OsSettings
@@ -358,6 +388,6 @@ export interface OsData {
 
 export const emptyOsData = (): OsData => ({
   modules: {}, goals: {}, tasks: {}, habits: {},
-  notes: {}, debts: {}, orgs: {}, vehicles: {}, workdays: {}, docs: {}, finance: {},
+  notes: {}, debts: {}, orgs: {}, vehicles: {}, workdays: {}, fuel: {}, docs: {}, finance: {},
   settings: { currency: '£' },
 })

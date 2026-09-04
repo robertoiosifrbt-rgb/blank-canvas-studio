@@ -33,7 +33,17 @@ describe('închiderea unei ture', () => {
     const items = data.finance['2026-09'].items
     expect(items.filter(i => i.type === 'in')).toHaveLength(1)
     expect(items.find(i => i.type === 'in')?.amount).toBeCloseTo(totals.gross, 6)
-    expect(items.find(i => i.type === 'out')?.amount).toBeCloseTo(totals.totalExpenses, 6)
+    expect(items.find(i => i.type === 'out')?.amount).toBeCloseTo(totals.totalExpenses - totals.fuel, 6)
+  })
+
+  it('nu duce combustibilul în registru: el intră de la pompă', () => {
+    const data = ready()
+    const totals = totalsOf(data, data.workdays.w1)
+    expect(totals.fuel).toBeGreaterThan(0)
+    run(dialogs(data).finish(data.workdays.w1), { toDebt: '0' })
+    const spent = data.finance['2026-09'].items
+      .filter(i => i.type === 'out').reduce((sum, i) => sum + i.amount, 0)
+    expect(spent).toBeCloseTo(totals.totalExpenses - totals.fuel, 6)
   })
 
   it('îngheață procentele, ca o setare de mâine să nu rescrie ziua', () => {
@@ -112,5 +122,30 @@ describe('intrările vechi din istoric', () => {
     data.workdays.w1.archived = true
     data.workdays.w1.done = true
     expect(summarise(data, daysOf(data, 'livrari')).days).toBe(1)
+  })
+})
+
+describe('alimentările', () => {
+  it('intră o dată în Finanțe, cu suma de pe bon', () => {
+    const data = ready()
+    run(dialogs(data).fuel('livrari'), { date: '2026-09-02', litres: '40', cost: '62', full: 'da' })
+    const items = data.finance['2026-09'].items.filter(i => i.cat === 'Combustibil')
+    expect(items).toHaveLength(1)
+    expect(items[0].amount).toBe(62)
+  })
+
+  it('modificate, nu se adună — se rescriu', () => {
+    const data = ready()
+    run(dialogs(data).fuel('livrari'), { date: '2026-09-02', litres: '40', cost: '62', full: 'da' })
+    const saved = Object.values(data.fuel)[0]
+    run(dialogs(data).fuel('livrari', saved), { cost: '70' })
+    const items = data.finance['2026-09'].items.filter(i => i.cat === 'Combustibil')
+    expect(items).toHaveLength(1)
+    expect(items[0].amount).toBe(70)
+  })
+
+  it('cer litrii — fără ei nu spun nimic', () => {
+    const data = ready()
+    expect(run(dialogs(data).fuel('livrari'), { date: '2026-09-02', litres: '0' })).toMatch(/litri/)
   })
 })

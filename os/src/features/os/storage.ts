@@ -22,6 +22,7 @@ function recover(parsed: unknown): { value: OsData; dropped: number } {
       modules: pick('modules'), goals: pick('goals'), tasks: pick('tasks'),
       habits: pick('habits'), notes: pick('notes'), debts: pick('debts'),
       orgs: pick('orgs'), vehicles: pick('vehicles'), workdays: pick('workdays'),
+      fuel: pick('fuel'),
       docs: pick('docs'), finance: pick('finance'),
       settings: { ...base.settings, ...(raw.settings ?? {}) },
     },

@@ -197,6 +197,15 @@ export function OsApp() {
         onAdd={() => open(drive.workday(view))} onEdit={d => open(drive.workday(view, d))}
         onFinish={d => open(drive.finish(d))}
         onVehicle={v => open(drive.vehicle(v))} onSettings={() => open(drive.settings())}
+        onFuel={f => open(drive.fuel(view, f))}
+        onDropFuel={f => open(core.confirm(`Ștergi alimentarea din ${f.date}?`,
+          'Dispare și din Finanțe, iar consumul se recalculează fără ea.',
+          () => update(draft => {
+            delete draft.fuel[f.id]
+            for (const month of Object.keys(draft.finance)) {
+              draft.finance[month].items = draft.finance[month].items.filter(i => i.id !== `fuel-${f.id}`)
+            }
+          })))}
         onReopen={d => open(core.confirm(`Redeschizi tura din ${d.date}?`,
           'Se scot din Finanțe banii scriși la închiderea ei. Îi pui la loc când o închizi din nou.',
           () => update(draft => {

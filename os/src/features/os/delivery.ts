@@ -1,4 +1,5 @@
 import { num } from './format'
+import { fuelRate } from './fuelChain'
 import type { DeliveryRates, OsData, Vehicle, Workday } from './types'
 
 /**
@@ -73,14 +74,24 @@ export interface DayTotals {
   availablePerHour: number
   /** Cât ai trimis peste sau sub ce era disponibil. */
   debtDifference: number
+  /** De unde a venit costul cu combustibilul, ca să se vadă pe ce te bazezi. */
+  fuelSource: string
 }
 
 export function totalsOf(data: OsData, day: Workday): DayTotals {
   const rates = ratesFor(data, day)
   const vehicle = day.vehicle ? data.vehicles[day.vehicle] : undefined
-  /* Consumul mașinii bate media, când e știut: o dubă și o mașină mică nu
-     costă la fel pe kilometru. */
-  const fuelPerKm = vehicle?.fuelPerKm ?? rates.fuelPerKm
+  /*
+   * Costul cu combustibilul, în ordinea în care merită crezut: mai întâi ce
+   * arată alimentările tale plin la plin, apoi ce ai scris pe mașină, apoi
+   * media din setări. Sursa merge mai departe cu rezultatul — o cifră în care
+   * te încrezi fără să știi de unde vine e mai rea decât una lipsă.
+   */
+  const measured = day.vehicle ? fuelRate(data, day.vehicle) : { costPerKm: 0, source: '', known: false }
+  const fuelPerKm = measured.known ? measured.costPerKm : vehicle?.fuelPerKm ?? rates.fuelPerKm
+  const fuelSource = measured.known ? measured.source
+    : vehicle?.fuelPerKm !== undefined ? `Scris pe ${vehicle.name}`
+      : 'Media din setări'
 
   const hours = hoursOf(day)
   const totalKm = Math.max(0, num(day.odoEnd) - num(day.odoStart))
@@ -111,6 +122,7 @@ export function totalsOf(data: OsData, day: Workday): DayTotals {
     taxReserve, niReserve, vehicleReserve, reserves,
     available, availablePerHour: div(available, hours),
     debtDifference: num(day.toDebt) - available,
+    fuelSource,
   }
 }
 

@@ -1,7 +1,7 @@
 import type { DialogSpec } from './Dialog'
 import { DEFAULT_RATES, totalsOf } from './delivery'
 import { money, num, today, uid, ym } from './format'
-import type { DeliveryRates, OsData, Vehicle, Workday } from './types'
+import type { DeliveryRates, Fuel, OsData, Vehicle, Workday } from './types'
 
 type Update = (change: (draft: OsData) => void) => void
 
@@ -156,9 +156,12 @@ export function deliveryDialogs(data: OsData, update: Update) {
             items.push({ id: `wd-in-${day.id}`, date: day.date, type: 'in',
               amount: totals.gross, cat: 'Livrări', note: `Tură ${day.date}` })
           }
-          if (totals.totalExpenses > 0) {
+          /* Fără combustibil: ăla intră în Finanțe de la pompă, cu suma
+             adevărată. Aici e doar o estimare, bună pentru judecata turei. */
+          const costsWithoutFuel = totals.totalExpenses - totals.fuel
+          if (costsWithoutFuel > 0) {
             items.push({ id: `wd-out-${day.id}`, date: day.date, type: 'out',
-              amount: totals.totalExpenses, cat: 'Livrări', note: `Costuri tură ${day.date}` })
+              amount: costsWithoutFuel, cat: 'Livrări', note: `Costuri tură ${day.date}` })
           }
           if (values.debt && num(values.toDebt) > 0) {
             items.push({ id: `wd-debt-${day.id}`, date: day.date, type: 'out',
@@ -169,5 +172,61 @@ export function deliveryDialogs(data: OsData, update: Update) {
     }
   }
 
-  return { vehicle, settings, workday, finish }
+  const fuel = (mod: string, existing?: Fuel): DialogSpec => ({
+    title: existing ? `Alimentarea din ${existing.date}` : 'Alimentare',
+    note: 'Bifează „plin" când umpli rezervorul. Consumul se poate socoti numai între două plinuri.',
+    fields: [
+      { key: 'date', label: 'Ziua', type: 'date', value: existing?.date ?? today() },
+      { key: 'vehicle', label: 'Mașina', type: 'select', value: existing?.vehicle ?? '', options: [
+        { value: '', label: '— niciuna —' },
+        ...Object.values(data.vehicles).map(v => ({ value: v.id, label: v.name })),
+      ] },
+      { key: 'odometer', label: 'Km pe bord', type: 'number',
+        value: existing?.odometer === undefined ? '' : String(existing.odometer) },
+      { key: 'litres', label: 'Litri', type: 'number',
+        value: existing?.litres === undefined ? '' : String(existing.litres) },
+      { key: 'cost', label: `Cât ai plătit (${currency})`, type: 'number',
+        value: existing?.cost === undefined ? '' : String(existing.cost) },
+      { key: 'full', label: 'Plin sau parțial', type: 'select', value: existing?.full ? 'da' : '', options: [
+        { value: 'da', label: 'Plin' },
+        { value: '', label: 'Parțial' },
+      ] },
+      { key: 'notes', label: 'Note', type: 'textarea', value: existing?.notes ?? '' },
+    ],
+    submit(values) {
+      if (!values.date) return 'Pune ziua.'
+      if (num(values.litres) <= 0) return 'Scrie câți litri.'
+      const id = existing?.id ?? `f${uid()}`
+      const month = ym(values.date)
+      update(draft => {
+        draft.fuel[id] = {
+          id, mod, date: values.date,
+          vehicle: values.vehicle || undefined,
+          odometer: values.odometer ? num(values.odometer) : undefined,
+          litres: num(values.litres),
+          cost: values.cost ? num(values.cost) : undefined,
+          full: values.full === 'da' ? true : undefined,
+          notes: values.notes || undefined,
+          createdAt: existing?.createdAt ?? new Date().toISOString(),
+        }
+
+        /* Banii dați la pompă sunt bani ieșiți acum, deci intră în Finanțe.
+           Costul cu combustibilul dintr-o tură rămâne o estimare, folosită ca
+           să judeci tura — el nu mai ajunge în registru, altfel aceeași
+           motorină ar fi numărată de două ori. */
+        for (const key of Object.keys(draft.finance)) {
+          draft.finance[key].items = draft.finance[key].items.filter(item => item.id !== `fuel-${id}`)
+        }
+        if (num(values.cost) > 0) {
+          draft.finance[month] ??= { items: [] }
+          draft.finance[month].items.push({
+            id: `fuel-${id}`, date: values.date, type: 'out', amount: num(values.cost),
+            cat: 'Combustibil', note: `${values.litres} l`,
+          })
+        }
+      })
+    },
+  })
+
+  return { vehicle, settings, workday, finish, fuel }
 }

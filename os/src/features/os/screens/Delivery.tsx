@@ -1,7 +1,8 @@
 import { Head, Section, Tile } from '../parts'
 import { money } from '../format'
 import { daysOf, summarise, totalsOf, vehicleName } from '../delivery'
-import type { OsData, Vehicle, Workday } from '../types'
+import { fuelOf, fuelRate, intervalsOf, pricePerLitre } from '../fuelChain'
+import type { Fuel, OsData, Vehicle, Workday } from '../types'
 
 /**
  * Livrări: ziua de lucru, cu ce a rămas din ea.
@@ -18,6 +19,8 @@ export interface DeliveryActions {
   onDelete: (day: Workday) => void
   onVehicle: (vehicle?: Vehicle) => void
   onSettings: () => void
+  onFuel: (item?: Fuel) => void
+  onDropFuel: (item: Fuel) => void
 }
 
 export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData; mod: string }) {
@@ -32,6 +35,7 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
         action={<button className="os-btn" onClick={on.onAdd}>Tură nouă</button>} />
 
       <div className="os-chips" style={{ marginBottom: 14 }}>
+        <button className="os-chip" onClick={() => on.onFuel()}>Alimentare</button>
         <button className="os-chip" onClick={() => on.onVehicle()}>Mașină nouă</button>
         <button className="os-chip" onClick={on.onSettings}>Procente și costuri</button>
       </div>
@@ -82,6 +86,7 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
 
             <div className="os-hero-facts">
               <div><b>{money(t.gross, currency)}</b><span>brut</span></div>
+              <div><b>{money(t.fuel, currency)}</b><span>combustibil</span></div>
               <div><b>{money(t.totalExpenses, currency)}</b><span>cheltuieli</span></div>
               <div><b>{money(t.reserves, currency)}</b><span>rezerve</span></div>
               {t.hours ? <div><b>{money(t.perHour, currency)}</b><span>brut/oră</span></div> : null}
@@ -101,6 +106,8 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
               </span>
             ) : null}
 
+            <span className="os-muted">{t.fuelSource}</span>
+
             {day.notes ? <p className="os-note-text">{day.notes}</p> : null}
 
             <div className="os-hero-acts">
@@ -113,6 +120,52 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
           </div>
         )
       })}
+
+      {fuelOf(data).length ? (
+        <>
+          <Section title="Alimentări" />
+          {Object.values(data.vehicles).map(car => {
+            const rate = fuelRate(data, car.id)
+            const last = intervalsOf(data, car.id).slice(-1)[0]
+            if (!fuelOf(data, car.id).length) return null
+            return (
+              <div className="os-card pad os-doc" key={car.id}>
+                <div className="os-doc-head">
+                  <div>
+                    <b>{car.name}</b>
+                    <span className="os-muted">{rate.source}</span>
+                  </div>
+                  {rate.known ? (
+                    <span className="os-doc-amount">{money(rate.costPerKm, currency)}/km</span>
+                  ) : null}
+                </div>
+                {last ? (
+                  <div className="os-hero-facts">
+                    <div><b>{last.litresPer100Km.toFixed(1)}</b><span>l/100 km</span></div>
+                    <div><b>{last.mpg.toFixed(1)}</b><span>mpg</span></div>
+                    <div><b>{Math.round(last.km)}</b><span>km pe plin</span></div>
+                  </div>
+                ) : null}
+                <div className="os-doc-files">
+                  {fuelOf(data, car.id).slice(0, 6).map(item => (
+                    <span className="os-doc-file" key={item.id}>
+                      <button className="os-doc-open" onClick={() => on.onFuel(item)}>
+                        {item.date}
+                        <em>{item.litres?.toFixed(1)} l</em>
+                        {item.cost ? <em>{money(item.cost, currency)}</em> : null}
+                        {item.litres && item.cost ? <em>{pricePerLitre(item).toFixed(3)}/l</em> : null}
+                        <em>{item.full ? 'plin' : 'parțial'}</em>
+                      </button>
+                      <button className="os-icon del" aria-label="Șterge alimentarea"
+                        onClick={() => on.onDropFuel(item)}>🗑</button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </>
+      ) : null}
 
       {Object.keys(data.vehicles).length ? (
         <>
