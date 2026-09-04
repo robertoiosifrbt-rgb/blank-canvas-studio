@@ -4,7 +4,7 @@ import { emptyOsData, type OsData } from './types'
 
 const withDebt = (): OsData => {
   const data = emptyOsData()
-  data.debts.d1 = { id: 'd1', name: 'Vechi', total: 100, payments: [] }
+  data.debts.d1 = { id: 'd1', mod: 'datorii', name: 'Vechi', direction: 'owe', total: 100, status: 'Activă' }
   return data
 }
 

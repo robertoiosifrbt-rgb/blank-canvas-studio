@@ -63,12 +63,108 @@ export interface Habit {
   createdAt?: string
 }
 
-export interface Debt {
+/**
+ * Organizațiile cu care ai de-a face pe o datorie: banca, recuperatorul,
+ * avocatul, instanța, executorul. Stau separat de datorii pentru că aceeași
+ * firmă apare pe mai multe, iar numărul ei de telefon se schimbă o dată, nu
+ * de zece ori.
+ */
+export interface Org {
   id: string
   name: string
+  /** Ce fel de firmă e: bancă, recuperator, avocat, instanță, executor. */
+  kind?: string
+  phone?: string
+  email?: string
+  web?: string
+  address?: string
+  notes?: string
+  createdAt?: string
+}
+
+/**
+ * Cine ține datoria, în ce rol și din ce dată.
+ *
+ * Datoriile se vând. Fără istoricul ăsta, peste un an nu mai știi cine ți-a
+ * scris prima oară, cine a cumpărat-o și cui îi datorezi acum — iar fiecare
+ * dintre ei ți-a dat altă referință.
+ */
+export interface DebtHolder {
+  id: string
+  org: string
+  /** Creditor inițial, proprietar anterior, proprietar curent, colectare, avocat, instanță, executor. */
+  role: string
+  from?: string
+  to?: string
+  /** Referința pe care ți-o dă firma asta. Fiecare are alta. */
+  ref?: string
+  notes?: string
+}
+
+export type PlanEvery = 'week' | 'fortnight' | 'month' | 'quarter' | 'once'
+
+/** Înțelegerea de plată: cât, cât de des, de când, și dacă mai ține. */
+export interface DebtPlan {
+  id: string
+  /** Standard, redus, temporar, simbolic, de stingere, hotărât de instanță. */
+  kind?: string
+  amount: number
+  every: PlanEvery
+  /** Următoarea scadență. De aici pleacă și intrarea din calendar. */
+  next?: string
+  from?: string
+  to?: string
+  status: string
+  notes?: string
+}
+
+/**
+ * Fiecare telefon, scrisoare, email. Cu ce a ieșit din el și când e
+ * follow-up-ul.
+ *
+ * Ăsta e ce te apără când firma spune altceva peste șase luni: ai data, ora
+ * și ce s-a stabilit.
+ */
+export interface DebtAction {
+  id: string
+  date: string
+  /** Telefon, email, scrisoare primită, scrisoare trimisă, plângere, dispută. */
+  kind: string
+  summary: string
+  outcome?: string
+  followUp?: string
+  org?: string
+}
+
+/**
+ * O datorie, în ambele sensuri: ce datorezi tu și ce ți se datorează.
+ *
+ * Plățile nu stau aici. O plată e o mișcare în Finanțe, marcată cu datoria —
+ * o singură înregistrare, citită din două locuri, ca să nu existe două
+ * adevăruri despre aceiași bani.
+ */
+export interface Debt {
+  id: string
+  mod: string
+  name: string
+  /** `owe` — datorezi tu. `owed` — ți se datorează. */
+  direction: 'owe' | 'owed'
+  /** Card, împrumut, overdraft, ipotecă, utilități, council tax, HMRC, catalog, telefon. */
+  category?: string
+  /** Soldul de la care pleci. Plățile îl scad. */
   total: number
+  status: string
+  /** Stadiul legal: de la notificare de default la CCJ sau executare. */
+  stage?: string
+  since?: string
+  defaulted?: string
   due?: string
-  payments?: Contribution[]
+  holders?: DebtHolder[]
+  plans?: DebtPlan[]
+  actions?: DebtAction[]
+  /** Scrisorile scanate. Stau la datoria lor, nu în Documente. */
+  files?: DocFile[]
+  notes?: string
   createdAt?: string
 }
 
@@ -90,6 +186,9 @@ export interface Movement {
   amount: number
   cat?: string
   note?: string
+  /** Datoria pe care o plătește, dacă e o plată. Legătura într-un singur sens:
+      banii sunt scriși o dată, aici, iar datoria se uită la ei. */
+  debt?: string
 }
 
 /** Finanțele stau grupate pe luni — o fișă pe lună, oricâte mișcări. */
@@ -107,6 +206,8 @@ export interface OsModule {
 export interface OsSettings {
   currency: string
   seeded?: boolean
+  /** Cu câte zile înainte și la ce oră sună notificările. */
+  alerts?: { lead: number; hour: number }
 }
 
 /** Un fișier atașat unui document: cât să-l poți arăta și regăsi. */
@@ -156,6 +257,7 @@ export interface OsData {
   habits: Record<string, Habit>
   notes: Record<string, Note>
   debts: Record<string, Debt>
+  orgs: Record<string, Org>
   docs: Record<string, Doc>
   finance: FinanceByMonth
   settings: OsSettings
@@ -163,6 +265,6 @@ export interface OsData {
 
 export const emptyOsData = (): OsData => ({
   modules: {}, goals: {}, tasks: {}, habits: {},
-  notes: {}, debts: {}, docs: {}, finance: {},
+  notes: {}, debts: {}, orgs: {}, docs: {}, finance: {},
   settings: { currency: '£' },
 })

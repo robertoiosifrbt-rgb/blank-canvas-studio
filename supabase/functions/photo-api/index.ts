@@ -57,16 +57,25 @@ const storage = (path: string, init: RequestInit = {}) =>
     },
   })
 
-/* Bucket privat: nimic nu se citește fără cheia de serviciu, deci nici cu
-   adresa fișierului ghicită. 409 înseamnă că există deja. */
+/*
+ * Bucket privat: nimic nu se citește fără cheia de serviciu, deci nici cu
+ * adresa fișierului ghicită.
+ *
+ * Eșecul nu se raportează. „Există deja" e răspunsul obișnuit de la a doua
+ * urcare încolo, iar Storage îl dă cu cod HTTP de eroare și cu 409 abia
+ * înăuntrul corpului — verificat pe status, oprea totul exact când era bine.
+ * Orice alt motiv real de eșec se vede oricum imediat, la urcarea care
+ * urmează, cu mesajul ei, nu cu al meu.
+ */
 async function ensureBucket(bucket: string): Promise<void> {
-  const response = await storage('bucket', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: bucket, name: bucket, public: false }),
-  })
-  if (!response.ok && response.status !== 409) {
-    throw new Error(`bucket ${bucket}: ${await response.text()}`)
+  try {
+    await storage('bucket', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: bucket, name: bucket, public: false }),
+    })
+  } catch {
+    /* rețeaua a căzut la creare; urcarea de mai jos o va spune */
   }
 }
 

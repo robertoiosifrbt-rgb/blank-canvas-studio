@@ -63,3 +63,37 @@ self.addEventListener('fetch', (event) => {
     }),
   )
 })
+
+/*
+ * Notificările.
+ *
+ * Fără bucata asta, telefonul se poate abona, serverul poate trimite, și tot
+ * nu vezi nimic: notificarea o afișează service worker-ul, nu browserul de
+ * la sine.
+ */
+self.addEventListener('push', (event) => {
+  let data = {}
+  try { data = event.data ? event.data.json() : {} } catch { data = {} }
+  event.waitUntil(self.registration.showNotification(data.title || 'Roberto OS', {
+    body: data.body || '',
+    icon: '/favicon.svg',
+    badge: '/favicon.svg',
+    /* Tag din id: o alarmă retrimisă înlocuiește notificarea veche în loc să
+       se adune lângă ea. */
+    tag: data.id || undefined,
+    data: { url: data.url || '/' },
+  }))
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const target = new URL(event.notification.data?.url || '/', self.location.origin).href
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    .then((windows) => {
+      /* Fereastra deschisă, dacă există: altfel ajungi cu aplicația în două
+         file, fiecare cu starea ei. */
+      const open = windows.find((client) => client.url.startsWith(self.location.origin))
+      if (open) { open.navigate(target); return open.focus() }
+      return self.clients.openWindow(target)
+    }))
+})

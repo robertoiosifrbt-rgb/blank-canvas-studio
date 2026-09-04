@@ -1,14 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { GymScreens } from '../../app/App'
 import type { Page as GymPage } from '../../app/App'
 import { Dialog, type DialogSpec } from './Dialog'
 import { OsIcon } from './OsIcon'
 import { GoalStrips } from './GoalHero'
 import { coreDialogs } from './dialogsCore'
+import { debtDialogs } from './dialogsDebts'
 import { goalDialogs } from './dialogsGoals'
 import { today, ym } from './format'
 import { childrenOf, moduleById, moduleTree, pathOf } from './modules'
 import { CalendarScreen } from './screens/CalendarScreen'
+import type { DayKind } from './calendar'
 import { Debts } from './screens/Debts'
 import { Docs } from './screens/Docs'
 import { Finance } from './screens/Finance'
@@ -19,6 +21,8 @@ import { SettingsScreen } from './screens/SettingsScreen'
 import { Tasks } from './screens/Tasks'
 import { Today } from './screens/Today'
 import { deviceToken, setDeviceToken } from './cloud'
+import { DEFAULT_ALERTS, buildAlarms } from './alerts'
+import { enablePush, pushState, syncAlarms, type PushState } from './push'
 import { resolveGoals } from './goalSources'
 import type { DocFile } from './types'
 import { describeImport, importInto } from './transfer'
@@ -47,7 +51,7 @@ const GYM_PAGES: Array<{ key: GymPage; name: string }> = [
 ]
 
 export function OsApp() {
-  const { data: stored, mode, error, photos, update } = useOs()
+  const { data: stored, mode, error, photos, ready, update } = useOs()
   /* Ecranele văd obiectivele cu citirile sălii deja aduse; scrierile merg tot
      în ce e salvat, deci măsurătorile sălii nu ajung niciodată copiate aici. */
   const data = useMemo(() => resolveGoals(stored), [stored])
@@ -63,9 +67,15 @@ export function OsApp() {
   const [gymPage, setGymPage] = useState<GymPage>('home')
   const [imported, setImported] = useState<string | null>(null)
   const [busyDoc, setBusyDoc] = useState<string | null>(null)
+  /* Straturile debifate din calendar. Ținute în aplicație, nu în date: e o
+     preferință de privit, nu ceva ce vrei sincronizat pe toate device-urile. */
+  const [hidden, setHidden] = useState<DayKind[]>([])
+  const [push, setPush] = useState<PushState | null>(null)
+  const [pushNote, setPushNote] = useState<string | null>(null)
 
   const goals = useMemo(() => goalDialogs(data, update), [data, update])
   const core = useMemo(() => coreDialogs(data, update), [data, update])
+  const owed = useMemo(() => debtDialogs(data, update), [data, update])
   const phone = typeof window !== 'undefined' && window.matchMedia('(max-width:860px)').matches
 
   const open = (spec: DialogSpec) => { setProblem(null); setDialog(spec) }
@@ -76,6 +86,41 @@ export function OsApp() {
     if (log[date]) delete log[date]; else log[date] = 1
     draft.habits[habitId].log = log
   })
+
+  /* Starea notificărilor se citește o dată, la deschidere: nu se schimbă
+     singură, ci doar când apeși tu butonul. */
+  useEffect(() => { void pushState().then(setPush) }, [])
+
+  /**
+   * Alarmele se recalculează din date și se trimit întregi.
+   *
+   * Amânat, pentru că orice tastă schimbă datele, iar lista e aceeași până
+   * termini de scris. Tăcut dacă telefonul nu e abonat — nu are rost o eroare
+   * pentru ceva ce n-ai pornit.
+   */
+  useEffect(() => {
+    if (!ready || push !== 'pornite') return
+    const timer = setTimeout(() => {
+      void syncAlarms(buildAlarms(stored, stored.settings.alerts ?? DEFAULT_ALERTS))
+        .catch((error: unknown) => {
+          setPushNote(`Alarmele n-au ajuns la server: ${error instanceof Error ? error.message : String(error)}`)
+        })
+    }, 2_000)
+    return () => clearTimeout(timer)
+  }, [stored, ready, push])
+
+  async function turnOnPush() {
+    setPushNote(null)
+    try {
+      await enablePush()
+      setPush('pornite')
+      await syncAlarms(buildAlarms(stored, stored.settings.alerts ?? DEFAULT_ALERTS))
+      setPushNote('Pornite. Termenele îți sună pe telefon.')
+    } catch (error) {
+      setPushNote(error instanceof Error ? error.message : String(error))
+      setPush(await pushState())
+    }
+  }
 
   const current = moduleById(data, view)
   const kind = view === '__set' ? 'settings' : current?.kind ?? 'dashboard'
@@ -103,11 +148,29 @@ export function OsApp() {
         onDelete={id => update(draft => {
           draft.finance[month] = { items: (draft.finance[month]?.items ?? []).filter(i => i.id !== id) }
         })} />
-      case 'debts': return <Debts data={data} onAdd={() => open(core.debt())}
-        onPay={d => open(core.pay(d))}
+      case 'debts': return <Debts data={data} mod={view} busy={busyDoc}
+        onAdd={() => open(owed.debt(view))} onEdit={d => open(owed.debt(view, d))}
+        onPay={d => open(owed.pay(d))}
+        onNewOrg={() => open(owed.org())}
+        onHolder={(d, h) => open(owed.holder(d, h))}
+        onDropHolder={(d, h) => update(draft => {
+          draft.debts[d.id].holders = (draft.debts[d.id].holders ?? []).filter(x => x.id !== h.id)
+        })}
+        onPlan={(d, p) => open(owed.plan(d, p))}
+        onDropPlan={(d, p) => update(draft => {
+          draft.debts[d.id].plans = (draft.debts[d.id].plans ?? []).filter(x => x.id !== p.id)
+        })}
+        onAction={(d, a) => open(owed.action(d, a))}
+        onDropAction={(d, a) => update(draft => {
+          draft.debts[d.id].actions = (draft.debts[d.id].actions ?? []).filter(x => x.id !== a.id)
+        })}
+        onAttach={attachToDebt} onOpenFile={showDebtFile} onDeleteFile={removeDebtFile}
         onDelete={d => open(core.confirm(`Ștergi „${d.name}”?`,
-          'Se pierde și istoricul plăților. Nu se poate anula.',
-          () => update(draft => { delete draft.debts[d.id] })))} />
+          'Dispare cu tot cu jurnal, firme și scrisori. Plățile rămân în Finanțe. Nu se poate anula.',
+          () => {
+            for (const file of d.files ?? []) void deleteDocFile(d.id, file).catch(() => undefined)
+            update(draft => { delete draft.debts[d.id] })
+          }))} />
       case 'tasks': return <Tasks data={data} mod={view} filter={taskFilter} onFilter={setTaskFilter}
         onAdd={() => open(core.task(view))}
         onToggle={t => update(draft => { draft.tasks[t.id].done = !draft.tasks[t.id].done })}
@@ -137,13 +200,18 @@ export function OsApp() {
         onAttach={attachToDoc} onOpenFile={showDocFile} onDeleteFile={removeDocFile} />
       case 'notes': return <Notes data={data} mod={view} search={search} onSearch={setSearch}
         onAdd={() => open(core.note(view))} onOpen={n => open(core.note(view, n))} />
-      case 'calendar': return <CalendarScreen data={data} month={calMonth} day={calDay}
-        onMonth={setCalMonth} onDay={setCalDay} onAddTask={() => open(core.task('taskuri', calDay))} />
+      case 'calendar': return <CalendarScreen data={data} month={calMonth} day={calDay} hidden={hidden}
+        onMonth={setCalMonth} onDay={setCalDay} onGoto={go}
+        onLayer={kind => setHidden(current => current.includes(kind)
+          ? current.filter(k => k !== kind) : [...current, kind])}
+        onAddTask={() => open(core.task('taskuri', calDay))} />
       case 'settings': return <SettingsScreen data={data} mode={mode} error={error} token={deviceToken()}
         photos={photos}
         onCurrency={value => update(draft => { draft.settings.currency = value })}
         onToken={value => { setDeviceToken(value); location.reload() }}
         onExport={exportData} onImport={importFile} imported={imported} onUpdate={hardReload}
+        push={push} pushNote={pushNote} onPush={() => { void turnOnPush() }}
+        onAlerts={(lead, hour) => update(draft => { draft.settings.alerts = { lead, hour } })}
         onNewModule={() => open(core.module())}
         onDeleteModule={id => open(core.removeModule(id))} />
       case 'hub': return <div className="os-head"><div><h1>{current?.name}</h1>
@@ -196,6 +264,34 @@ export function OsApp() {
         draft.docs[doc.id].files = (draft.docs[doc.id].files ?? []).filter(f => f.id !== file.id)
       })
       void deleteDocFile(doc.id, file).catch((error: unknown) => {
+        setProblem(error instanceof Error ? error.message : String(error))
+      })
+    }))
+  }
+
+  /* Scrisorile unei datorii stau în același loc ca scanurile documentelor:
+     un fișier e un fișier, iar dosarul e id-ul celui care îl poartă. */
+  async function attachToDebt(debt: { id: string }, file: File) {
+    setBusyDoc(debt.id)
+    setProblem(null)
+    try {
+      const stored = await uploadDocFile(debt.id, file)
+      update(draft => { draft.debts[debt.id].files = [...(draft.debts[debt.id].files ?? []), stored] })
+    } catch (error) {
+      setProblem(error instanceof Error ? error.message : String(error))
+    } finally {
+      setBusyDoc(null)
+    }
+  }
+
+  const showDebtFile = showDocFile
+
+  function removeDebtFile(debt: { id: string }, file: DocFile) {
+    open(core.confirm(`Ștergi „${file.name}”?`, 'Dispare din cloud. Nu se poate anula.', () => {
+      update(draft => {
+        draft.debts[debt.id].files = (draft.debts[debt.id].files ?? []).filter(f => f.id !== file.id)
+      })
+      void deleteDocFile(debt.id, file).catch((error: unknown) => {
         setProblem(error instanceof Error ? error.message : String(error))
       })
     }))

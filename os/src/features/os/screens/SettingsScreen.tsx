@@ -4,17 +4,32 @@ import { moduleTree } from '../modules'
 import type { OsData } from '../types'
 import type { SyncMode } from '../storage'
 import type { PhotoSync } from '../photoCloud'
+import type { PushState } from '../push'
+import { DEFAULT_ALERTS } from '../alerts'
 
 /* Scurt, cât să se compare cu un commit din GitHub. */
 const BUILD = __APP_VERSION__.slice(0, 7)
 const LS_MAX = 5_000_000
 
-export function SettingsScreen({ data, mode, error, token, photos, imported, onCurrency, onToken, onExport, onImport, onUpdate, onNewModule, onDeleteModule }: {
+/* Ce înseamnă fiecare stare, în cuvinte care spun și ce ai de făcut. */
+const PUSH_NOTES: Record<PushState, string> = {
+  'pornite': 'Termenele îți sună pe telefon, chiar cu aplicația închisă.',
+  'oprite': 'Nu sună nimic. Pornește-le ca să nu scapi un termen.',
+  'refuzate': 'Le-ai refuzat cândva. Se dau înapoi din setările telefonului, la notificări.',
+  'nu-se-poate': 'Browserul ăsta nu știe notificări push.',
+  'de-instalat': 'Pe iPhone merg doar din aplicația instalată: Share → Add to Home Screen, apoi deschide-o de acolo.',
+}
+
+export function SettingsScreen({ data, mode, error, token, photos, imported, push, pushNote, onPush, onAlerts, onCurrency, onToken, onExport, onImport, onUpdate, onNewModule, onDeleteModule }: {
   data: OsData
   mode: SyncMode
   error: string | null
   token: string
   photos: PhotoSync | null
+  push: PushState | null
+  pushNote: string | null
+  onPush: () => void
+  onAlerts: (lead: number, hour: number) => void
   onCurrency: (value: string) => void
   onToken: (value: string) => void
   onExport: () => void
@@ -29,6 +44,7 @@ export function SettingsScreen({ data, mode, error, token, photos, imported, onC
   const pct = Math.min(100, (used / LS_MAX) * 100)
   const kb = `${(used / 1024).toFixed(1)} KB`
   const tree = moduleTree(data)
+  const alerts = data.settings.alerts ?? DEFAULT_ALERTS
 
   return (
     <>
@@ -138,6 +154,36 @@ export function SettingsScreen({ data, mode, error, token, photos, imported, onC
                 if (file) onImport(file)
                 event.target.value = ''
               }} />
+          </label>
+        </div>
+      </div>
+
+      <Section title="Notificări" />
+      <div className="os-card pad os-stack">
+        <div className="os-split">
+          <div>
+            <b>Notificări pe telefon</b>
+            <span className="os-muted">{pushNote ?? PUSH_NOTES[push ?? 'oprite']}</span>
+          </div>
+          {push === 'oprite' ? <button className="os-btn" onClick={onPush}>Pornește</button>
+            : <span className={`os-pill ${push === 'pornite' ? 'good' : 'warn'}`}>{push ?? '…'}</span>}
+        </div>
+
+        <div className="os-grid2">
+          <label className="os-fld">
+            <span>Cu cât timp înainte</span>
+            <select value={alerts.lead} onChange={e => onAlerts(Number(e.target.value), alerts.hour)}>
+              <option value={0}>în ziua respectivă</option>
+              <option value={1}>cu o zi înainte</option>
+              <option value={3}>cu trei zile înainte</option>
+              <option value={7}>cu o săptămână înainte</option>
+            </select>
+          </label>
+          <label className="os-fld">
+            <span>La ce oră</span>
+            <select value={alerts.hour} onChange={e => onAlerts(alerts.lead, Number(e.target.value))}>
+              {[7, 8, 9, 10, 12, 18, 20].map(h => <option key={h} value={h}>{h}:00</option>)}
+            </select>
           </label>
         </div>
       </div>

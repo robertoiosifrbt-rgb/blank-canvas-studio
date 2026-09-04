@@ -1,8 +1,7 @@
 import type { DialogSpec } from './Dialog'
-import { money, num, today, uid, ym } from './format'
+import { num, today, uid, ym } from './format'
 import { moduleTree, descendants, itemsOf } from './modules'
-import { remainingDebt } from './goals'
-import type { Debt, Doc, Note, OsData, Task } from './types'
+import type { Doc, Note, OsData, Task } from './types'
 
 type Update = (change: (draft: OsData) => void) => void
 
@@ -11,7 +10,6 @@ const CATS = ['Casă', 'Mâncare', 'Transport', 'Sănătate', 'Familie', 'Busine
 
 /** Restul ferestrelor: bani, datorii, task-uri, obiceiuri, notițe, module. */
 export function coreDialogs(data: OsData, update: Update) {
-  const currency = data.settings.currency
 
   const movement = (month: string): DialogSpec => ({
     title: 'Mișcare nouă',
@@ -38,49 +36,6 @@ export function coreDialogs(data: OsData, update: Update) {
       })
     },
   })
-
-  const debt = (): DialogSpec => ({
-    title: 'Datorie nouă',
-    fields: [
-      { key: 'name', label: 'Către cine / pentru ce', placeholder: 'ex: credit auto' },
-      { key: 'total', label: 'Suma totală', type: 'number', placeholder: '0.00' },
-      { key: 'paid', label: 'Deja achitat (opțional)', type: 'number', placeholder: '0.00' },
-      { key: 'due', label: 'Scadență (opțional)', type: 'date' },
-    ],
-    submit(values) {
-      if (!values.name) return 'Scrie pentru ce e datoria.'
-      if (num(values.total) <= 0) return 'Scrie suma totală.'
-      const paid = num(values.paid)
-      const id = `d${uid()}`
-      update(draft => {
-        draft.debts[id] = {
-          id, name: values.name, total: num(values.total), due: values.due || undefined,
-          payments: paid > 0 ? [{ id: uid(), date: today(), amount: paid }] : [],
-          createdAt: new Date().toISOString(),
-        }
-      })
-    },
-  })
-
-  const pay = (target: Debt): DialogSpec => {
-    const left = remainingDebt(target)
-    return {
-      title: `Plată către „${target.name}”`,
-      note: `Rest de plată acum: ${money(left, currency)}`,
-      fields: [
-        { key: 'amount', label: 'Cât plătești', type: 'number', value: left.toFixed(2) },
-        { key: 'date', label: 'Data', type: 'date', value: today() },
-      ],
-      submit(values) {
-        const amount = num(values.amount)
-        if (amount <= 0) return 'Scrie o sumă mai mare ca zero.'
-        update(draft => {
-          const d = draft.debts[target.id]
-          d.payments = [...(d.payments ?? []), { id: uid(), date: values.date || today(), amount }]
-        })
-      },
-    }
-  }
 
   const task = (mod: string, due?: string): DialogSpec => ({
     title: 'Task nou',
@@ -224,7 +179,7 @@ export function coreDialogs(data: OsData, update: Update) {
     title, note, ok: 'Șterge', danger: true, fields: [], submit() { run() },
   })
 
-  return { movement, debt, pay, task, habit, note, doc, module, removeModule, confirm }
+  return { movement, task, habit, note, doc, module, removeModule, confirm }
 }
 
 export type TaskLike = Task

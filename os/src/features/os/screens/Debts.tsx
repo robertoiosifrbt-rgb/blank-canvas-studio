@@ -1,89 +1,212 @@
-import { Empty, Row, Rows, Section, Tile } from '../parts'
-import { money, num, zile } from '../format'
-import { paidDebt, remainingDebt } from '../goals'
-import type { Debt, OsData } from '../types'
+import { Head, Section } from '../parts'
+import { money, today } from '../format'
+import { itemsUnder } from '../modules'
+import {
+  activePlan, currentHolder, everyLabel, nextDue, paymentsFor, progress, remaining,
+} from '../debts'
+import type { Debt, DebtAction, DebtHolder, DebtPlan, DocFile, OsData } from '../types'
 
-export function Debts({ data, onAdd, onPay, onDelete }: {
-  data: OsData
+/**
+ * Controlul datoriilor.
+ *
+ * O datorie nu e o sumă, e un dosar: cine o ține acum, cu ce referință, în ce
+ * stadiu legal, ce s-a vorbit și când. Ecranul arată în ordinea în care te
+ * costă dacă nu te uiți — întâi cele în stadiu legal avansat, apoi restul.
+ */
+
+/* Cât de departe a mers pe drumul legal. Numărul nu se vede nicăieri; doar
+   ordonează, ca cele grave să nu stea sub cele plătite. */
+const HEAT: Record<string, number> = {
+  'Executare': 9, 'CCJ obținut': 8, 'Acțiune în instanță': 7, 'Somație': 6,
+  'Înainte de somație': 5, 'În default': 4, 'Vândută': 3,
+  'Notificare de default': 3, 'Scrisoare primită': 2, 'Contestată': 2,
+}
+
+const heat = (debt: Debt): number => HEAT[debt.stage ?? ''] ?? 0
+const settled = (debt: Debt): boolean =>
+  ['Plătită', 'Stinsă', 'Închisă'].includes(debt.status)
+
+function byUrgency(a: Debt, b: Debt): number {
+  if (settled(a) !== settled(b)) return settled(a) ? 1 : -1
+  if (heat(a) !== heat(b)) return heat(b) - heat(a)
+  return a.name.localeCompare(b.name)
+}
+
+export interface DebtsActions {
   onAdd: () => void
-  onPay: (d: Debt) => void
-  onDelete: (d: Debt) => void
+  onEdit: (debt: Debt) => void
+  onDelete: (debt: Debt) => void
+  onPay: (debt: Debt) => void
+  onHolder: (debt: Debt, holder?: DebtHolder) => void
+  onDropHolder: (debt: Debt, holder: DebtHolder) => void
+  onPlan: (debt: Debt, plan?: DebtPlan) => void
+  onDropPlan: (debt: Debt, plan: DebtPlan) => void
+  onAction: (debt: Debt, action?: DebtAction) => void
+  onDropAction: (debt: Debt, action: DebtAction) => void
+  onAttach: (debt: Debt, file: File) => void
+  onOpenFile: (debt: Debt, file: DocFile) => void
+  onDeleteFile: (debt: Debt, file: DocFile) => void
+  onNewOrg: () => void
+}
+
+export function Debts({ data, mod, busy, ...on }: DebtsActions & {
+  data: OsData
+  mod: string
+  busy: string | null
 }) {
   const currency = data.settings.currency
-  const all = Object.values(data.debts)
-  const active = all.filter(d => remainingDebt(d) > 0)
-    .sort((a, b) => (a.due ?? '9999').localeCompare(b.due ?? '9999'))
-  const closed = all.filter(d => remainingDebt(d) <= 0)
-  const left = active.reduce((sum, d) => sum + remainingDebt(d), 0)
-  const total = all.reduce((sum, d) => sum + num(d.total), 0)
-  const paid = all.reduce((sum, d) => sum + paidDebt(d), 0)
+  const list = itemsUnder(data, data.debts, mod).sort(byUrgency)
+  const owe = list.filter(d => d.direction !== 'owed' && !settled(d))
+  const total = owe.reduce((sum, debt) => sum + remaining(data, debt), 0)
+
+  const head = (
+    <Head title="Datorii" sub={owe.length
+      ? `${money(total, currency)} de plată, pe ${owe.length} ${owe.length === 1 ? 'datorie' : 'datorii'}.`
+      : 'Cine ține fiecare datorie, cu ce referință, în ce stadiu.'}
+      action={<button className="os-btn" onClick={on.onAdd}>Datorie nouă</button>} />
+  )
+
+  if (list.length === 0) {
+    return (
+      <>
+        {head}
+        <div className="os-empty">
+          <h3>Nicio datorie</h3>
+          <p>Pune-le aici cu tot cu firme, referințe și ce s-a vorbit. Scadențele intră în calendar.</p>
+        </div>
+      </>
+    )
+  }
 
   return (
     <>
-      <div className="os-head">
-        <div>
-          <h1>Datorii</h1>
-          <p>Fiecare plată se scade din rest. Vezi mereu cât mai ai de dat.</p>
-        </div>
-        <button className="os-btn" onClick={onAdd}>Datorie nouă</button>
+      {head}
+      <div className="os-chips" style={{ marginBottom: 14 }}>
+        <button className="os-chip" onClick={on.onNewOrg}>Organizație nouă</button>
       </div>
 
-      {all.length ? (
-        <div className="os-tiles">
-          <Tile label="Rest de plată" value={money(left, currency)} lead tone={left ? 'bad' : 'good'}
-            sub={`${active.length} ${active.length === 1 ? 'datorie activă' : 'datorii active'}`} />
-          <Tile label="Achitat" value={money(paid, currency)}
-            sub={total ? `${Math.round((paid / total) * 100)}% din total` : undefined} />
-          <Tile label="Total contractat" value={money(total, currency)} sub={`${all.length} în evidență`} />
-        </div>
-      ) : null}
+      {list.map(debt => {
+        const left = remaining(data, debt)
+        const done = progress(data, debt)
+        const holder = currentHolder(debt)
+        const org = holder ? data.orgs[holder.org] : undefined
+        const plan = activePlan(debt)
+        const due = plan ? nextDue(plan) : undefined
+        const payments = paymentsFor(data, debt.id)
+        const incoming = debt.direction === 'owed'
 
-      <Section title="Active" />
-      {active.length ? (
-        <Rows>
-          {active.map(d => {
-            const days = d.due ? Math.round((new Date(`${d.due}T12:00:00`).getTime() - Date.now()) / 864e5) : null
-            const cls = days === null ? undefined : days < 0 ? 'bad' : days <= 14 ? 'warn' : 'good'
-            const when = days === null ? 'fără scadență'
-              : days < 0 ? `restanță de ${zile(Math.abs(days))}`
-              : days === 0 ? 'scadent azi' : `scadent în ${zile(days)}`
-            const pct = num(d.total) ? (paidDebt(d) / num(d.total)) * 100 : 0
-            return (
-              <div className="os-row" key={d.id}>
-                {cls ? <span className={`os-stripe ${cls}`} /> : null}
-                <div className="main">
-                  <span className="ttl">{d.name}</span>
-                  <span className="sub">achitat {money(paidDebt(d), currency)} din {money(num(d.total), currency)} · {when}</span>
-                  <span className="os-prog" style={{ marginTop: 6, maxWidth: 280 }}>
-                    <i className={cls} style={{ width: `${pct}%` }} />
-                  </span>
-                </div>
-                <span className="amt">{money(remainingDebt(d), currency)}</span>
-                <button className="os-btn ghost sm" onClick={() => onPay(d)}>Plată</button>
-                <button className="os-icon del" onClick={() => onDelete(d)} aria-label="Șterge">🗑</button>
+        return (
+          <div className="os-card pad os-doc" key={debt.id}>
+            <div className="os-doc-head">
+              <div>
+                <b>{debt.name}</b>
+                <span className="os-muted">{[
+                  incoming ? 'mi se datorează' : '',
+                  debt.category,
+                  debt.status,
+                  debt.stage && debt.stage !== 'Niciunul' ? debt.stage : '',
+                ].filter(Boolean).join(' · ')}</span>
               </div>
-            )
-          })}
-        </Rows>
-      ) : (
-        <Empty title={all.length ? 'Nicio datorie activă — toate achitate' : 'Nicio datorie înregistrată'}
-          text={all.length ? 'Felicitări. Când apare una nouă, o adaugi aici.'
-            : 'Adaugă o datorie cu suma totală și scadența. Pe măsură ce plătești, vezi cât ți-a mai rămas.'}
-          action={<button className="os-btn" onClick={onAdd}>Adaugă o datorie</button>} />
-      )}
+              <span className="os-doc-amount">{money(left, currency)}</span>
+            </div>
 
-      {closed.length ? (
-        <>
-          <Section title="Achitate" />
-          <Rows>
-            {closed.map(d => (
-              <Row key={d.id} stripe="good" title={d.name}
-                sub={`achitat integral · ${money(num(d.total), currency)}`}
-                action={<button className="os-icon del" onClick={() => onDelete(d)} aria-label="Șterge">🗑</button>} />
-            ))}
-          </Rows>
-        </>
-      ) : null}
+            <div className="os-prog"><i style={{ width: `${Math.max(1.5, done)}%` }} /></div>
+            <span className="os-muted">
+              {money(debt.total - left, currency)} din {money(debt.total, currency)}
+              {payments.length ? ` · ${payments.length} ${payments.length === 1 ? 'plată' : 'plăți'}` : ''}
+            </span>
+
+            {org ? (
+              <div className="os-doc-files">
+                <span className="os-doc-file">
+                  <span className="os-doc-open" role="note">
+                    {org.name} <em>{holder?.role}</em>
+                    {holder?.ref ? <em>ref. {holder.ref}</em> : null}
+                    {org.phone ? <em>{org.phone}</em> : null}
+                  </span>
+                </span>
+              </div>
+            ) : (
+              <span className="os-muted">Nu știi cine o ține. Adaugă firma.</span>
+            )}
+
+            {plan ? (
+              <span className={`os-pill ${due && due < today() ? 'bad' : 'warn'}`}>
+                {money(plan.amount, currency)} {everyLabel(plan.every)}{due ? ` · ${due}` : ''}
+              </span>
+            ) : null}
+
+            {(debt.actions ?? []).length ? (
+              <div className="os-doc-files">
+                {[...(debt.actions ?? [])].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3).map(action => (
+                  <span className="os-doc-file" key={action.id}>
+                    <button className="os-doc-open" onClick={() => on.onAction(debt, action)}>
+                      {action.date} · {action.kind} — {action.summary}
+                      {action.followUp ? <em>reluat {action.followUp}</em> : null}
+                    </button>
+                    <button className="os-icon del" aria-label="Șterge intrarea"
+                      onClick={() => on.onDropAction(debt, action)}>🗑</button>
+                  </span>
+                ))}
+              </div>
+            ) : null}
+
+            {(debt.files ?? []).length ? (
+              <div className="os-doc-files">
+                {(debt.files ?? []).map(file => (
+                  <span className="os-doc-file" key={file.id}>
+                    <button className="os-doc-open" onClick={() => on.onOpenFile(debt, file)}>{file.name}</button>
+                    <button className="os-icon del" aria-label={`Șterge ${file.name}`}
+                      onClick={() => on.onDeleteFile(debt, file)}>🗑</button>
+                  </span>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="os-hero-acts">
+              <button className="os-btn sm" onClick={() => on.onPay(debt)}>
+                {incoming ? 'Încasare' : 'Plată'}
+              </button>
+              <button className="os-btn ghost sm" onClick={() => on.onAction(debt)}>Ce s-a întâmplat</button>
+              <button className="os-btn ghost sm" onClick={() => on.onHolder(debt)}>Firmă</button>
+              <button className="os-btn ghost sm" onClick={() => on.onPlan(debt, plan)}>
+                {plan ? 'Planul' : 'Plan de plată'}
+              </button>
+              <label className={`os-btn ghost sm${busy === debt.id ? ' busy' : ''}`}>
+                {busy === debt.id ? 'Se urcă…' : 'Scrisoare'}
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                  style={{ display: 'none' }} disabled={busy === debt.id}
+                  onChange={event => {
+                    const picked = event.target.files?.[0]
+                    if (picked) on.onAttach(debt, picked)
+                    event.target.value = ''
+                  }} />
+              </label>
+              <button className="os-btn ghost sm" onClick={() => on.onEdit(debt)}>Modifică</button>
+              <button className="os-icon del" onClick={() => on.onDelete(debt)} aria-label="Șterge">🗑</button>
+            </div>
+
+            {(debt.holders ?? []).length > 1 ? (
+              <>
+                <Section title="Cine a ținut-o" />
+                <div className="os-doc-files">
+                  {(debt.holders ?? []).map(h => (
+                    <span className="os-doc-file" key={h.id}>
+                      <button className="os-doc-open" onClick={() => on.onHolder(debt, h)}>
+                        {data.orgs[h.org]?.name ?? 'firmă ștearsă'} <em>{h.role}</em>
+                        {h.from ? <em>din {h.from}</em> : null}
+                        {h.to ? <em>până {h.to}</em> : null}
+                      </button>
+                      <button className="os-icon del" aria-label="Șterge"
+                        onClick={() => on.onDropHolder(debt, h)}>🗑</button>
+                    </span>
+                  ))}
+                </div>
+              </>
+            ) : null}
+          </div>
+        )
+      })}
     </>
   )
 }

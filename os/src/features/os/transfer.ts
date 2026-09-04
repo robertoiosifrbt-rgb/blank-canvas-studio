@@ -8,7 +8,7 @@ import { emptyOsData, type OsData } from './types'
  * dintr-un fișier înseamnă „nu era în el", nu „șterge".
  */
 
-const BAGS = ['modules', 'goals', 'tasks', 'habits', 'notes', 'debts', 'docs'] as const
+const BAGS = ['modules', 'goals', 'tasks', 'habits', 'notes', 'debts', 'orgs', 'docs'] as const
 
 export interface ImportResult {
   data: OsData
@@ -74,6 +74,7 @@ const NAMES: Record<string, [string, string]> = {
   habits: ['obicei', 'obiceiuri'],
   notes: ['însemnare', 'însemnări'],
   debts: ['datorie', 'datorii'],
+  orgs: ['organizație', 'organizații'],
   docs: ['document', 'documente'],
   finance: ['mișcare', 'mișcări'],
 }

@@ -127,3 +127,13 @@
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .os-doc-open em{font-style:normal;color:var(--os-ink-3);font-family:var(--os-mono);font-size:11px}
 .os-btn.busy{opacity:.6}
+
+/* Ziua din calendar: fiecare intrare își poartă informația, nu doar titlul. */
+.os-cal-list{display:flex;flex-direction:column;gap:8px}
+.os-cal-item{display:flex;align-items:stretch;gap:11px}
+.os-cal-item .main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.os-cal-item .ttl{font-weight:600}
+.os-cal-item .sub{font-size:12.5px;color:var(--os-ink-3)}
+.os-cal-item .amt{font-family:var(--os-mono);font-weight:600;font-variant-numeric:tabular-nums;
+  white-space:nowrap;align-self:center}
+.os-cal-item .amt.good{color:var(--os-good)}
