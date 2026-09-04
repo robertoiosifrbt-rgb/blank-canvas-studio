@@ -1,0 +1,45 @@
+/* Importat de exact un .tsx din acest director: ErrorBoundary.tsx */
+
+.eroare {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: calc(var(--safe-top) + var(--space-5)) var(--space-4)
+    calc(var(--safe-bottom) + var(--space-5));
+  padding-left: calc(var(--safe-left) + var(--space-4));
+  padding-right: calc(var(--safe-right) + var(--space-4));
+}
+
+.eroare-titlu {
+  font-size: var(--text-l);
+  font-weight: 600;
+}
+
+.eroare-text {
+  color: var(--text-dim);
+}
+
+.eroare-detaliu {
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--danger);
+  font-size: var(--text-s);
+  /* Un mesaj lung nu are voie să împingă ecranul lateral. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.eroare-buton {
+  align-self: flex-start;
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: 0 var(--space-5);
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #12100e;
+  font-weight: 600;
+}

@@ -1,0 +1,36 @@
+/* Singurul loc în care se scriu culori, spații și dimensiuni.
+   Importat exclusiv din main.tsx. */
+:root {
+  /* Marginile de siguranță ale telefonului. Suprascrise de verificatorul
+     de așezare, care simulează un telefon cu crestătură. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  --bg: #12100e;
+  --bg-raised: #1c1917;
+  --line: #2f2a26;
+  --text: #f5f1ea;
+  --text-dim: #a8a09a;
+  --accent: #e8b04b;
+  --danger: #e06c5a;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --radius: 12px;
+
+  /* Zona apăsabilă minimă. Verificatorul de așezare cade sub ea. */
+  --tap: 44px;
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --text-s: 13px;
+  --text-m: 16px;
+  --text-l: 20px;
+  --text-xl: 28px;
+}
