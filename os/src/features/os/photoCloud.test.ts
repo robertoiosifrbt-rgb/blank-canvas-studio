@@ -98,7 +98,7 @@ describe('sincronizarea pozelor de progres', () => {
     expect(result.error).toBe('funcția nu e pusă')
   })
 
-  it('trimite codul de device, nu cheia Supabase', async () => {
+  it('se legitimează cu codul de device, nu cu o cheie cu drepturi', async () => {
     sets.push(fullSet('a1', '2026-09-01'))
     const seen: RequestInit[] = []
     vi.stubGlobal('fetch', vi.fn((_url: string, init: RequestInit) => {
@@ -108,6 +108,18 @@ describe('sincronizarea pozelor de progres', () => {
     await syncPhotos()
     const headers = seen[0].headers as Record<string, string>
     expect(headers['x-device-token']).toBe('token-de-test-1234567890')
-    expect(JSON.stringify(headers)).not.toContain('apikey')
+
+    /* Cheia din antet trece doar de poarta Supabase. Trebuie să fie cea
+       publică: `service_role` în codul unei pagini web ar da oricui drepturi
+       depline pe baza de date. */
+    const role = JSON.parse(atob(headers.apikey.split('.')[1])) as { role: string }
+    expect(role.role).toBe('anon')
+  })
+
+  it('spune că lipsește funcția când poarta răspunde fără motiv', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      ok: false, status: 404, json: () => Promise.resolve({}),
+    })))
+    expect((await syncPhotos()).error).toContain('photo-api')
   })
 })

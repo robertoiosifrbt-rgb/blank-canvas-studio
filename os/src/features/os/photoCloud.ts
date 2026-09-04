@@ -17,6 +17,18 @@ import { deviceToken } from './cloud'
 
 const PHOTO_API = 'https://xmhvkgoxhoiuiigimied.supabase.co/functions/v1/photo-api'
 
+/*
+ * Cheia publică a proiectului, cerută de poarta Supabase la fiecare apel de
+ * funcție. Nu dă niciun drept: e făcută să stea în codul unei pagini web, iar
+ * `photo-api` nu se uită la ea — ea cere `x-device-token` și ține cheia cu
+ * drepturi (`service_role`) pe server. Fără antetul ăsta, poarta răspunde 401
+ * înainte ca funcția să apuce să vadă cererea.
+ */
+const ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9' +
+  '.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtaHZrZ294aG9pdWlpZ2ltaWVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzOTg4NjQsImV4cCI6MjEwMTk3NDg2NH0' +
+  '.DBTyUsE63fe6w5KxWy3LL_H7prQ7ERJDN1SQVfhgAGc'
+
 interface Reply {
   files?: string[]
   data?: string
@@ -26,11 +38,25 @@ interface Reply {
 async function call(body: Record<string, unknown>): Promise<Reply> {
   const response = await fetch(PHOTO_API, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-device-token': deviceToken() },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-device-token': deviceToken(),
+      apikey: ANON_KEY,
+      Authorization: `Bearer ${ANON_KEY}`,
+    },
     body: JSON.stringify(body),
   })
   const reply = (await response.json().catch(() => ({}))) as Reply
-  if (!response.ok) throw new Error(reply.error ?? `eroare ${response.status}`)
+  if (!response.ok) {
+    /* Funcția noastră scrie întotdeauna un motiv. Un răspuns fără el vine de
+       dinaintea ei — de la poartă — și înseamnă aproape sigur că funcția nu e
+       pusă în Supabase. Merită spus, altfel „eroare 404" nu ajută pe nimeni. */
+    if (reply.error) throw new Error(reply.error)
+    throw new Error(
+      `Supabase a răspuns ${response.status} înainte de funcție. ` +
+      'Verifică dacă funcția `photo-api` e pusă în proiect.',
+    )
+  }
   return reply
 }
 
