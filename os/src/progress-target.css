@@ -36,7 +36,7 @@
   gap: 4px;
   padding: 4px;
   border-radius: 14px;
-  background: #f1f3f7
+  background: var(--color-surface-alt)
 }
 
 .progress-photo-filters button {
@@ -96,8 +96,8 @@
   aspect-ratio: 3/4;
   object-fit: cover;
   border-radius: 12px;
-  background: #eef1f5;
-  border: 1px solid #e1e5ec
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border)
 }
 
 .progress-photo-tile figcaption {

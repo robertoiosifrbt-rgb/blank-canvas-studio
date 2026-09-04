@@ -24,7 +24,12 @@
   padding: 15px;
   border: 1px solid var(--color-border);
   border-radius: 18px;
-  background: linear-gradient(135deg, #fff6f3, #fff);
+  /* Nuanța caldă a cardului, amestecată peste suprafața aplicației. Scrisă
+     fix, rămânea deschisă pe temă închisă, iar numele — care își ia culoarea
+     din tokeni — dispărea în ea. */
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--color-accent) 10%, var(--color-surface)),
+    var(--color-surface));
 }
 
 .settings-avatar {
