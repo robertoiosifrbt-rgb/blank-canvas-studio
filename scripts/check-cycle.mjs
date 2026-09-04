@@ -15,6 +15,8 @@ import { readFileSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { chromium } from 'playwright'
 
+import { dayCell, pickDay, sameMonth } from './lib/calendar.mjs'
+
 const PORT = Number(process.env.CHECK_PORT ?? 4320)
 const BASE = `http://127.0.0.1:${PORT}`
 const EMAIL = process.env.CHECK_EMAIL
@@ -169,7 +171,22 @@ try {
 
   await step('it shows up in the Calendar, on tomorrow, under Planned', async () => {
     await page.click('.shell-nav-button >> text=Calendar')
-    await assertVisible(page, 'in the Calendar')
+
+    // The mark on the grid is what sends you to that day at all. Without it,
+    // a day holding something is indistinguishable from an empty one.
+    if (sameMonth(TOMORROW, TODAY)) {
+      await dayCell(page, TOMORROW)
+        .first()
+        .locator('.month-mark')
+        .first()
+        .waitFor({ state: 'visible', timeout: 15000 })
+        .catch(() => {
+          throw new Error(`tomorrow (${TOMORROW}) carries no mark on the grid`)
+        })
+    }
+
+    await pickDay(page, TOMORROW, TODAY)
+    await assertVisible(page, 'in the Calendar, on tomorrow')
     const day = page.locator('.day', { has: page.locator('.row', { hasText: TITLE }) })
     const heading = (await day.first().locator('.day-heading').textContent()) ?? ''
     const dayNumber = String(Number(TOMORROW.slice(8, 10)))
@@ -189,6 +206,9 @@ try {
       state: 'detached',
       timeout: 15000,
     })
+
+    // Ticking put it on today, and the screen is still showing tomorrow.
+    await page.click('.month-today')
 
     const todayDay = page.locator('.day-today', {
       has: page.locator('.row', { hasText: TITLE }),
