@@ -7,9 +7,12 @@ Construit până acum:
 - **pasul 1** — scheletul
 - **pasul 2** — regulile impuse
 - **pasul 3** — autentificare (email și parolă) și coloana, în bază
+- **pasul 4** — stratul de date: snapshot, delta, scriere, export
 
-Nu există încă stratul de date: `items` există în bază, dar niciun ecran nu
-citește și nu scrie în el. Vine la pasul 4.
+Stratul de date există și e verificat, dar **niciun ecran nu-l folosește încă**:
+Captura, Azi, Calendarul, foaia de item și butonul „Descarcă tot" vin la pasul
+5. Tot ce ține de sincronizare stă în `src/repository/`, iar ESLint nu lasă
+niciun alt fișier să atingă Supabase.
 
 ## Comenzi
 
