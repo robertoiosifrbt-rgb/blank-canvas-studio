@@ -107,6 +107,19 @@ describe('forCalendar', () => {
     expect(days[1]?.done.map((i) => i.id)).toEqual(['moved'])
   })
 
+  it('shows it once, under done, when it was planned and done on one day', () => {
+    // Two headings for one row on one day show no difference, only the row
+    // twice. Done is what happened, so that is the one that stays.
+    const days = forCalendar([
+      task('same-day', { state: 'done', due: '2026-09-07', done_at: '2026-09-07' }),
+    ])
+
+    expect(days).toHaveLength(1)
+    expect(days[0]?.day).toBe('2026-09-07')
+    expect(days[0]?.planned).toEqual([])
+    expect(days[0]?.done.map((i) => i.id)).toEqual(['same-day'])
+  })
+
   it('shows an undated task, finished, on the day you ticked it', () => {
     // That is why done_at exists: so nothing finished disappears everywhere.
     const days = forCalendar([task('undated', { state: 'done', done_at: '2026-09-09' })])
