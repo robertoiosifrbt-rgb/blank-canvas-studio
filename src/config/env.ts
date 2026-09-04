@@ -21,7 +21,9 @@ export function readSupabaseConfig(
   if (missing.length > 0) {
     throw new Error(
       `Missing configuration: ${missing.join(', ')}. ` +
-        'Set it in .env.local locally, and in Vercel per environment.',
+        'Set it in .env.local locally, and in Vercel per environment — ' +
+        'then redeploy, because these values are baked into the build, not ' +
+        'read when the page opens.',
     )
   }
 
