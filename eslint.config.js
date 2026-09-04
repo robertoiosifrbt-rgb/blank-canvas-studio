@@ -70,10 +70,14 @@ export default tseslint.config(
     rules: { '@typescript-eslint/no-restricted-imports': 'off' },
   },
 
-  // The layout checker: part of its code runs in Node and part in the page, so
-  // it sees the globals of both.
+  // The browser checkers: part of their code runs in Node and part inside the
+  // page, so they see the globals of both.
   {
-    files: ['scripts/check-layout.mjs', 'scripts/lib/layout.mjs'],
+    files: [
+      'scripts/check-layout.mjs',
+      'scripts/check-cycle.mjs',
+      'scripts/lib/layout.mjs',
+    ],
     extends: [js.configs.recommended],
     languageOptions: {
       globals: { ...globals.node, ...globals.browser },

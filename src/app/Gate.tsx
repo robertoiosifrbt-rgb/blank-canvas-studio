@@ -37,7 +37,7 @@ export function Gate() {
 
   return (
     <Routes>
-      <Route element={<AppShell email={state.session.email} />}>
+      <Route element={<AppShell session={state.session} />}>
         {SCREENS.map((screen) => (
           <Route key={screen.path} path={screen.path} element={screen.element} />
         ))}

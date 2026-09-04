@@ -17,6 +17,10 @@ import type { SyncResult } from './sync'
 import { applyPatch, create, softDelete } from './write'
 
 export type { Item, Patch } from './item'
+// The filters live here, in one place; the screens call them over the snapshot
+// they already hold instead of re-reading the cache for every group.
+export { forCalendar, forToday } from './filters'
+export { localToday } from './item'
 export type { CalendarDay, TodayGroups } from './filters'
 export type { SyncResult } from './sync'
 export type { ExportFile } from './export'

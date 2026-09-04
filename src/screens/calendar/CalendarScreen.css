@@ -1,0 +1,49 @@
+/* Imported by exactly one .tsx in this directory: CalendarScreen.tsx */
+
+.calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.calendar-note {
+  color: var(--text-dim);
+  font-size: var(--text-s);
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--line);
+}
+
+.day-today {
+  border-left-color: var(--accent);
+}
+
+.day-heading {
+  font-size: var(--text-m);
+  font-weight: 600;
+}
+
+.day-part {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.day-part-heading {
+  font-size: var(--text-s);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.day-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

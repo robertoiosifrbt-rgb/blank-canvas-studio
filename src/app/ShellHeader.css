@@ -1,0 +1,70 @@
+/* Imported by exactly one .tsx in this directory: ShellHeader.tsx */
+
+.head {
+  /* The phone's status bar never sits over text. */
+  padding: calc(var(--safe-top) + var(--space-4)) var(--space-4) var(--space-3);
+  padding-left: calc(var(--safe-left) + var(--space-4));
+  padding-right: calc(var(--safe-right) + var(--space-4));
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.head-row-tools {
+  gap: var(--space-2);
+}
+
+.head-title {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.head-button {
+  flex: none;
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  font-size: var(--text-s);
+}
+
+.head-account {
+  color: var(--text-dim);
+  font-size: var(--text-s);
+  overflow-wrap: anywhere;
+}
+
+.head-sync {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  text-align: left;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  font-size: var(--text-s);
+  overflow-wrap: anywhere;
+}
+
+.head-sync-bad {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.head-error {
+  color: var(--danger);
+  font-size: var(--text-s);
+  overflow-wrap: anywhere;
+}

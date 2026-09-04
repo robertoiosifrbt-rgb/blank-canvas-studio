@@ -1,0 +1,50 @@
+/* Imported by exactly one .tsx in this directory: ItemRow.tsx */
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--space-3);
+  text-align: left;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--bg-raised);
+}
+
+.row-done .row-title {
+  color: var(--text-dim);
+  text-decoration: line-through;
+}
+
+.row-mark {
+  flex: none;
+  width: 1.25rem;
+  color: var(--accent);
+  font-size: var(--text-m);
+  line-height: 1.45;
+}
+
+.row-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.row-title {
+  font-size: var(--text-m);
+  overflow-wrap: anywhere;
+}
+
+.row-meta {
+  color: var(--text-dim);
+  font-size: var(--text-s);
+}
+
+.row-unsaved {
+  color: var(--danger);
+  font-size: var(--text-s);
+  overflow-wrap: anywhere;
+}

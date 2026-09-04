@@ -76,7 +76,7 @@ jobs:
       - name: RLS, negatives and positives
         run: npm run check:rls
 
-      - name: the account the layout check signs in with
+      - name: the account the browser checks sign in with
         run: |
           curl -sS --fail-with-body \
             -X POST "$VITE_SUPABASE_URL/auth/v1/admin/users" \
@@ -89,11 +89,16 @@ jobs:
       - name: build against the local values
         run: npm run build
 
-      - name: browser for the layout check
+      - name: browser for the browser checks
         run: npx playwright install --with-deps chromium
 
-      # It checks both the sign-in screen and the screens behind it — it signs
-      # in through the form, like a person.
+      # The full cycle from the end of step 5: write a line, process it, tick
+      # it, download it, see it on a second device and after a refresh.
+      - name: the full cycle
+        run: npm run check:cycle
+
+      # It checks the sign-in screen, the screens behind it and both sheets —
+      # it signs in through the form, like a person.
       - name: layout at phone width
         run: npm run check:layout
 
