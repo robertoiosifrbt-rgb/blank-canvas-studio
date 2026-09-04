@@ -110,7 +110,7 @@ describe('sincronizarea pozelor de progres', () => {
     expect((await syncPhotos()).error).toContain('Bad gateway')
   })
 
-  it('se legitimează cu codul de device, nu cu o cheie cu drepturi', async () => {
+  it('se legitimează cu codul de device și cu nimic altceva', async () => {
     sets.push(fullSet('a1', '2026-09-01'))
     const seen: RequestInit[] = []
     vi.stubGlobal('fetch', vi.fn((_url: string, init: RequestInit) => {
@@ -121,11 +121,10 @@ describe('sincronizarea pozelor de progres', () => {
     const headers = seen[0].headers as Record<string, string>
     expect(headers['x-device-token']).toBe('token-de-test-1234567890')
 
-    /* Cheia din antet trece doar de poarta Supabase. Trebuie să fie cea
-       publică: `service_role` în codul unei pagini web ar da oricui drepturi
-       depline pe baza de date. */
-    const role = JSON.parse(atob(headers.apikey.split('.')[1])) as { role: string }
-    expect(role.role).toBe('anon')
+    /* Nicio cheie Supabase în cerere. Una veche e respinsă de poartă cu 401,
+       iar una cu drepturi n-are ce căuta în codul unei pagini web. */
+    expect(Object.keys(headers).map(name => name.toLowerCase()))
+      .toEqual(['content-type', 'x-device-token'])
   })
 
   it('dă măcar numărul când răspunsul e gol', async () => {
