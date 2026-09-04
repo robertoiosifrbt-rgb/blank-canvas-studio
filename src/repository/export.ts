@@ -1,39 +1,39 @@
-// Exportul: singurul lucru din tot planul care îți dă control care nu depinde
-// de nimeni. Un buton, un fișier pe telefonul tău.
+// The export: the one thing in the whole plan that gives you control that
+// depends on nobody. One button, one file on your own phone.
 
 import type { Item } from './item'
 
-export type Fișier = {
-  nume: string
-  /** Tot conținutul, ca text. */
-  conținut: string
+export type ExportFile = {
+  name: string
+  /** The whole content, as text. */
+  contents: string
 }
 
 /**
- * Snapshot-ul întreg, ca fișier.
+ * The entire snapshot, as a file.
  *
- * Include și rândurile șterse și momentul până la care e sincronizat: un
- * fișier care nu spune cât de proaspăt e ar promite mai mult decât știe.
+ * It includes the deleted rows and the point it is synced through: a file that
+ * did not say how fresh it is would promise more than it knows.
  */
-export function fișierDeExport(
-  utilizator: string,
-  itemi: readonly Item[],
+export function exportFile(
+  user: string,
+  items: readonly Item[],
   cursor: string | null,
-  acum: Date,
-): Fișier {
-  const conținut = JSON.stringify(
+  now: Date,
+): ExportFile {
+  const contents = JSON.stringify(
     {
-      aplicație: 'life-control-centre',
-      versiuneFormat: 1,
-      utilizator,
-      exportatLa: acum.toISOString(),
-      sincronizatPânăLa: cursor,
-      itemi,
+      app: 'life-control-centre',
+      formatVersion: 1,
+      user,
+      exportedAt: now.toISOString(),
+      syncedThrough: cursor,
+      items,
     },
     null,
     2,
   )
 
-  const zi = acum.toISOString().slice(0, 10)
-  return { nume: `life-control-centre-${zi}.json`, conținut }
+  const day = now.toISOString().slice(0, 10)
+  return { name: `life-control-centre-${day}.json`, contents }
 }

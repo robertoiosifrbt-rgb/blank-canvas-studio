@@ -4,60 +4,58 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import {
-  citeșteArbore,
-  extrageImporturi,
-  LIMITA_LINII,
-  numărăLinii,
-  rezolvăImport,
-  verifică,
-  verificăCss,
-  verificăLinii,
+  check,
+  checkCssConvention,
+  checkLineLimits,
+  countLines,
+  importsOf,
+  LINE_LIMIT,
+  readTree,
+  resolveImport,
 } from './structure.mjs'
 
-/** Un arbore minim și corect, pe care verificatorul trebuie să tacă. */
-function arboreCorect() {
+/** A minimal, correct tree the checker must stay quiet about. */
+function goodTree() {
   return [
     {
-      cale: 'src/main.tsx',
-      conținut: "import './styles/tokens.css'\nimport './styles/reset.css'\n",
+      path: 'src/main.tsx',
+      contents: "import './styles/tokens.css'\nimport './styles/reset.css'\n",
     },
-    { cale: 'src/styles/tokens.css', conținut: ':root { color: red }\n' },
-    { cale: 'src/styles/reset.css', conținut: 'body { margin: 0 }\n' },
-    { cale: 'src/app/AppShell.tsx', conținut: "import './AppShell.css'\n" },
-    { cale: 'src/app/AppShell.css', conținut: '.shell {}\n' },
+    { path: 'src/styles/tokens.css', contents: ':root { color: red }\n' },
+    { path: 'src/styles/reset.css', contents: 'body { margin: 0 }\n' },
+    { path: 'src/app/AppShell.tsx', contents: "import './AppShell.css'\n" },
+    { path: 'src/app/AppShell.css', contents: '.shell {}\n' },
   ]
 }
 
-describe('numărăLinii', () => {
-  it('nu numără linia goală de la final ca linie', () => {
-    expect(numărăLinii('a\nb\n')).toBe(2)
-    expect(numărăLinii('a\nb')).toBe(2)
-    expect(numărăLinii('')).toBe(0)
+describe('countLines', () => {
+  it('does not count the trailing blank line as a line', () => {
+    expect(countLines('a\nb\n')).toBe(2)
+    expect(countLines('a\nb')).toBe(2)
+    expect(countLines('')).toBe(0)
   })
 })
 
-describe('verificăLinii', () => {
-  it('lasă să treacă exact limita și oprește un rând peste', () => {
-    const laLimită = `${'x\n'.repeat(LIMITA_LINII)}`
-    const pesteLimită = `${'x\n'.repeat(LIMITA_LINII + 1)}`
+describe('checkLineLimits', () => {
+  it('lets exactly the limit through and stops one line over', () => {
+    const atLimit = `${'x\n'.repeat(LINE_LIMIT)}`
+    const overLimit = `${'x\n'.repeat(LINE_LIMIT + 1)}`
 
-    expect(verificăLinii([{ cale: 'src/a.ts', conținut: laLimită }])).toEqual([])
-    expect(
-      verificăLinii([{ cale: 'src/a.ts', conținut: pesteLimită }]),
-    ).toHaveLength(1)
+    expect(checkLineLimits([{ path: 'src/a.ts', contents: atLimit }])).toEqual([])
+    expect(checkLineLimits([{ path: 'src/a.ts', contents: overLimit }])).toHaveLength(1)
   })
 
-  it('se aplică la .ts și .tsx, nu la altceva', () => {
-    const prea = `${'x\n'.repeat(LIMITA_LINII + 1)}`
-    expect(verificăLinii([{ cale: 'src/a.tsx', conținut: prea }])).toHaveLength(1)
-    expect(verificăLinii([{ cale: 'src/a.css', conținut: prea }])).toEqual([])
-    expect(verificăLinii([{ cale: 'src/a.md', conținut: prea }])).toEqual([])
+  it('applies to .ts and .tsx, not to anything else', () => {
+    const tooMany = `${'x\n'.repeat(LINE_LIMIT + 1)}`
+    expect(checkLineLimits([{ path: 'src/a.tsx', contents: tooMany }])).toHaveLength(1)
+    expect(checkLineLimits([{ path: 'src/a.css', contents: tooMany }])).toEqual([])
+    expect(checkLineLimits([{ path: 'src/a.md', contents: tooMany }])).toEqual([])
   })
 })
 
-describe('extrageImporturi', () => {
-  it('prinde toate formele de import și de re-export', () => {
-    const cod = [
+describe('importsOf', () => {
+  it('catches every form of import and re-export', () => {
+    const code = [
       "import './a.css'",
       "import React from 'react'",
       "import type { X } from './x'",
@@ -67,7 +65,7 @@ describe('extrageImporturi', () => {
       "const e = await import('./e')",
     ].join('\n')
 
-    expect(extrageImporturi(cod)).toEqual([
+    expect(importsOf(code)).toEqual([
       './a.css',
       'react',
       './x',
@@ -79,121 +77,113 @@ describe('extrageImporturi', () => {
   })
 })
 
-describe('rezolvăImport', () => {
-  it('rezolvă relativ la directorul importatorului', () => {
-    expect(rezolvăImport('src/main.tsx', './styles/tokens.css')).toBe(
+describe('resolveImport', () => {
+  it('resolves relative to the importer directory', () => {
+    expect(resolveImport('src/main.tsx', './styles/tokens.css')).toBe(
       'src/styles/tokens.css',
     )
-    expect(rezolvăImport('src/ui/Nota.tsx', '../styles/tokens.css')).toBe(
+    expect(resolveImport('src/ui/Note.tsx', '../styles/tokens.css')).toBe(
       'src/styles/tokens.css',
     )
   })
 
-  it('ignoră pachetele', () => {
-    expect(rezolvăImport('src/main.tsx', 'react')).toBeNull()
+  it('ignores packages', () => {
+    expect(resolveImport('src/main.tsx', 'react')).toBeNull()
   })
 })
 
-describe('verificăCss', () => {
-  it('tace pe un arbore corect', () => {
-    expect(verificăCss(arboreCorect())).toEqual([])
+describe('checkCssConvention', () => {
+  it('stays quiet on a correct tree', () => {
+    expect(checkCssConvention(goodTree())).toEqual([])
   })
 
-  it('oprește un al treilea CSS importat din intrare', () => {
-    const fișiere = arboreCorect()
-    fișiere[0].conținut += "import './app/AppShell.css'\n"
-    const abateri = verificăCss(fișiere)
-    expect(abateri.some((a) => a.cale === 'src/main.tsx')).toBe(true)
+  it('stops a third CSS file imported from the entry', () => {
+    const files = goodTree()
+    files[0].contents += "import './app/AppShell.css'\n"
+    expect(checkCssConvention(files).some((p) => p.path === 'src/main.tsx')).toBe(true)
   })
 
-  it('oprește un CSS pe care nu-l importă nimeni', () => {
-    const fișiere = [
-      ...arboreCorect(),
-      { cale: 'src/app/Orfan.css', conținut: '.orfan {}\n' },
-    ]
-    const abateri = verificăCss(fișiere)
-    expect(abateri).toContainEqual({
-      cale: 'src/app/Orfan.css',
-      motiv: 'nu e importat de niciun .tsx din directorul lui',
+  it('stops a CSS file nobody imports', () => {
+    const files = [...goodTree(), { path: 'src/app/Orphan.css', contents: '.o {}\n' }]
+    expect(checkCssConvention(files)).toContainEqual({
+      path: 'src/app/Orphan.css',
+      reason: 'not imported by any .tsx in its own directory',
     })
   })
 
-  it('oprește un CSS importat de două fișiere din același director', () => {
-    const fișiere = [
-      ...arboreCorect(),
-      { cale: 'src/app/Alt.tsx', conținut: "import './AppShell.css'\n" },
+  it('stops a CSS file imported by two files in the same directory', () => {
+    const files = [
+      ...goodTree(),
+      { path: 'src/app/Other.tsx', contents: "import './AppShell.css'\n" },
     ]
-    const abateri = verificăCss(fișiere)
     expect(
-      abateri.some(
-        (a) => a.cale === 'src/app/AppShell.css' && a.motiv.includes('2 fișiere'),
+      checkCssConvention(files).some(
+        (p) => p.path === 'src/app/AppShell.css' && p.reason.includes('2 files'),
       ),
     ).toBe(true)
   })
 
-  it('oprește un CSS importat din alt director', () => {
-    const fișiere = arboreCorect()
-    fișiere.push({
-      cale: 'src/screens/azi/AziScreen.tsx',
-      conținut: "import '../../app/AppShell.css'\n",
+  it('stops a CSS file imported from another directory', () => {
+    const files = goodTree()
+    files.push({
+      path: 'src/screens/today/TodayScreen.tsx',
+      contents: "import '../../app/AppShell.css'\n",
     })
-    const abateri = verificăCss(fișiere)
     expect(
-      abateri.some(
-        (a) =>
-          a.cale === 'src/app/AppShell.css' &&
-          a.motiv.startsWith('importat din alt director'),
+      checkCssConvention(files).some(
+        (p) =>
+          p.path === 'src/app/AppShell.css' &&
+          p.reason.startsWith('imported from another directory'),
       ),
     ).toBe(true)
   })
 
-  it('oprește un import către un CSS care nu există', () => {
-    const fișiere = arboreCorect()
-    fișiere.push({
-      cale: 'src/screens/azi/AziScreen.tsx',
-      conținut: "import './Lipsă.css'\n",
+  it('stops an import of a CSS file that does not exist', () => {
+    const files = goodTree()
+    files.push({
+      path: 'src/screens/today/TodayScreen.tsx',
+      contents: "import './Missing.css'\n",
     })
-    const abateri = verificăCss(fișiere)
     expect(
-      abateri.some((a) => a.cale === 'src/screens/azi/AziScreen.tsx'),
+      checkCssConvention(files).some(
+        (p) => p.path === 'src/screens/today/TodayScreen.tsx',
+      ),
     ).toBe(true)
   })
 
-  it('oprește lipsa intrării', () => {
-    const fișiere = arboreCorect().filter((f) => f.cale !== 'src/main.tsx')
-    expect(verificăCss(fișiere)).toContainEqual({
-      cale: 'src/main.tsx',
-      motiv: 'lipsește intrarea aplicației',
+  it('stops a missing entry', () => {
+    const files = goodTree().filter((f) => f.path !== 'src/main.tsx')
+    expect(checkCssConvention(files)).toContainEqual({
+      path: 'src/main.tsx',
+      reason: 'the application entry is missing',
     })
   })
 
-  it('oprește lipsa unui CSS global', () => {
-    const fișiere = arboreCorect().filter(
-      (f) => f.cale !== 'src/styles/reset.css',
-    )
+  it('stops a missing global CSS file', () => {
+    const files = goodTree().filter((f) => f.path !== 'src/styles/reset.css')
     expect(
-      verificăCss(fișiere).some((a) => a.cale === 'src/styles/reset.css'),
+      checkCssConvention(files).some((p) => p.path === 'src/styles/reset.css'),
     ).toBe(true)
   })
 })
 
-describe('verifică', () => {
-  it('nu trece verde pe un arbore gol', () => {
-    expect(verifică([])).toHaveLength(1)
+describe('check', () => {
+  it('does not go green on an empty tree', () => {
+    expect(check([])).toHaveLength(1)
   })
 })
 
-describe('citeșteArbore', () => {
-  it('coboară în foldere pe care nu le cunoaște nimeni', () => {
-    const rădăcină = mkdtempSync(path.join(tmpdir(), 'structura-'))
-    mkdirSync(path.join(rădăcină, 'modul/nou/adânc'), { recursive: true })
-    writeFileSync(path.join(rădăcină, 'sus.ts'), 'a\n')
-    writeFileSync(path.join(rădăcină, 'modul/nou/adânc/jos.tsx'), 'b\n')
+describe('readTree', () => {
+  it('descends into folders nobody told it about', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'structure-'))
+    mkdirSync(path.join(root, 'module/new/deep'), { recursive: true })
+    writeFileSync(path.join(root, 'top.ts'), 'a\n')
+    writeFileSync(path.join(root, 'module/new/deep/bottom.tsx'), 'b\n')
 
-    const fișiere = citeșteArbore(rădăcină)
-    const căi = fișiere.map((f) => f.cale.slice(rădăcină.length + 1))
+    const files = readTree(root)
+    const paths = files.map((f) => f.path.slice(root.length + 1))
 
-    expect(căi).toEqual(['modul/nou/adânc/jos.tsx', 'sus.ts'])
-    expect(fișiere[0].conținut).toBe('b\n')
+    expect(paths).toEqual(['module/new/deep/bottom.tsx', 'top.ts'])
+    expect(files[0].contents).toBe('b\n')
   })
 })

@@ -1,200 +1,182 @@
 #!/usr/bin/env node
-// Pornește aplicația la lățime de telefon și cade dacă ceva iese din ecran,
-// dacă un text stă sub bara de status sau dacă o zonă apăsabilă e prea mică.
+// Starts the app at phone width and fails if anything sticks out of the
+// screen, if text sits under the status bar, or if a tap target is too small.
 //
-// Verifică și ecranul de intrare, și ecranele de după autentificare — deci are
-// nevoie de un cont pe Supabase local. Fără el se oprește: un verificator care
-// sare în silence peste jumătate din aplicație e o verificare verde care nu
-// verifică nimic.
+// It checks both the sign-in screen and the screens behind it — so it needs an
+// account on the local Supabase. Without one it stops: a checker that silently
+// skips half the app is a green check that checks nothing.
 //
-// La final se verifică singur, cu patru elemente stricate intenționat.
+// At the end it checks itself, with four deliberately broken elements.
 
 import { spawn } from 'node:child_process'
 import { chromium } from 'playwright'
 
-import {
-  APĂSABILE,
-  cssSiguranță,
-  inspectează,
-  LĂȚIMI,
-  SIGURANȚĂ,
-  ZONA_MINIMĂ,
-} from './lib/layout.mjs'
+import { inspect, MIN_TAP, SAFE, safeAreaCss, SIZES, TAPPABLE } from './lib/layout.mjs'
 
-const PORT = Number(process.env.PORT_VERIFICARE ?? 4319)
-const BAZA = `http://127.0.0.1:${PORT}`
-const EMAIL = process.env.VERIFICARE_EMAIL
-const PAROLA = process.env.VERIFICARE_PAROLA
+const PORT = Number(process.env.CHECK_PORT ?? 4319)
+const BASE = `http://127.0.0.1:${PORT}`
+const EMAIL = process.env.CHECK_EMAIL
+const PASSWORD = process.env.CHECK_PASSWORD
 
-if (!EMAIL || !PAROLA) {
+if (!EMAIL || !PASSWORD) {
   console.error(
-    'Lipsesc VERIFICARE_EMAIL și VERIFICARE_PAROLA. Ecranele aplicației stau\n' +
-      'după autentificare, deci verificarea are nevoie de un cont pe Supabase\n' +
-      'local. Nu se folosesc niciodată credențiale de producție.',
+    'CHECK_EMAIL and CHECK_PASSWORD are missing. The app screens live behind\n' +
+      'authentication, so this check needs an account on the local Supabase.\n' +
+      'Production credentials are never used here.',
   )
   process.exit(1)
 }
 
-/** Ecranul dinaintea contului. */
-const CĂI_PUBLICE = ['/intrare']
-/** Ecranele de după cont. Ultima nu există: trebuie să aibă ieșire. */
-const CĂI_PRIVATE = ['/azi', '/calendar', '/', '/o-cale-care-nu-există']
+/** The screen before the account. */
+const PUBLIC_PATHS = ['/sign-in']
+/** The screens after the account. The last one does not exist: it needs an exit. */
+const PRIVATE_PATHS = ['/today', '/calendar', '/', '/a-path-that-does-not-exist']
 
-const ARGUMENTE = {
-  zonaMinimă: ZONA_MINIMĂ,
-  siguranță: SIGURANȚĂ,
-  apăsabile: APĂSABILE,
-}
+const ARGUMENTS = { minTap: MIN_TAP, safe: SAFE, tappable: TAPPABLE }
 
-async function așteaptăServerul(încercări = 60) {
-  for (let i = 0; i < încercări; i += 1) {
+async function waitForServer(attempts = 60) {
+  for (let i = 0; i < attempts; i += 1) {
     try {
-      if ((await fetch(BAZA)).ok) return
+      if ((await fetch(BASE)).ok) return
     } catch {
-      // serverul nu s-a ridicat încă
+      // the server has not come up yet
     }
-    await new Promise((gata) => setTimeout(gata, 250))
+    await new Promise((done) => setTimeout(done, 250))
   }
-  throw new Error(`Serverul nu a răspuns la ${BAZA}`)
+  throw new Error(`The server did not answer at ${BASE}`)
 }
 
-function porneșteServerul() {
-  const proces = spawn(
+function startServer() {
+  const child = spawn(
     'npx',
     ['vite', 'preview', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'],
     { stdio: ['ignore', 'pipe', 'pipe'] },
   )
-  proces.stderr.on('data', (bucată) => process.stderr.write(bucată))
-  return proces
+  child.stderr.on('data', (chunk) => process.stderr.write(chunk))
+  return child
 }
 
-/** Deschide o cale și așteaptă un ecran adevărat, nu starea de încărcare. */
-async function deschide(pagină, cale) {
-  await pagină.goto(`${BAZA}${cale}`, { waitUntil: 'networkidle' })
-  await pagină.waitForSelector('.shell, .intrare', { timeout: 15000 })
-  await pagină.addStyleTag({ content: cssSiguranță() })
+/** Opens a path and waits for a real screen, not the loading state. */
+async function open(page, path) {
+  await page.goto(`${BASE}${path}`, { waitUntil: 'networkidle' })
+  await page.waitForSelector('.shell, .signin', { timeout: 15000 })
+  await page.addStyleTag({ content: safeAreaCss() })
 }
 
-async function intrăÎnCont(pagină) {
-  await deschide(pagină, '/intrare')
-  await pagină.fill('input[name="email"]', EMAIL)
-  await pagină.fill('input[name="parola"]', PAROLA)
-  await pagină.click('.intrare-buton')
+async function signIn(page) {
+  await open(page, '/sign-in')
+  await page.fill('input[name="email"]', EMAIL)
+  await page.fill('input[name="password"]', PASSWORD)
+  await page.click('.signin-button')
   try {
-    await pagină.waitForSelector('.shell', { timeout: 20000 })
+    await page.waitForSelector('.shell', { timeout: 20000 })
   } catch {
-    // Dacă formularul a spus de ce, ăla e motivul adevărat.
-    const spus = await pagină
-      .locator('.intrare-mesaj-eroare')
+    // If the form said why, that is the real reason.
+    const said = await page
+      .locator('.signin-message-error')
       .first()
       .textContent()
       .catch(() => null)
     throw new Error(
-      `nu s-a putut intra în cont cu ${EMAIL}: ${spus ?? 'ecranul a rămas la intrare'}`,
+      `could not sign in as ${EMAIL}: ${said ?? 'the screen stayed on sign-in'}`,
     )
   }
 }
 
-const abateri = []
-const server = porneșteServerul()
+const problems = []
+const server = startServer()
 let browser
 
 try {
-  await așteaptăServerul()
+  await waitForServer()
   browser = await chromium.launch({
     ...(process.env.CHROMIUM_EXECUTABLE
       ? { executablePath: process.env.CHROMIUM_EXECUTABLE }
       : {}),
   })
 
-  for (const dimensiune of LĂȚIMI) {
-    // Context nou la fiecare lățime: fiecare rundă pleacă fără sesiune salvată.
+  for (const size of SIZES) {
+    // A fresh context per width: each round starts with no stored session.
     const context = await browser.newContext({
-      viewport: { width: dimensiune.lățime, height: dimensiune.înălțime },
+      viewport: { width: size.width, height: size.height },
     })
-    const pagină = await context.newPage()
+    const page = await context.newPage()
 
-    const căi = [...CĂI_PUBLICE]
-    for (const cale of căi) {
-      await deschide(pagină, cale)
-      adună(await pagină.evaluate(inspectează, ARGUMENTE), cale, dimensiune)
+    for (const path of PUBLIC_PATHS) {
+      await open(page, path)
+      collect(await page.evaluate(inspect, ARGUMENTS), path, size)
     }
 
-    await intrăÎnCont(pagină)
-    for (const cale of CĂI_PRIVATE) {
-      await deschide(pagină, cale)
-      adună(await pagină.evaluate(inspectează, ARGUMENTE), cale, dimensiune)
+    await signIn(page)
+    for (const path of PRIVATE_PATHS) {
+      await open(page, path)
+      collect(await page.evaluate(inspect, ARGUMENTS), path, size)
     }
 
-    if (dimensiune === LĂȚIMI[0]) await autoVerifică(pagină)
+    if (size === SIZES[0]) await checkItself(page)
     await context.close()
   }
-} catch (motiv) {
-  // O cădere a verificatorului e o abatere raportată, nu o urmă de stivă.
-  abateri.push({
-    unde: 'verificare',
-    fel: 'căzut',
+} catch (reason) {
+  // A checker falling over is a reported problem, not a stack trace.
+  problems.push({
+    where: 'the check itself',
+    kind: 'crashed',
     element: '-',
-    detaliu: motiv instanceof Error ? motiv.message : String(motiv),
+    detail: reason instanceof Error ? reason.message : String(reason),
   })
 } finally {
   await browser?.close()
   server.kill('SIGTERM')
 }
 
-function adună({ abateri: găsite, numărate }, cale, dimensiune) {
-  const unde = `${cale} @ ${dimensiune.lățime}px`
-  if (numărate.text === 0) {
-    abateri.push({ unde, fel: 'gol', element: '-', detaliu: 'niciun text pe ecran' })
+function collect({ problems: found, counted }, path, size) {
+  const where = `${path} @ ${size.width}px`
+  if (counted.text === 0) {
+    problems.push({ where, kind: 'empty', element: '-', detail: 'no text on the screen' })
   }
-  if (numărate.apăsabile === 0) {
-    abateri.push({
-      unde,
-      fel: 'gol',
-      element: '-',
-      detaliu: 'nicio zonă apăsabilă pe ecran',
-    })
+  if (counted.taps === 0) {
+    problems.push({ where, kind: 'empty', element: '-', detail: 'no tap target on the screen' })
   }
-  for (const abatere of găsite) abateri.push({ unde, ...abatere })
+  for (const problem of found) problems.push({ where, ...problem })
   console.log(
-    `  ${unde}: ${găsite.length} abateri, ${numărate.text} texte, ${numărate.apăsabile} zone apăsabile`,
+    `  ${where}: ${found.length} problems, ${counted.text} texts, ${counted.taps} tap targets`,
   )
 }
 
-/** Patru greșeli puse anume, care trebuie prinse toate patru. */
-async function autoVerifică(pagină) {
-  await pagină.evaluate(() => {
-    const strică = document.createElement('div')
-    strică.id = 'canar'
-    strică.innerHTML =
-      '<div id="canar-lat" style="position:fixed;top:200px;left:0;width:200vw;height:4px"></div>' +
-      '<p id="canar-text" style="position:fixed;top:0;left:0;margin:0">sub bară</p>' +
-      '<button id="canar-buton" style="position:fixed;top:100px;left:0;width:10px;height:10px">x</button>' +
-      '<button id="canar-jos" style="position:fixed;bottom:0;left:0;width:44px;height:44px">j</button>'
-    document.body.append(strică)
+/** Four deliberate mistakes, all four of which must be caught. */
+async function checkItself(page) {
+  await page.evaluate(() => {
+    const broken = document.createElement('div')
+    broken.id = 'canary'
+    broken.innerHTML =
+      '<div id="canary-wide" style="position:fixed;top:200px;left:0;width:200vw;height:4px"></div>' +
+      '<p id="canary-text" style="position:fixed;top:0;left:0;margin:0">under the bar</p>' +
+      '<button id="canary-button" style="position:fixed;top:100px;left:0;width:10px;height:10px">x</button>' +
+      '<button id="canary-bottom" style="position:fixed;bottom:0;left:0;width:44px;height:44px">b</button>'
+    document.body.append(broken)
   })
-  const { abateri: prinse } = await pagină.evaluate(inspectează, ARGUMENTE)
-  const feluri = new Set(prinse.map((a) => a.fel))
-  for (const fel of ['ieșit', 'sub-bară', 'prea-mic', 'sub-indicator']) {
-    if (!feluri.has(fel)) {
-      abateri.push({
-        unde: 'auto-verificare',
-        fel: 'orb',
-        element: fel,
-        detaliu: `verificatorul nu a prins o greșeală de tip „${fel}"`,
+  const { problems: caught } = await page.evaluate(inspect, ARGUMENTS)
+  const kinds = new Set(caught.map((p) => p.kind))
+  for (const kind of ['overflow', 'under-status-bar', 'too-small', 'under-indicator']) {
+    if (!kinds.has(kind)) {
+      problems.push({
+        where: 'self-check',
+        kind: 'blind',
+        element: kind,
+        detail: `the checker did not catch a mistake of kind "${kind}"`,
       })
     }
   }
-  console.log(`  auto-verificare: a prins ${[...feluri].join(', ')}`)
+  console.log(`  self-check: caught ${[...kinds].join(', ')}`)
 }
 
-if (abateri.length === 0) {
-  console.log('\nAșezare în regulă la lățime de telefon.')
+if (problems.length === 0) {
+  console.log('\nLayout is fine at phone width.')
   process.exit(0)
 }
 
-console.error(`\nAșezare: ${abateri.length} abateri\n`)
-for (const abatere of abateri) {
-  console.error(`  [${abatere.fel}] ${abatere.unde} → ${abatere.element}: ${abatere.detaliu}`)
+console.error(`\nLayout: ${problems.length} problems\n`)
+for (const problem of problems) {
+  console.error(`  [${problem.kind}] ${problem.where} → ${problem.element}: ${problem.detail}`)
 }
 process.exit(1)

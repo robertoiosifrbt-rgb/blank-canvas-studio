@@ -1,41 +1,40 @@
-// Configurația nu se scrie în cod. Vine din variabile de mediu, în Vercel și
-// în .env.local. Nu pentru secretizare — cheia publishable e publică oricum —
-// ci ca dev și producție să nu fie hardcodate.
+// Configuration never lives in code. It comes from environment variables, in
+// Vercel and in .env.local. Not for secrecy — the publishable key is public
+// anyway — but so that dev and production are never hardcoded.
 
-export type ConfigurațieSupabase = {
+export type SupabaseConfig = {
   url: string
-  cheiePublishable: string
+  publishableKey: string
 }
 
-/** Citește configurația dintr-un set de variabile, oricare ar fi sursa lui. */
-export function citeșteConfigurațiaSupabase(
-  variabile: Record<string, string | undefined>,
-): ConfigurațieSupabase {
-  const url = variabile['VITE_SUPABASE_URL']?.trim() ?? ''
-  const cheiePublishable =
-    variabile['VITE_SUPABASE_PUBLISHABLE_KEY']?.trim() ?? ''
+/** Reads the configuration out of a set of variables, whatever their source. */
+export function readSupabaseConfig(
+  env: Record<string, string | undefined>,
+): SupabaseConfig {
+  const url = env['VITE_SUPABASE_URL']?.trim() ?? ''
+  const publishableKey = env['VITE_SUPABASE_PUBLISHABLE_KEY']?.trim() ?? ''
 
-  const lipsesc: string[] = []
-  if (url === '') lipsesc.push('VITE_SUPABASE_URL')
-  if (cheiePublishable === '') lipsesc.push('VITE_SUPABASE_PUBLISHABLE_KEY')
+  const missing: string[] = []
+  if (url === '') missing.push('VITE_SUPABASE_URL')
+  if (publishableKey === '') missing.push('VITE_SUPABASE_PUBLISHABLE_KEY')
 
-  if (lipsesc.length > 0) {
+  if (missing.length > 0) {
     throw new Error(
-      `Configurație lipsă: ${lipsesc.join(', ')}. ` +
-        'Se pune în .env.local local, și în Vercel pentru fiecare mediu.',
+      `Missing configuration: ${missing.join(', ')}. ` +
+        'Set it in .env.local locally, and in Vercel per environment.',
     )
   }
 
-  return { url, cheiePublishable }
+  return { url, publishableKey }
 }
 
 /**
- * Configurația mediului în care rulează aplicația.
+ * The configuration of the environment the app runs in.
  *
- * Se citește la cerere, nu la pornire: până când există stratul de date,
- * aplicația nu are nevoie de Supabase, și un ecran nu are voie să cadă
- * pentru o variabilă pe care nu o folosește încă.
+ * Read on demand, not at startup: until the data layer exists the app has no
+ * need of Supabase, and a screen must not fall over for a variable it does not
+ * use yet.
  */
-export function configurațiaSupabase(): ConfigurațieSupabase {
-  return citeșteConfigurațiaSupabase(import.meta.env)
+export function supabaseConfig(): SupabaseConfig {
+  return readSupabaseConfig(import.meta.env)
 }

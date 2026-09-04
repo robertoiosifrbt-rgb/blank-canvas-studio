@@ -2,165 +2,162 @@ import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import posix from 'node:path/posix'
 
-/** Un fișier, o responsabilitate. */
-export const LIMITA_LINII = 300
+/** One file, one responsibility. */
+export const LINE_LIMIT = 300
 
-/** Rădăcina codului. Verificatorul nu primește niciodată o listă de foldere. */
-export const RĂDĂCINA = 'src'
+/** The root of the code. The checker never receives a list of folders. */
+export const ROOT = 'src'
 
-/** Singurul fișier care are voie să importe CSS global. */
-export const INTRARE = 'src/main.tsx'
+/** The only file allowed to import global CSS. */
+export const ENTRY = 'src/main.tsx'
 
-/** Singurele două fișiere CSS pe care intrarea are voie să le importe. */
-export const CSS_DE_INTRARE = ['src/styles/tokens.css', 'src/styles/reset.css']
+/** The only two CSS files the entry is allowed to import. */
+export const ENTRY_CSS = ['src/styles/tokens.css', 'src/styles/reset.css']
 
-const EXTENSII_COD = ['.ts', '.tsx']
+const CODE_EXTENSIONS = ['.ts', '.tsx']
 
 /**
- * Parcurge recursiv tot ce e sub rădăcină și întoarce fiecare fișier găsit.
- * Dacă apare un folder nou, e acoperit automat — de-aia nu există nicio listă
- * de foldere de întreținut.
+ * Walks everything under the root, recursively, and returns every file found.
+ * If a new folder appears it is covered automatically — which is why there is
+ * no list of folders to maintain.
  */
-export function citeșteArbore(rădăcină, io = { readdirSync, readFileSync }) {
-  const fișiere = []
+export function readTree(root, io = { readdirSync, readFileSync }) {
+  const files = []
 
-  const coboară = (dir) => {
-    const intrări = io.readdirSync(dir, { withFileTypes: true })
-    for (const intrare of intrări) {
-      const cale = path.join(dir, intrare.name)
-      if (intrare.isDirectory()) {
-        coboară(cale)
-      } else if (intrare.isFile()) {
-        fișiere.push({
-          cale: cale.split(path.sep).join('/'),
-          conținut: io.readFileSync(cale, 'utf8'),
+  const descend = (dir) => {
+    for (const entry of io.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) {
+        descend(full)
+      } else if (entry.isFile()) {
+        files.push({
+          path: full.split(path.sep).join('/'),
+          contents: io.readFileSync(full, 'utf8'),
         })
       }
     }
   }
 
-  coboară(rădăcină)
-  return fișiere.sort((a, b) => a.cale.localeCompare(b.cale))
+  descend(root)
+  return files.sort((a, b) => a.path.localeCompare(b.path))
 }
 
-/** Numărul de linii, fără să numere linia goală de la final ca linie. */
-export function numărăLinii(conținut) {
-  const linii = conținut.split('\n')
-  if (linii.length > 0 && linii[linii.length - 1] === '') linii.pop()
-  return linii.length
+/** The number of lines, without counting a trailing blank line as a line. */
+export function countLines(contents) {
+  const lines = contents.split('\n')
+  if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop()
+  return lines.length
 }
 
-/** Toate specificatoarele de import și de re-export dintr-un fișier. */
-export function extrageImporturi(conținut) {
-  const găsite = []
-  const regex = /\b(?:import|export)\b[^'";]*?['"]([^'"]+)['"]/g
-  let potrivire
-  while ((potrivire = regex.exec(conținut)) !== null) {
-    găsite.push(potrivire[1])
+/** Every import and re-export specifier in a file. */
+export function importsOf(contents) {
+  const found = []
+  const pattern = /\b(?:import|export)\b[^'";]*?['"]([^'"]+)['"]/g
+  let match
+  while ((match = pattern.exec(contents)) !== null) {
+    found.push(match[1])
   }
-  return găsite
+  return found
 }
 
-/** Specificatorul relativ, rezolvat în cale de la rădăcina repo-ului. */
-export function rezolvăImport(caleaImportatorului, specificator) {
-  if (!specificator.startsWith('.')) return null
-  return posix.normalize(
-    posix.join(posix.dirname(caleaImportatorului), specificator),
-  )
+/** A relative specifier, resolved to a path from the repository root. */
+export function resolveImport(importerPath, specifier) {
+  if (!specifier.startsWith('.')) return null
+  return posix.normalize(posix.join(posix.dirname(importerPath), specifier))
 }
 
-export function verificăLinii(fișiere) {
-  return fișiere
-    .filter((f) => EXTENSII_COD.includes(posix.extname(f.cale)))
-    .map((f) => ({ cale: f.cale, linii: numărăLinii(f.conținut) }))
-    .filter((f) => f.linii > LIMITA_LINII)
-    .map((f) => ({
-      cale: f.cale,
-      motiv: `${f.linii} linii, limita e ${LIMITA_LINII}`,
+export function checkLineLimits(files) {
+  return files
+    .filter((file) => CODE_EXTENSIONS.includes(posix.extname(file.path)))
+    .map((file) => ({ path: file.path, lines: countLines(file.contents) }))
+    .filter((file) => file.lines > LINE_LIMIT)
+    .map((file) => ({
+      path: file.path,
+      reason: `${file.lines} lines, the limit is ${LINE_LIMIT}`,
     }))
 }
 
-export function verificăCss(fișiere) {
-  const abateri = []
-  const fișiereCss = fișiere.filter((f) => posix.extname(f.cale) === '.css')
-  const fișiereTsx = fișiere.filter((f) => posix.extname(f.cale) === '.tsx')
+export function checkCssConvention(files) {
+  const problems = []
+  const cssFiles = files.filter((file) => posix.extname(file.path) === '.css')
+  const tsxFiles = files.filter((file) => posix.extname(file.path) === '.tsx')
 
-  // Cine importă ce.
-  const importatori = new Map(fișiereCss.map((f) => [f.cale, []]))
-  for (const tsx of fișiereTsx) {
-    for (const specificator of extrageImporturi(tsx.conținut)) {
-      if (!specificator.endsWith('.css')) continue
-      const țintă = rezolvăImport(tsx.cale, specificator)
-      if (țintă === null || !importatori.has(țintă)) {
-        abateri.push({
-          cale: tsx.cale,
-          motiv: `importă un CSS care nu există sub ${RĂDĂCINA}/: ${specificator}`,
+  // Who imports what.
+  const importers = new Map(cssFiles.map((file) => [file.path, []]))
+  for (const tsx of tsxFiles) {
+    for (const specifier of importsOf(tsx.contents)) {
+      if (!specifier.endsWith('.css')) continue
+      const target = resolveImport(tsx.path, specifier)
+      if (target === null || !importers.has(target)) {
+        problems.push({
+          path: tsx.path,
+          reason: `imports a CSS file that does not exist under ${ROOT}/: ${specifier}`,
         })
         continue
       }
-      importatori.get(țintă).push(tsx.cale)
+      importers.get(target).push(tsx.path)
     }
   }
 
-  // Regula intrării: numai cele două fișiere globale.
-  const intrare = fișiere.find((f) => f.cale === INTRARE)
-  if (!intrare) {
-    abateri.push({ cale: INTRARE, motiv: 'lipsește intrarea aplicației' })
+  // The entry rule: only the two global files.
+  const entry = files.find((file) => file.path === ENTRY)
+  if (!entry) {
+    problems.push({ path: ENTRY, reason: 'the application entry is missing' })
   } else {
-    for (const specificator of extrageImporturi(intrare.conținut)) {
-      if (!specificator.endsWith('.css')) continue
-      const țintă = rezolvăImport(INTRARE, specificator)
-      if (țintă === null || !CSS_DE_INTRARE.includes(țintă)) {
-        abateri.push({
-          cale: INTRARE,
-          motiv:
-            `importă ${specificator}. Din intrare se pot importa numai ` +
-            CSS_DE_INTRARE.join(' și '),
+    for (const specifier of importsOf(entry.contents)) {
+      if (!specifier.endsWith('.css')) continue
+      const target = resolveImport(ENTRY, specifier)
+      if (target === null || !ENTRY_CSS.includes(target)) {
+        problems.push({
+          path: ENTRY,
+          reason:
+            `imports ${specifier}. The entry may import only ` +
+            ENTRY_CSS.join(' and '),
         })
       }
     }
-    for (const global of CSS_DE_INTRARE) {
-      if (!importatori.has(global)) {
-        abateri.push({ cale: global, motiv: 'lipsește fișierul CSS global' })
+    for (const global of ENTRY_CSS) {
+      if (!importers.has(global)) {
+        problems.push({ path: global, reason: 'the global CSS file is missing' })
       }
     }
   }
 
-  // Regula celorlalte: exact un .tsx din același director.
-  for (const css of fișiereCss) {
-    if (CSS_DE_INTRARE.includes(css.cale)) continue
-    const aiciSunt = importatori.get(css.cale)
-    const dinAcelașiDirector = aiciSunt.filter(
-      (importator) => posix.dirname(importator) === posix.dirname(css.cale),
+  // The rule for every other file: exactly one .tsx in the same directory.
+  for (const css of cssFiles) {
+    if (ENTRY_CSS.includes(css.path)) continue
+    const here = importers.get(css.path)
+    const sameDirectory = here.filter(
+      (importer) => posix.dirname(importer) === posix.dirname(css.path),
     )
-    const dinAltParte = aiciSunt.filter(
-      (importator) => posix.dirname(importator) !== posix.dirname(css.cale),
+    const elsewhere = here.filter(
+      (importer) => posix.dirname(importer) !== posix.dirname(css.path),
     )
 
-    if (dinAltParte.length > 0) {
-      abateri.push({
-        cale: css.cale,
-        motiv: `importat din alt director: ${dinAltParte.join(', ')}`,
+    if (elsewhere.length > 0) {
+      problems.push({
+        path: css.path,
+        reason: `imported from another directory: ${elsewhere.join(', ')}`,
       })
     }
-    if (dinAcelașiDirector.length !== 1) {
-      abateri.push({
-        cale: css.cale,
-        motiv:
-          dinAcelașiDirector.length === 0
-            ? 'nu e importat de niciun .tsx din directorul lui'
-            : `importat de ${dinAcelașiDirector.length} fișiere din directorul lui: ${dinAcelașiDirector.join(', ')}`,
+    if (sameDirectory.length !== 1) {
+      problems.push({
+        path: css.path,
+        reason:
+          sameDirectory.length === 0
+            ? 'not imported by any .tsx in its own directory'
+            : `imported by ${sameDirectory.length} files in its own directory: ${sameDirectory.join(', ')}`,
       })
     }
   }
 
-  return abateri
+  return problems
 }
 
-/** Toate verificările de structură, pe același arbore de fișiere. */
-export function verifică(fișiere) {
-  if (fișiere.length === 0) {
-    return [{ cale: RĂDĂCINA, motiv: 'nu s-a găsit niciun fișier' }]
+/** Every structure check, over the same file tree. */
+export function check(files) {
+  if (files.length === 0) {
+    return [{ path: ROOT, reason: 'no files were found' }]
   }
-  return [...verificăLinii(fișiere), ...verificăCss(fișiere)]
+  return [...checkLineLimits(files), ...checkCssConvention(files)]
 }

@@ -1,22 +1,22 @@
 import { describe, expect, it } from 'vitest'
 
-import { confirmăContul } from './items'
+import { assertAccount } from './items'
 
-describe('confirmăContul', () => {
-  it('trece când namespace-ul e al contului curent', () => {
+describe('assertAccount', () => {
+  it('passes when the namespace belongs to the current account', () => {
     expect(() =>
-      confirmăContul('a', { utilizator: 'a', email: 'a@exemplu.ro' }),
+      assertAccount('a', { userId: 'a', email: 'a@example.com' }),
     ).not.toThrow()
   })
 
-  it('refuză când nu e nimeni autentificat', () => {
-    expect(() => confirmăContul('a', null)).toThrow('Nu e nimeni autentificat')
+  it('refuses when nobody is signed in', () => {
+    expect(() => assertAccount('a', null)).toThrow('Nobody is signed in')
   })
 
-  it('refuză cache-ul altui cont', () => {
-    // Logout din A, login în B: datele lui A nu apar nici o clipă.
+  it("refuses another account's cache", () => {
+    // Sign out of A, sign in as B: A's data does not appear for a moment.
     expect(() =>
-      confirmăContul('a', { utilizator: 'b', email: 'b@exemplu.ro' }),
-    ).toThrow('contul curent e altul')
+      assertAccount('a', { userId: 'b', email: 'b@example.com' }),
+    ).toThrow('the current account is another')
   })
 })

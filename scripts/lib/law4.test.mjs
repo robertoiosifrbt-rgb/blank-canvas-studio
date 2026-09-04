@@ -2,75 +2,75 @@ import { ESLint } from 'eslint'
 import tseslint from 'typescript-eslint'
 import { describe, expect, it } from 'vitest'
 
-import { IMPORTURI_INTERZISE } from '../../eslint.config.js'
+import { RESTRICTED_IMPORTS } from '../../eslint.config.js'
 
 /**
- * Legea 4 trece din text în CI. Testul de aici verifică exact asta: că regula
- * chiar respinge, și că e stinsă numai în src/repository/.
+ * Law 4 moves from text into CI. This test checks exactly that: that the rule
+ * really does refuse, and that it is switched off only in src/repository/.
  *
- * Fără el, o greșeală în tiparele de import ar da un lint verde care nu
- * verifică nimic — exact eșecul de care planul se ferește.
+ * Without it, a mistake in the import patterns would give a green lint that
+ * checks nothing — precisely the failure the plan guards against.
  */
 
-/** Un ESLint minim, cu doar regula legii 4, ca să nu ceară tipuri. */
-const doarLegea4 = new ESLint({
+/** A minimal ESLint with only law 4, so it needs no type information. */
+const law4Only = new ESLint({
   overrideConfigFile: true,
   overrideConfig: [
     {
       files: ['**/*.{ts,tsx}'],
       languageOptions: { parser: tseslint.parser },
       plugins: { '@typescript-eslint': tseslint.plugin },
-      rules: { '@typescript-eslint/no-restricted-imports': IMPORTURI_INTERZISE },
+      rules: { '@typescript-eslint/no-restricted-imports': RESTRICTED_IMPORTS },
     },
   ],
 })
 
-async function abateri(cod, cale) {
-  const rezultate = await doarLegea4.lintText(cod, { filePath: cale })
-  return rezultate.flatMap((r) => r.messages)
+async function problems(code, filePath) {
+  const results = await law4Only.lintText(code, { filePath })
+  return results.flatMap((r) => r.messages)
 }
 
-const CALE_ECRAN = 'src/screens/azi/AziScreen.tsx'
+const SCREEN_PATH = 'src/screens/today/TodayScreen.tsx'
 
-describe('legea 4, impusă de ESLint', () => {
+describe('law 4, enforced by ESLint', () => {
   it.each([
-    ["import { createClient } from '@supabase/supabase-js'", 'pachetul'],
-    ["import type { User } from '@supabase/supabase-js'", 'un tip din pachet'],
-    ["import { supabase } from '../../repository/supabaseClient'", 'clientul, relativ'],
-    ["export { supabase } from '../../repository/supabaseClient'", 'clientul, re-exportat'],
-  ])('respinge %s (%s)', async (cod) => {
-    const mesaje = await abateri(cod, CALE_ECRAN)
-    expect(mesaje).toHaveLength(1)
-    expect(mesaje[0].ruleId).toBe('@typescript-eslint/no-restricted-imports')
+    ["import { createClient } from '@supabase/supabase-js'", 'the package'],
+    ["import type { User } from '@supabase/supabase-js'", 'a type from the package'],
+    ["import { supabase } from '../../repository/supabaseClient'", 'the client, relative'],
+    ["export { supabase } from '../../repository/supabaseClient'", 're-exporting the client'],
+  ])('refuses %s (%s)', async (code) => {
+    const messages = await problems(code, SCREEN_PATH)
+    expect(messages).toHaveLength(1)
+    expect(messages[0].ruleId).toBe('@typescript-eslint/no-restricted-imports')
   })
 
   it.each([
     "import { useState } from 'react'",
-    "import { listeazăItemi } from '../../repository/items'",
-    "import { Neconstruit } from '../../ui/Neconstruit'",
-  ])('lasă să treacă %s', async (cod) => {
-    expect(await abateri(cod, CALE_ECRAN)).toEqual([])
+    "import { today } from '../../repository/items'",
+    "import { NotBuilt } from '../../ui/NotBuilt'",
+  ])('lets %s through', async (code) => {
+    expect(await problems(code, SCREEN_PATH)).toEqual([])
   })
 })
 
-describe('unde e stinsă legea 4', () => {
+describe('where law 4 is switched off', () => {
   const config = new ESLint({ overrideConfigFile: 'eslint.config.js' })
 
-  /** Severitatea cu care regula ajunge la un fișier: 2 = error, 0 = off. */
-  async function severitate(cale) {
-    const rezolvat = await config.calculateConfigForFile(cale)
-    return rezolvat.rules['@typescript-eslint/no-restricted-imports'][0]
+  /** The severity the rule reaches a file with: 2 = error, 0 = off. */
+  async function severity(filePath) {
+    const resolved = await config.calculateConfigForFile(filePath)
+    return resolved.rules['@typescript-eslint/no-restricted-imports'][0]
   }
 
-  it('e pornită pentru un ecran', async () => {
-    expect(await severitate(CALE_ECRAN)).toBe(2)
+  it('is on for a screen', async () => {
+    expect(await severity(SCREEN_PATH)).toBe(2)
   })
 
-  it('e stinsă în src/repository/', async () => {
-    expect(await severitate('src/repository/supabaseClient.ts')).toBe(0)
+  it('is off in src/repository/', async () => {
+    expect(await severity('src/repository/supabase.ts')).toBe(0)
   })
 
-  it('e pornită pentru un fișier care doar seamănă', async () => {
-    expect(await severitate('src/screens/repository-fals/Ecran.tsx')).toBe(2)
+  it('is on for a file that merely looks similar', async () => {
+    expect(await severity('src/screens/fake-repository/Screen.tsx')).toBe(2)
   })
 })

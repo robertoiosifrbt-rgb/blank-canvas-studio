@@ -4,42 +4,41 @@ import type { ErrorInfo, ReactNode } from 'react'
 import './ErrorBoundary.css'
 
 type Props = { children: ReactNode }
-type State = { eroare: Error | null }
+type State = { error: Error | null }
 
 /**
- * Prinde o eroare de randare și oferă o ieșire: butonul de reset.
- * Fără el, o singură eroare lasă un ecran gol din care nu se mai poate pleca.
+ * Catches a render error and offers a way out: the reset button.
+ *
+ * Without it, one error leaves a blank screen you cannot leave.
  */
 export class ErrorBoundary extends Component<Props, State> {
-  override state: State = { eroare: null }
+  override state: State = { error: null }
 
-  static getDerivedStateFromError(eroare: Error): State {
-    return { eroare }
+  static getDerivedStateFromError(error: Error): State {
+    return { error }
   }
 
-  override componentDidCatch(eroare: Error, info: ErrorInfo) {
-    console.error('Eroare de randare:', eroare, info.componentStack)
+  override componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('Render error:', error, info.componentStack)
   }
 
-  private readonly reia = () => {
-    this.setState({ eroare: null })
+  private readonly reset = () => {
+    this.setState({ error: null })
   }
 
   override render() {
-    const { eroare } = this.state
-    if (!eroare) {
+    const { error } = this.state
+    if (!error) {
       return this.props.children
     }
 
     return (
-      <div className="eroare" role="alert">
-        <h2 className="eroare-titlu">Ceva s-a rupt aici</h2>
-        <p className="eroare-text">
-          Datele tale sunt neatinse. Poți reîncerca ecranul.
-        </p>
-        <pre className="eroare-detaliu">{eroare.message}</pre>
-        <button type="button" className="eroare-buton" onClick={this.reia}>
-          Reîncearcă
+      <div className="error" role="alert">
+        <h2 className="error-title">Something broke here</h2>
+        <p className="error-text">Your data is untouched. You can try again.</p>
+        <pre className="error-detail">{error.message}</pre>
+        <button type="button" className="error-button" onClick={this.reset}>
+          Try again
         </button>
       </div>
     )

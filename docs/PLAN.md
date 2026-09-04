@@ -533,7 +533,9 @@ verifică logica. Niciunul nu prinde un titlu de culoarea fundalului, o
 fereastră cu titlul sub câmpuri, sau bara de status peste text. De-aia
 verificarea așezării e un script în CI, nu o intenție.
 
-Interfața în română. Comentariile din cod, la fel.
+Codul în engleză, tot: identificatori, comentarii, interfață, clase CSS,
+mesaje de commit. Doar documentele rămân în română — planul ăsta, README-ul
+și CLAUDE.md.
 
 ## Ce se impune singur și ce depinde de disciplină
 

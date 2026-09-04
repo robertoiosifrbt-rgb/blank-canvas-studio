@@ -1,6 +1,6 @@
-/* Importat de exact un .tsx din acest director: Neconstruit.tsx */
+/* Imported by exactly one .tsx in this directory: NotBuilt.tsx */
 
-.neconstruit {
+.not-built {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -8,11 +8,11 @@
   max-width: 34rem;
 }
 
-.neconstruit-text {
+.not-built-text {
   font-size: var(--text-m);
 }
 
-.neconstruit-stare {
+.not-built-state {
   color: var(--text-dim);
   font-size: var(--text-s);
 }

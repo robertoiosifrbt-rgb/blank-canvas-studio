@@ -1,15 +1,16 @@
--- Coloana. Un singur tabel, și legile care îl apără.
+-- The spine. A single table, and the laws that protect it.
 --
--- Ce poate garanta baza nu se verifică în JavaScript: identitatea, versiunea,
--- ceasul, proprietarul și coerența dintre stare și fel sunt toate impuse aici.
+-- What the database can guarantee is not checked in JavaScript: identity, the
+-- version, the clock, the owner, and the coherence between state and kind are
+-- all enforced here.
 
 create table public.items (
   id         uuid primary key default gen_random_uuid(),
   owner      uuid not null default auth.uid() references auth.users(id),
 
-  -- Nullable, intenționat. Un lucru capturat nu e „de tip captură" — e ceva
-  -- despre care încă nu știi ce e. Marcajul lucrului neprocesat e o singură
-  -- coloană: state='inbox'.
+  -- Nullable on purpose. A captured thing is not "of kind capture" — it is
+  -- something you do not yet know the shape of. The mark of an unprocessed
+  -- thing is a single column: state='inbox'.
   kind       text check (kind in ('task','letter')),
 
   state      text not null default 'inbox'
@@ -17,57 +18,57 @@ create table public.items (
 
   title      text not null,
 
-  -- Dată, nu dată-și-oră. Ora se adaugă la prima nevoie reală.
+  -- A date, not a date and time. The time gets added at the first real need.
   due        date,
 
-  -- Ziua în care ai făcut lucrul. due e ce ai planificat, done_at e ce s-a
-  -- întâmplat. Un task due luni, terminat miercuri, apare la ambele.
+  -- The day you did the thing. `due` is what you planned, `done_at` is what
+  -- happened. A task due Monday, finished Wednesday, shows up in both.
   done_at    date,
 
   version    integer     not null default 1,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
-  -- Ștergerea e soft. Rândurile șterse rămân, ca sincronizarea să le poată
-  -- duce mai departe.
+  -- Deleting is soft. Deleted rows stay, so the sync can carry them onward.
   deleted_at timestamptz,
 
-  -- În ambele sensuri: nu ieși din inbox fără kind, și în inbox nu există
-  -- kind. Altfel starea și felul se pot contrazice.
-  constraint items_stare_și_fel check (
+  -- Both ways round: you do not leave the inbox without a kind, and in the
+  -- inbox there is no kind. Otherwise the state and the kind can contradict
+  -- each other.
+  constraint items_state_matches_kind check (
     (state =  'inbox' and kind is null)
     or
     (state <> 'inbox' and kind is not null)
   ),
 
-  -- Planul scria `btrim(title) <> ''`. btrim implicit taie doar spații, deci
-  -- un titlu făcut din taburi sau din linii noi trecea, și ar fi apărut în Azi
-  -- ca un rând care nu arată nimic. `~ '\S'` cere măcar un caracter care nu e
-  -- spațiu — aceeași lege, scrisă complet.
-  constraint items_titlu_nu_e_gol check (title ~ '\S')
+  -- The plan wrote `btrim(title) <> ''`. btrim with no argument only strips
+  -- spaces, so a title made of tabs or newlines went through, and would have
+  -- shown up in Today as a row that displays nothing. `~ '\S'` requires at
+  -- least one character that is not whitespace — the same law, written whole.
+  constraint items_title_not_blank check (title ~ '\S')
 );
 
--- Nu există constrângerea „un task activ trebuie să aibă dată". Multe
--- task-uri reale n-au dată, iar o astfel de regulă te împinge să pui „mâine"
--- ca să treci validarea — și atunci Azi se umple de amânări.
+-- There is no constraint saying "an active task must have a date". Plenty of
+-- real tasks have none, and such a rule pushes you into putting "tomorrow"
+-- just to pass validation — and then Today fills up with postponements.
 
 
--- Granturi și RLS, tratate împreună. Privilegiile implicite nu se presupun.
+-- Grants and RLS, handled together. Default privileges are not assumed.
 
 revoke all on table public.items from anon, authenticated;
 
 grant select, insert on table public.items to authenticated;
 
--- UPDATE se dă pe coloane, nu pe tabel. Așa id, owner, version, created_at și
--- updated_at devin imposibil de scris de client — nu doar suprascrise de
--- trigger. Identitatea e imuabilă în bază, iar id e ancora tuturor modulelor
--- de mai târziu.
+-- UPDATE is granted per column, not per table. That is what makes id, owner,
+-- version, created_at and updated_at impossible for a client to write — not
+-- merely overwritten by the trigger. Identity is immutable in the database,
+-- and id is the anchor of every module that comes later.
 grant update (kind, state, title, due, done_at, deleted_at)
   on table public.items to authenticated;
 
--- Nici anon, nici authenticated nu primesc DELETE, și nu există politică de
--- DELETE. Ștergerea din interfață e un UPDATE pe deleted_at. Altfel granturile
--- ar anula tot rostul soft-delete-ului.
+-- Neither anon nor authenticated gets DELETE, and there is no DELETE policy.
+-- Deleting from the interface is an UPDATE on deleted_at. Otherwise the grants
+-- would cancel the whole point of the soft delete.
 
 alter table public.items enable row level security;
 
@@ -77,15 +78,15 @@ create policy items_select on public.items for select to authenticated
 create policy items_insert on public.items for insert to authenticated
   with check (owner = auth.uid());
 
--- USING stabilește ce rând existent ai voie să atingi; WITH CHECK validează
--- cum are voie să arate rândul după UPDATE, deci el împiedică mutarea către
--- alt owner.
+-- USING decides which existing row you are allowed to touch; WITH CHECK
+-- validates what the row is allowed to look like after the UPDATE, so it is
+-- what prevents moving a row to another owner.
 create policy items_update on public.items for update to authenticated
   using (owner = auth.uid()) with check (owner = auth.uid());
 
 
--- Triggerul. Ceasul unui telefon poate minți, și un client poate trimite orice
--- versiune. Niciuna nu ajunge în tabel.
+-- The trigger. A phone's clock can lie, and a client can send any version.
+-- Neither one reaches the table.
 
 create function public.stamp() returns trigger as $$
 begin

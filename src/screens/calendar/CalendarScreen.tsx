@@ -1,9 +1,9 @@
-import { Neconstruit } from '../../ui/Neconstruit'
+import { NotBuilt } from '../../ui/NotBuilt'
 
 export function CalendarScreen() {
   return (
-    <Neconstruit>
-      Aici vor sta zilele, cu ce ai planificat și ce ai făcut în fiecare.
-    </Neconstruit>
+    <NotBuilt>
+      The days will live here, with what you planned and what you did on each.
+    </NotBuilt>
   )
 }

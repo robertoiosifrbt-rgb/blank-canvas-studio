@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
-import { aziLocal, cuFăcutLa, dinRând } from './item'
+import { fromRow, localToday, withDoneAt } from './item'
 import type { Item } from './item'
 
-const RÂND_BUN = {
+const GOOD_ROW = {
   id: 'i1',
   owner: 'a',
   kind: 'task',
   state: 'active',
-  title: 'sun la X',
+  title: 'call X',
   due: '2026-09-05',
   done_at: null,
   version: 3,
@@ -17,106 +17,94 @@ const RÂND_BUN = {
   deleted_at: null,
 }
 
-function item(peste: Partial<Item> = {}): Item {
-  return { ...dinRând(RÂND_BUN), ...peste }
+function item(over: Partial<Item> = {}): Item {
+  return { ...fromRow(GOOD_ROW), ...over }
 }
 
-describe('dinRând', () => {
-  it('acceptă un rând întreg', () => {
-    expect(dinRând(RÂND_BUN)).toEqual(RÂND_BUN)
+describe('fromRow', () => {
+  it('accepts a whole row', () => {
+    expect(fromRow(GOOD_ROW)).toEqual(GOOD_ROW)
   })
 
-  it('acceptă un item de captură: fără fel, fără date', () => {
-    const capturat = dinRând({
-      ...RÂND_BUN,
-      state: 'inbox',
-      kind: null,
-      due: null,
-    })
-    expect(capturat.kind).toBeNull()
-    expect(capturat.state).toBe('inbox')
+  it('accepts a captured item: no kind, no dates', () => {
+    const captured = fromRow({ ...GOOD_ROW, state: 'inbox', kind: null, due: null })
+    expect(captured.kind).toBeNull()
+    expect(captured.state).toBe('inbox')
   })
 
-  it.each([
-    ['id', {}],
-    ['title', {}],
-    ['owner', {}],
-    ['state', {}],
-    ['created_at', {}],
-    ['updated_at', {}],
-  ])('refuză un rând fără %s', (cheie) => {
-    const ciuntit: Record<string, unknown> = { ...RÂND_BUN }
-    delete ciuntit[cheie]
-    expect(() => dinRând(ciuntit)).toThrow(`Rând fără ${cheie}`)
+  it.each(['id', 'title', 'owner', 'state', 'created_at', 'updated_at'])(
+    'refuses a row without %s',
+    (key) => {
+      const trimmed: Record<string, unknown> = { ...GOOD_ROW }
+      delete trimmed[key]
+      expect(() => fromRow(trimmed)).toThrow(`Row without ${key}`)
+    },
+  )
+
+  it('refuses a state or a kind it does not know', () => {
+    expect(() => fromRow({ ...GOOD_ROW, state: 'dropped' })).toThrow('Unknown state')
+    expect(() => fromRow({ ...GOOD_ROW, kind: 'note' })).toThrow('Unknown kind')
   })
 
-  it('refuză o stare sau un fel pe care nu le știe', () => {
-    expect(() => dinRând({ ...RÂND_BUN, state: 'dropped' })).toThrow(
-      'Stare necunoscută',
-    )
-    expect(() => dinRând({ ...RÂND_BUN, kind: 'note' })).toThrow('Fel necunoscut')
+  it('refuses a version that is not a whole number', () => {
+    expect(() => fromRow({ ...GOOD_ROW, version: '3' })).toThrow('Row without version')
+    expect(() => fromRow({ ...GOOD_ROW, version: 3.5 })).toThrow('Row without version')
   })
 
-  it('refuză o versiune care nu e număr întreg', () => {
-    expect(() => dinRând({ ...RÂND_BUN, version: '3' })).toThrow('Rând fără version')
-    expect(() => dinRând({ ...RÂND_BUN, version: 3.5 })).toThrow('Rând fără version')
-  })
-
-  it('refuză ce nu e obiect', () => {
-    expect(() => dinRând(null)).toThrow('nu e un obiect')
-    expect(() => dinRând('un rând')).toThrow('nu e un obiect')
+  it('refuses anything that is not an object', () => {
+    expect(() => fromRow(null)).toThrow('not an object')
+    expect(() => fromRow('a row')).toThrow('not an object')
   })
 })
 
-describe('aziLocal', () => {
-  it('dă ziua din ceasul dispozitivului, nu din UTC', () => {
-    // 1 septembrie, 23:30, ora locală a mașinii care rulează testul.
-    const local = new Date(2026, 8, 1, 23, 30)
-    expect(aziLocal(local)).toBe('2026-09-01')
+describe('localToday', () => {
+  it('gives the day from the device clock, not from UTC', () => {
+    // 1 September, 23:30, in the local time of the machine running the test.
+    expect(localToday(new Date(2026, 8, 1, 23, 30))).toBe('2026-09-01')
   })
 
-  it('pune zerouri în față', () => {
-    expect(aziLocal(new Date(2026, 0, 5, 12, 0))).toBe('2026-01-05')
+  it('pads with leading zeros', () => {
+    expect(localToday(new Date(2026, 0, 5, 12, 0))).toBe('2026-01-05')
   })
 })
 
-describe('cuFăcutLa', () => {
-  const AZI = '2026-09-04'
+describe('withDoneAt', () => {
+  const TODAY = '2026-09-04'
 
-  it('pune ziua locală când itemul devine done', () => {
-    expect(cuFăcutLa(item(), { state: 'done' }, AZI)).toEqual({
+  it('sets the local day when an item becomes done', () => {
+    expect(withDoneAt(item(), { state: 'done' }, TODAY)).toEqual({
       state: 'done',
-      done_at: AZI,
+      done_at: TODAY,
     })
   })
 
-  it('șterge done_at când itemul se redeschide', () => {
-    const gata = item({ state: 'done', done_at: '2026-09-02' })
-    expect(cuFăcutLa(gata, { state: 'active' }, AZI)).toEqual({
+  it('clears done_at when an item is reopened', () => {
+    const done = item({ state: 'done', done_at: '2026-09-02' })
+    expect(withDoneAt(done, { state: 'active' }, TODAY)).toEqual({
       state: 'active',
       done_at: null,
     })
   })
 
-  it('nu atinge done_at când starea nu se schimbă', () => {
-    expect(cuFăcutLa(item(), { title: 'alt titlu' }, AZI)).toEqual({
-      title: 'alt titlu',
+  it('leaves done_at alone when the state does not change', () => {
+    expect(withDoneAt(item(), { title: 'another title' }, TODAY)).toEqual({
+      title: 'another title',
     })
-    const gata = item({ state: 'done', done_at: '2026-09-02' })
-    expect(cuFăcutLa(gata, { title: 'alt titlu' }, AZI)).toEqual({
-      title: 'alt titlu',
+    const done = item({ state: 'done', done_at: '2026-09-02' })
+    expect(withDoneAt(done, { title: 'another title' }, TODAY)).toEqual({
+      title: 'another title',
     })
   })
 
-  it('lasă un done_at trimis anume, ca ziua să poată fi corectată', () => {
-    const gata = item({ state: 'done', done_at: '2026-09-02' })
-    expect(cuFăcutLa(gata, { done_at: '2026-09-03' }, AZI)).toEqual({
+  it('keeps a done_at passed on purpose, so the day can be corrected', () => {
+    const done = item({ state: 'done', done_at: '2026-09-02' })
+    expect(withDoneAt(done, { done_at: '2026-09-03' }, TODAY)).toEqual({
       done_at: '2026-09-03',
     })
   })
 
-  it('nu pune done_at pe un item care era deja done', () => {
-    const gata = item({ state: 'done', done_at: '2026-09-02' })
-    expect(cuFăcutLa(gata, { state: 'done' }, AZI)).toEqual({ state: 'done' })
+  it('does not re-stamp an item that was already done', () => {
+    const done = item({ state: 'done', done_at: '2026-09-02' })
+    expect(withDoneAt(done, { state: 'done' }, TODAY)).toEqual({ state: 'done' })
   })
 })

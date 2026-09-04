@@ -1,6 +1,6 @@
-/* Importat de exact un .tsx din acest director: ErrorBoundary.tsx */
+/* Imported by exactly one .tsx in this directory: ErrorBoundary.tsx */
 
-.eroare {
+.error {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -11,16 +11,16 @@
   padding-right: calc(var(--safe-right) + var(--space-4));
 }
 
-.eroare-titlu {
+.error-title {
   font-size: var(--text-l);
   font-weight: 600;
 }
 
-.eroare-text {
+.error-text {
   color: var(--text-dim);
 }
 
-.eroare-detaliu {
+.error-detail {
   margin: 0;
   padding: var(--space-3);
   background: var(--bg-raised);
@@ -28,12 +28,12 @@
   border-radius: var(--radius);
   color: var(--danger);
   font-size: var(--text-s);
-  /* Un mesaj lung nu are voie să împingă ecranul lateral. */
+  /* A long message must not push the screen sideways. */
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
-.eroare-buton {
+.error-button {
   align-self: flex-start;
   min-height: var(--tap);
   min-width: var(--tap);

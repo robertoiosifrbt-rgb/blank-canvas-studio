@@ -1,172 +1,166 @@
 /**
- * Cazurile testului de RLS.
+ * The cases of the RLS test.
  *
- * E partea cea mai periculoasă din schemă și singura ale cărei greșeli nu se
- * văd ca un ecran urât, ci ca datele tale citite de altcineva.
+ * This is the most dangerous part of the schema and the only one whose
+ * mistakes do not show up as an ugly screen, but as your data read by somebody
+ * else.
  *
- * Negativele nu ajung singure: dacă A n-ar putea face nimic deloc, toate ar
- * trece verzi. De-aia sunt și pozitive.
+ * The negatives are not enough on their own: if A could do nothing at all,
+ * every one of them would go green. That is why there are positives too.
  */
 
-/** Doi utilizatori, semănați în auth.users înainte de cazuri. */
+/** Two users, seeded into auth.users before the cases run. */
 export const A = '11111111-1111-1111-1111-111111111111'
 export const B = '22222222-2222-2222-2222-222222222222'
 
-/** Refuz: privilegiu lipsă sau politică încălcată. */
-export const REFUZAT = '42501'
-/** Refuz: o constrângere check a tabelului. */
-export const CONSTRÂNGERE = '23514'
+/** Refusal: a missing privilege or a violated policy. */
+export const DENIED = '42501'
+/** Refusal: one of the table's check constraints. */
+export const CONSTRAINT = '23514'
 
-export class Cădere extends Error {}
+export class Failure extends Error {}
 
 /**
- * Uneltele unui caz. Tot ce se întâmplă printr-un context stă într-o
- * tranzacție pe care rulătorul o dă înapoi, deci niciun caz nu lasă urme.
+ * A case's tools. Everything that happens through a context sits inside a
+ * transaction the runner rolls back, so no case leaves a trace.
  */
-export function contextul(client) {
-  let savepointuri = 0
+export function contextFor(client) {
+  let savepoints = 0
 
   const context = {
-    /** Interogare ca administrator: pregătirea cazului. */
-    q: (sql, parametri) => client.query(sql, parametri),
+    /** A query as the administrator: the case's setup. */
+    q: (sql, params) => client.query(sql, params),
 
-    /** Intră în pielea unui rol, cu identitatea lui. */
-    async ca(rol, uid, treabă) {
+    /** Step into a role, with its identity. */
+    async as(role, uid, body) {
       if (uid !== null) {
         await client.query('select set_config($1, $2, true)', [
           'request.jwt.claims',
           JSON.stringify({ sub: uid }),
         ])
       }
-      await client.query(`set local role ${rol}`)
+      await client.query(`set local role ${role}`)
       try {
-        return await treabă()
+        return await body()
       } finally {
         await client.query('reset role')
       }
     },
 
-    caAnon: (treabă) => context.ca('anon', null, treabă),
-    caA: (treabă) => context.ca('authenticated', A, treabă),
+    asAnon: (body) => context.as('anon', null, body),
+    asA: (body) => context.as('authenticated', A, body),
 
     /**
-     * Cere ca o interogare să fie refuzată, cu codul așteptat — nu doar „să
-     * dea eroare". Savepoint-ul e obligatoriu: în Postgres prima eroare
-     * abandonează tranzacția, iar fără el verificarea următoare ar cădea
-     * pentru alt motiv decât cel testat.
+     * Requires a query to be refused, with the expected code — not merely "to
+     * throw". The savepoint is mandatory: in PostgreSQL the first error aborts
+     * the transaction, and without it the next check would fail for a reason
+     * other than the one being tested.
      */
-    async refuză(cod, sql, parametri) {
-      const nume = `s${(savepointuri += 1)}`
-      await client.query(`savepoint ${nume}`)
+    async denied(code, sql, params) {
+      const name = `s${(savepoints += 1)}`
+      await client.query(`savepoint ${name}`)
       try {
-        await client.query(sql, parametri)
-      } catch (eroare) {
-        await client.query(`rollback to savepoint ${nume}`)
-        if (eroare.code === cod) return
-        throw new Cădere(
-          `refuzat cu ${eroare.code}, se aștepta ${cod} — ${eroare.message}`,
-        )
+        await client.query(sql, params)
+      } catch (error) {
+        await client.query(`rollback to savepoint ${name}`)
+        if (error.code === code) return
+        throw new Failure(`refused with ${error.code}, expected ${code} — ${error.message}`)
       }
-      await client.query(`rollback to savepoint ${nume}`)
-      throw new Cădere(`a trecut, deși trebuia refuzat: ${sql}`)
+      await client.query(`rollback to savepoint ${name}`)
+      throw new Failure(`it went through, though it should have been refused: ${sql}`)
     },
 
-    cere(condiție, mesaj) {
-      if (!condiție) throw new Cădere(mesaj)
+    require(condition, message) {
+      if (!condition) throw new Failure(message)
     },
   }
 
   return context
 }
 
-/** Un rând al lui A, pus de administrator. Întoarce id-ul. */
-async function rândAlLui(t, proprietar) {
+/** A row owned by someone, inserted by the administrator. Returns its id. */
+async function rowOwnedBy(t, owner) {
   const { rows } = await t.q(
     'insert into public.items (owner, title) values ($1, $2) returning id',
-    [proprietar, 'rând de verificare'],
+    [owner, 'a row for checking'],
   )
   return rows[0].id
 }
 
-export const CAZURI = [
+export const CASES = [
   // ── Negative ────────────────────────────────────────────────────────────
   {
-    grup: 'negativ',
-    nume: 'neautentificat nu poate citi',
-    rulează: (t) =>
-      t.caAnon(() => t.refuză(REFUZAT, 'select * from public.items')),
+    group: 'negative',
+    name: 'an unauthenticated visitor cannot read',
+    run: (t) => t.asAnon(() => t.denied(DENIED, 'select * from public.items')),
   },
   {
-    grup: 'negativ',
-    nume: 'neautentificat nu poate scrie',
-    rulează: (t) =>
-      t.caAnon(() =>
-        t.refuză(REFUZAT, "insert into public.items (title) values ('de la anon')"),
+    group: 'negative',
+    name: 'an unauthenticated visitor cannot write',
+    run: (t) =>
+      t.asAnon(() =>
+        t.denied(DENIED, "insert into public.items (title) values ('from anon')"),
       ),
   },
   {
-    grup: 'negativ',
-    nume: 'A nu vede niciun rând al lui B',
-    rulează: async (t) => {
-      await rândAlLui(t, B)
-      const rezultat = await t.caA(() => t.q('select id from public.items'))
-      t.cere(
-        rezultat.rowCount === 0,
-        `a văzut ${rezultat.rowCount} rânduri care nu sunt ale lui`,
+    group: 'negative',
+    name: "A sees none of B's rows",
+    run: async (t) => {
+      await rowOwnedBy(t, B)
+      const result = await t.asA(() => t.q('select id from public.items'))
+      t.require(
+        result.rowCount === 0,
+        `saw ${result.rowCount} rows that are not its own`,
       )
     },
   },
   {
-    grup: 'negativ',
-    nume: 'A nu poate insera un rând cu owner = B',
-    rulează: (t) =>
-      t.caA(() =>
-        t.refuză(
-          REFUZAT,
-          'insert into public.items (owner, title) values ($1, $2)',
-          [B, 'strecurat'],
-        ),
-      ),
-  },
-  {
-    grup: 'negativ',
-    nume: 'A nu poate muta un rând către B',
-    rulează: async (t) => {
-      const id = await rândAlLui(t, A)
-      await t.caA(() =>
-        t.refuză(REFUZAT, 'update public.items set owner = $1 where id = $2', [
+    group: 'negative',
+    name: 'A cannot insert a row owned by B',
+    run: (t) =>
+      t.asA(() =>
+        t.denied(DENIED, 'insert into public.items (owner, title) values ($1, $2)', [
           B,
-          id,
+          'smuggled',
         ]),
+      ),
+  },
+  {
+    group: 'negative',
+    name: 'A cannot move a row to B',
+    run: async (t) => {
+      const id = await rowOwnedBy(t, A)
+      await t.asA(() =>
+        t.denied(DENIED, 'update public.items set owner = $1 where id = $2', [B, id]),
       )
     },
   },
   {
-    grup: 'negativ',
-    nume: 'A nu poate face DELETE fizic',
-    rulează: async (t) => {
-      const id = await rândAlLui(t, A)
-      await t.caA(() =>
-        t.refuză(REFUZAT, 'delete from public.items where id = $1', [id]),
+    group: 'negative',
+    name: 'A cannot do a physical DELETE',
+    run: async (t) => {
+      const id = await rowOwnedBy(t, A)
+      await t.asA(() =>
+        t.denied(DENIED, 'delete from public.items where id = $1', [id]),
       )
     },
   },
   {
-    grup: 'negativ',
-    nume: 'A nu poate scrie id, owner, version, created_at sau updated_at',
-    rulează: async (t) => {
-      const id = await rândAlLui(t, A)
-      await t.caA(async () => {
-        for (const [coloană, valoare] of [
+    group: 'negative',
+    name: 'A cannot write id, owner, version, created_at or updated_at',
+    run: async (t) => {
+      const id = await rowOwnedBy(t, A)
+      await t.asA(async () => {
+        for (const [column, value] of [
           ['id', "'33333333-3333-3333-3333-333333333333'"],
           ['owner', `'${B}'`],
           ['version', '99'],
           ['created_at', 'now()'],
           ['updated_at', 'now()'],
         ]) {
-          await t.refuză(
-            REFUZAT,
-            `update public.items set ${coloană} = ${valoare} where id = $1`,
+          await t.denied(
+            DENIED,
+            `update public.items set ${column} = ${value} where id = $1`,
             [id],
           )
         }
@@ -174,146 +168,146 @@ export const CAZURI = [
     },
   },
 
-  // ── Pozitive: fără ele, cele de sus pot fi verzi și degeaba ─────────────
+  // ── Positive: without these, the ones above can be green for nothing ────
   {
-    grup: 'pozitiv',
-    nume: 'A își inserează propriul rând',
-    rulează: (t) =>
-      t.caA(async () => {
+    group: 'positive',
+    name: 'A inserts its own row',
+    run: (t) =>
+      t.asA(async () => {
         const { rows } = await t.q(
-          "insert into public.items (title) values ('sun la X') returning owner, state, kind, version",
+          "insert into public.items (title) values ('call X') returning owner, state, kind, version",
         )
-        t.cere(rows[0].owner === A, 'owner-ul implicit nu e A')
-        t.cere(rows[0].state === 'inbox', 'starea implicită nu e inbox')
-        t.cere(rows[0].kind === null, 'kind nu e null la captură')
-        t.cere(rows[0].version === 1, 'versiunea la insert nu e 1')
+        t.require(rows[0].owner === A, 'the default owner is not A')
+        t.require(rows[0].state === 'inbox', 'the default state is not inbox')
+        t.require(rows[0].kind === null, 'kind is not null on a capture')
+        t.require(rows[0].version === 1, 'the version on insert is not 1')
       }),
   },
   {
-    grup: 'pozitiv',
-    nume: 'A își citește propriul rând',
-    rulează: async (t) => {
-      await rândAlLui(t, B)
-      await t.caA(async () => {
-        await t.q("insert into public.items (title) values ('sun la X')")
+    group: 'positive',
+    name: 'A reads its own row',
+    run: async (t) => {
+      await rowOwnedBy(t, B)
+      await t.asA(async () => {
+        await t.q("insert into public.items (title) values ('call X')")
         const { rowCount } = await t.q('select id from public.items')
-        t.cere(rowCount === 1, `a văzut ${rowCount} rânduri, se aștepta 1`)
+        t.require(rowCount === 1, `saw ${rowCount} rows, expected 1`)
       })
     },
   },
   {
-    grup: 'pozitiv',
-    nume: 'A își modifică propriul rând, și versiunea crește',
-    rulează: (t) =>
-      t.caA(async () => {
+    group: 'positive',
+    name: 'A updates its own row, and the version grows',
+    run: (t) =>
+      t.asA(async () => {
         const { rows } = await t.q(
-          "insert into public.items (title) values ('sun la X') returning id",
+          "insert into public.items (title) values ('call X') returning id",
         )
-        const după = await t.q(
+        const after = await t.q(
           "update public.items set state = 'active', kind = 'task', due = '2026-09-05' where id = $1 returning version, created_at, updated_at",
           [rows[0].id],
         )
-        t.cere(după.rows[0].version === 2, `versiunea după update e ${după.rows[0].version}`)
-        t.cere(
-          după.rows[0].updated_at >= după.rows[0].created_at,
-          'updated_at a rămas în urma lui created_at',
+        t.require(after.rows[0].version === 2, `the version after update is ${after.rows[0].version}`)
+        t.require(
+          after.rows[0].updated_at >= after.rows[0].created_at,
+          'updated_at fell behind created_at',
         )
       }),
   },
   {
-    grup: 'pozitiv',
-    nume: 'A face soft-delete pe al lui',
-    rulează: (t) =>
-      t.caA(async () => {
+    group: 'positive',
+    name: 'A soft-deletes its own row',
+    run: (t) =>
+      t.asA(async () => {
         const { rows } = await t.q(
-          "insert into public.items (title) values ('sun la X') returning id",
+          "insert into public.items (title) values ('call X') returning id",
         )
-        const după = await t.q(
+        const after = await t.q(
           'update public.items set deleted_at = now() where id = $1 returning deleted_at',
           [rows[0].id],
         )
-        t.cere(după.rows[0].deleted_at !== null, 'deleted_at a rămas gol')
+        t.require(after.rows[0].deleted_at !== null, 'deleted_at stayed empty')
       }),
   },
 
-  // ── Scrierea: verificarea de versiune, impusă de bază ──────────────────
+  // ── Writing: the version check, enforced by the database ────────────────
   {
-    grup: 'scriere',
-    nume: 'UPDATE-ul condiționat atinge un rând cu versiunea curentă, zero cu una veche',
-    rulează: (t) =>
-      t.caA(async () => {
+    group: 'writing',
+    name: 'the conditional UPDATE affects one row on the current version, zero on a stale one',
+    run: (t) =>
+      t.asA(async () => {
         const { rows } = await t.q(
-          "insert into public.items (title) values ('sun la X') returning id, version",
+          "insert into public.items (title) values ('call X') returning id, version",
         )
         const { id, version } = rows[0]
 
-        // Cu versiunea curentă: exact un rând.
-        const potrivit = await t.q(
-          `update public.items set title = 'schimbat'
+        // With the current version: exactly one row.
+        const matched = await t.q(
+          `update public.items set title = 'changed'
              where id = $1 and owner = auth.uid() and version = $2
            returning version`,
           [id, version],
         )
-        t.cere(potrivit.rowCount === 1, `a atins ${potrivit.rowCount} rânduri, se aștepta 1`)
-        t.cere(potrivit.rows[0].version === version + 1, 'versiunea nu a crescut')
+        t.require(matched.rowCount === 1, `affected ${matched.rowCount} rows, expected 1`)
+        t.require(matched.rows[0].version === version + 1, 'the version did not grow')
 
-        // Cu versiunea de dinainte: niciunul. Ăsta e mecanismul pe care se
-        // sprijină toată scrierea — nu o verificare în JavaScript.
-        const depășit = await t.q(
-          `update public.items set title = 'peste'
+        // With the previous version: none. This is the mechanism the entire
+        // write path rests on — not a check in JavaScript.
+        const stale = await t.q(
+          `update public.items set title = 'over the top'
              where id = $1 and owner = auth.uid() and version = $2
            returning id`,
           [id, version],
         )
-        t.cere(depășit.rowCount === 0, `a atins ${depășit.rowCount} rânduri, se aștepta 0`)
+        t.require(stale.rowCount === 0, `affected ${stale.rowCount} rows, expected 0`)
 
-        // Iar rândul a rămas cum l-a lăsat scrierea care a trecut.
-        const acum = await t.q('select title from public.items where id = $1', [id])
-        t.cere(acum.rows[0].title === 'schimbat', 'rândul a fost călcat de scrierea depășită')
+        // And the row still holds what the write that succeeded left there.
+        const now = await t.q('select title from public.items where id = $1', [id])
+        t.require(now.rows[0].title === 'changed', 'the row was trampled by the stale write')
       }),
   },
 
-  // ── Constrângerile pe care planul le trece drept impuse de mașină ───────
+  // ── The constraints the plan counts as machine-enforced ─────────────────
   {
-    grup: 'constrângere',
-    nume: 'titlu gol, refuzat',
-    rulează: (t) =>
-      t.caA(async () => {
-        for (const titlu of ['', '   ', '\t\n']) {
-          await t.refuză(CONSTRÂNGERE, 'insert into public.items (title) values ($1)', [
-            titlu,
+    group: 'constraint',
+    name: 'an empty title is refused',
+    run: (t) =>
+      t.asA(async () => {
+        for (const title of ['', '   ', '\t\n']) {
+          await t.denied(CONSTRAINT, 'insert into public.items (title) values ($1)', [
+            title,
           ])
         }
       }),
   },
   {
-    grup: 'constrângere',
-    nume: 'stare și fel contradictorii, refuzate în ambele sensuri',
-    rulează: (t) =>
-      t.caA(async () => {
-        // În inbox nu există kind.
-        await t.refuză(
-          CONSTRÂNGERE,
+    group: 'constraint',
+    name: 'a contradictory state and kind are refused both ways round',
+    run: (t) =>
+      t.asA(async () => {
+        // In the inbox there is no kind.
+        await t.denied(
+          CONSTRAINT,
           "insert into public.items (title, state, kind) values ('x', 'inbox', 'task')",
         )
-        // Nu ieși din inbox fără kind.
-        await t.refuză(
-          CONSTRÂNGERE,
+        // You do not leave the inbox without a kind.
+        await t.denied(
+          CONSTRAINT,
           "insert into public.items (title, state) values ('x', 'active')",
         )
       }),
   },
   {
-    grup: 'constrângere',
-    nume: 'o stare sau un fel care nu există, refuzate',
-    rulează: (t) =>
-      t.caA(async () => {
-        await t.refuză(
-          CONSTRÂNGERE,
+    group: 'constraint',
+    name: 'a state or a kind that does not exist is refused',
+    run: (t) =>
+      t.asA(async () => {
+        await t.denied(
+          CONSTRAINT,
           "insert into public.items (title, state, kind) values ('x', 'dropped', 'task')",
         )
-        await t.refuză(
-          CONSTRÂNGERE,
+        await t.denied(
+          CONSTRAINT,
           "insert into public.items (title, state, kind) values ('x', 'active', 'note')",
         )
       }),
