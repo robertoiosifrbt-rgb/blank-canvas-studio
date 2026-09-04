@@ -54,3 +54,26 @@ describe('stilurile OS-ului nu ies din OS', () => {
     expect(offenders).toEqual([])
   })
 })
+
+/* Aplicația de sală declară `h1,h2,h3{color:…}` pe element. Stratul o coboară
+   în cascadă, dar straturile decid doar între declarații pentru aceeași
+   proprietate: o declarație directă bate oricând o culoare moștenită de la
+   părinte, oricât de jos ar fi stratul ei. Așa a rămas titlul „Azi" negru pe
+   negru și după ce credeam că e reparat. Deci fiecare titlu al OS-ului își
+   spune culoarea. */
+describe('titlurile OS-ului', () => {
+  const SHEETS = ['osLayout.css', 'osComponents.css', 'osScreens.css']
+
+  /* Un titlu poate avea mai multe reguli — una de bază și una pentru telefon,
+     care schimbă doar mărimea. Se cere o culoare pe undeva, nu în fiecare. */
+  it.each(SHEETS)('%s dă o culoare fiecărui titlu', file => {
+    const css = readFileSync(`src/features/os/${file}`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    const coloured = new Map<string, boolean>()
+    for (const [, selector, block] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const name = selector.trim()
+      if (!/\bh[1-3]\s*$/.test(name)) continue
+      coloured.set(name, (coloured.get(name) ?? false) || /(^|;)\s*color\s*:/.test(block))
+    }
+    expect([...coloured].filter(([, has]) => !has).map(([name]) => name)).toEqual([])
+  })
+})

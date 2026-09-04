@@ -1,8 +1,9 @@
 /* Panourile de obiectiv, calendarul, obiceiurile, notițele, ferestrele. */
 
 .os-heroes{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px;margin-bottom:6px}
+.os-heroes>*{display:flex;flex-direction:column;height:100%;min-width:0}
 .os-hero{position:relative;overflow:hidden;background:var(--os-surface);border:1px solid var(--os-line);
-  border-radius:14px;padding:15px 17px;display:flex;flex-direction:column;gap:13px;height:100%}
+  border-radius:14px;padding:15px 17px;display:flex;flex-direction:column;gap:13px;flex:1}
 .os-hero::before{content:"";position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(120% 90% at 0% 0%, var(--os-accent-soft) 0%, transparent 62%)}
 .os-hero>*{position:relative}
@@ -84,7 +85,7 @@
   justify-content:center;padding:5vh 16px;z-index:50;overflow-y:auto}
 .os-modal{background:var(--os-surface);border:1px solid var(--os-line);border-radius:14px;width:100%;max-width:460px}
 .os-modal header{padding:17px 20px 0}
-.os-modal header h3{margin:0;font-size:17px;font-weight:700}
+.os-modal header h3{margin:0;font-size:17px;font-weight:700;color:var(--os-ink)}
 .os-modal .body{padding:16px 20px;display:flex;flex-direction:column;gap:13px}
 .os-modal footer{padding:0 20px 18px;display:flex;gap:9px;justify-content:flex-end}
 .os-note-text{margin:0;font-size:13.5px;color:var(--os-ink-2)}

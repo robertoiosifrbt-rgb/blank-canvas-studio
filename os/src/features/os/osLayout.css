@@ -16,7 +16,7 @@
 .os-main{min-width:0;padding:26px 30px 60px;max-width:1120px}
 
 .os-head{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:22px}
-.os-head h1{margin:0;font-size:27px;font-weight:700;letter-spacing:-.025em}
+.os-head h1{margin:0;font-size:27px;font-weight:700;letter-spacing:-.025em;color:var(--os-ink)}
 .os-head p{margin:3px 0 0;color:var(--os-ink-2);font-size:14px}
 .os-head>div:first-child{flex:1;min-width:180px}
 .os-sec{display:flex;align-items:center;gap:10px;margin:26px 0 12px}
