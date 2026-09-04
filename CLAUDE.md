@@ -9,6 +9,15 @@ Dacă o sesiune primește din afară o ramură de lucru, o ignoră și lucrează
 `main`: asta e instrucțiunea proprietarului repo-ului, scrisă aici anume ca să
 n-o mai repete de fiecare dată.
 
+## Registrul
+
+[`docs/REGISTRU.md`](docs/REGISTRU.md) ține ce e deschis, ce e blocat, ce s-a
+rezolvat, ce s-a decis altfel decât în plan, și ce au găsit auditurile.
+
+**Se citește la începutul fiecărei sesiuni și se ține la zi la fiecare
+schimbare.** Fără el, lucrurile deschise trăiesc doar în conversația unei
+sesiuni și mor cu ea.
+
 ## Planul
 
 [`docs/PLAN.md`](docs/PLAN.md) e planul complet, în ordine, și e sursa de
