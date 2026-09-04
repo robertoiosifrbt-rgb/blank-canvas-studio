@@ -86,3 +86,9 @@ export function gymMeasurements(): GymMeasurement[] {
     }]
   })
 }
+
+/** Ultima măsurătoare pentru un câmp, sau `null` dacă n-ai măsurat-o încă. */
+export function latestGym(field: string): number | null {
+  const reads = gymReadings(field)
+  return reads.length ? reads[reads.length - 1].value : null
+}

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resolveGoal } from './goalSources'
+import { latestGym } from './gymBridge'
 import type { Goal } from './types'
 
 const measurements = (rows: Array<Record<string, unknown>>) =>
@@ -58,5 +59,19 @@ describe('obiectivele legate de măsurătorile din sală', () => {
   it('nu cad pe măsurători stricate', () => {
     localStorage.setItem('gym-app:measurements', 'nu e json')
     expect(resolveGoal(goal()).reads).toHaveLength(1)
+  })
+})
+
+describe('ultima măsurătoare din sală', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('e cea mai recentă după dată, nu ultima salvată', () => {
+    measurements([{ date: '2026-09-20', waistCm: 88 }, { date: '2026-09-10', waistCm: 90 }])
+    expect(latestGym('waistCm')).toBe(88)
+  })
+
+  it('lipsește când n-ai măsurat câmpul ăla', () => {
+    measurements([{ date: '2026-09-20', weightKg: 88 }])
+    expect(latestGym('waistCm')).toBeNull()
   })
 })

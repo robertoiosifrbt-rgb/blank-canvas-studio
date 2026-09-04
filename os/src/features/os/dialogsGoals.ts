@@ -1,5 +1,5 @@
 import type { DialogSpec } from './Dialog'
-import { GYM_METRICS, gymMetric } from './gymBridge'
+import { GYM_METRICS, gymMetric, latestGym } from './gymBridge'
 import { current, formatValue, hasTarget, isMetric } from './goals'
 import { money, num, today, uid } from './format'
 import type { Goal, OsData } from './types'
@@ -26,15 +26,19 @@ export function goalDialogs(data: OsData, update: Update) {
         ...GYM_METRICS.map(m => ({ value: `gym:${m.key}`, label: `Sală — ${m.name} (${m.unit})` })),
       ] },
       { key: 'unit', label: 'Unitate (doar dacă îl scrii de mână)', placeholder: 'kg, %, cm' },
-      { key: 'start', label: 'De la ce valoare pornești', type: 'number', placeholder: '0' },
+      /* Lăsat gol pentru un obiectiv legat de sală, punctul de plecare e
+         ultima ta măsurătoare — o știe deja aplicația, n-are rost s-o scrii. */
+      { key: 'start', label: 'De la ce valoare pornești (gol = ultima măsurătoare)', type: 'number', placeholder: '0' },
       { key: 'target', label: 'Ținta', type: 'number', placeholder: '0' },
       { key: 'due', label: 'Până când (opțional)', type: 'date' },
     ],
     submit(values) {
       if (!values.name) return 'Dă-i un nume obiectivului.'
       if (!values.target) return 'Scrie ținta.'
-      const start = num(values.start), target = num(values.target)
       const metric = values.kind === 'metric'
+      const fromGym = metric && values.source ? latestGym(values.source.slice(4)) : null
+      const start = values.start ? num(values.start) : fromGym ?? 0
+      const target = num(values.target)
       if (metric && start === target) return 'Ținta trebuie să fie diferită de valoarea de start.'
       if (!metric && target <= 0) return 'Ținta trebuie să fie mai mare ca zero.'
       const id = `g${uid()}`
@@ -65,7 +69,7 @@ export function goalDialogs(data: OsData, update: Update) {
         ...GYM_METRICS.map(m => ({ value: `gym:${m.key}`, label: `Sală — ${m.name} (${m.unit})` })),
       ] },
         { key: 'unit', label: 'Unitate', value: goal.unit ?? '', placeholder: 'kg, %, cm' },
-        { key: 'start', label: 'Valoarea de plecare', type: 'number' as const, value: goal.start === undefined ? '' : String(goal.start) },
+        { key: 'start', label: 'Valoarea de plecare (gol = ultima măsurătoare)', type: 'number' as const, value: goal.start === undefined ? '' : String(goal.start) },
       ] : []),
       { key: 'target', label: 'Ținta', type: 'number', value: hasTarget(goal) ? String(goal.target) : '' },
       { key: 'due', label: 'Până când (opțional)', type: 'date', value: goal.due ?? '' },
@@ -75,7 +79,8 @@ export function goalDialogs(data: OsData, update: Update) {
       if (!values.target) return 'Scrie ținta.'
       const target = num(values.target)
       const metric = isMetric(goal)
-      const start = num(values.start)
+      const fromGym = metric && values.source ? latestGym(values.source.slice(4)) : null
+      const start = values.start ? num(values.start) : fromGym ?? num(values.start)
       if (metric && start === target) return 'Ținta trebuie să fie diferită de valoarea de plecare.'
       if (!metric && target <= 0) return 'Ținta trebuie să fie mai mare ca zero.'
       update(draft => {
