@@ -32,7 +32,12 @@ const ANON_KEY =
 interface Reply {
   files?: string[]
   data?: string
+  /* `error` e al funcției noastre; `message` și `msg` sunt ale porții
+     Supabase, care răspunde altfel. Citite toate, altfel motivul adevărat —
+     „Invalid JWT", „Function not found" — se pierde și rămâne doar numărul. */
   error?: string
+  message?: string
+  msg?: string
 }
 
 async function call(body: Record<string, unknown>): Promise<Reply> {
@@ -46,16 +51,19 @@ async function call(body: Record<string, unknown>): Promise<Reply> {
     },
     body: JSON.stringify(body),
   })
-  const reply = (await response.json().catch(() => ({}))) as Reply
+  /* Citit ca text întâi: un răspuns care nu e JSON — o pagină de eroare a
+     porții, de exemplu — ar dispărea cu totul dacă am cere direct JSON. */
+  const raw = await response.text()
+  let reply: Reply = {}
+  try {
+    reply = JSON.parse(raw) as Reply
+  } catch {
+    /* rămâne gol; textul brut e mai jos */
+  }
+
   if (!response.ok) {
-    /* Funcția noastră scrie întotdeauna un motiv. Un răspuns fără el vine de
-       dinaintea ei — de la poartă — și înseamnă aproape sigur că funcția nu e
-       pusă în Supabase. Merită spus, altfel „eroare 404" nu ajută pe nimeni. */
-    if (reply.error) throw new Error(reply.error)
-    throw new Error(
-      `Supabase a răspuns ${response.status} înainte de funcție. ` +
-      'Verifică dacă funcția `photo-api` e pusă în proiect.',
-    )
+    const said = reply.error ?? reply.message ?? reply.msg ?? raw.slice(0, 200)
+    throw new Error(`${response.status}${said ? `: ${said}` : ''}`)
   }
   return reply
 }

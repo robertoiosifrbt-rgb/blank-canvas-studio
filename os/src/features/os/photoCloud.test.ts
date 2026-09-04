@@ -33,7 +33,9 @@ function server(files: string[]) {
   return calls
 }
 
-const reply = (value: unknown) => ({ ok: true, json: () => Promise.resolve(value) })
+/** Ce dă `fetch`: răspunsul e citit ca text, ca să nu se piardă ce nu e JSON. */
+const reply = (value: unknown) => ({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify(value)) })
+const refusal = (status: number, body: string) => ({ ok: false, status, text: () => Promise.resolve(body) })
 
 describe('sincronizarea pozelor de progres', () => {
   beforeEach(() => {
@@ -90,12 +92,22 @@ describe('sincronizarea pozelor de progres', () => {
     expect((await syncPhotos()).downloaded).toBe(0)
   })
 
-  it('spune de ce n-a mers, în loc să pară că a mers', async () => {
-    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
-      ok: false, json: () => Promise.resolve({ error: 'funcția nu e pusă' }),
-    })))
-    const result = await syncPhotos()
-    expect(result.error).toBe('funcția nu e pusă')
+  it('spune ce a răspuns funcția, nu doar numărul', async () => {
+    vi.stubGlobal('fetch', vi.fn(() =>
+      Promise.resolve(refusal(500, '{"error":"funcția nu e pusă"}'))))
+    expect((await syncPhotos()).error).toContain('funcția nu e pusă')
+  })
+
+  it('duce mai departe motivul porții Supabase, care scrie în alt câmp', async () => {
+    vi.stubGlobal('fetch', vi.fn(() =>
+      Promise.resolve(refusal(401, '{"code":401,"message":"Invalid JWT"}'))))
+    expect((await syncPhotos()).error).toContain('Invalid JWT')
+  })
+
+  it('arată și un răspuns care nu e JSON, în loc să-l piardă', async () => {
+    vi.stubGlobal('fetch', vi.fn(() =>
+      Promise.resolve(refusal(502, '<html>Bad gateway</html>'))))
+    expect((await syncPhotos()).error).toContain('Bad gateway')
   })
 
   it('se legitimează cu codul de device, nu cu o cheie cu drepturi', async () => {
@@ -116,10 +128,8 @@ describe('sincronizarea pozelor de progres', () => {
     expect(role.role).toBe('anon')
   })
 
-  it('spune că lipsește funcția când poarta răspunde fără motiv', async () => {
-    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
-      ok: false, status: 404, json: () => Promise.resolve({}),
-    })))
-    expect((await syncPhotos()).error).toContain('photo-api')
+  it('dă măcar numărul când răspunsul e gol', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(refusal(404, ''))))
+    expect((await syncPhotos()).error).toBe('404')
   })
 })
