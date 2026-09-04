@@ -109,6 +109,33 @@ export interface OsSettings {
   seeded?: boolean
 }
 
+/**
+ * O hârtie primită: o scrisoare, o factură, o decizie.
+ *
+ * Ține ce ai nevoie ca s-o poți lăsa din mână — cine a trimis-o, când, ce
+ * referință are, ce trebuie făcut și până când — plus unde stă originalul.
+ * Termenul intră în calendar, ca orice altceva cu o dată.
+ */
+export interface Doc {
+  id: string
+  mod: string
+  title: string
+  /** Cine a trimis-o: DWP, HMRC, banca. */
+  from?: string
+  /** Data de pe hârtie, nu ziua în care ai introdus-o. */
+  date?: string
+  /** Referința lor — cu ea te caută când suni. */
+  ref?: string
+  amount?: number
+  /** Ce ai de făcut până când. Ăsta ajunge în calendar. */
+  due?: string
+  note?: string
+  /** Datoria pe care o privește, dacă e cazul. */
+  debt?: string
+  done?: boolean
+  createdAt?: string
+}
+
 export interface OsData {
   modules: Record<string, OsModule>
   goals: Record<string, Goal>
@@ -116,12 +143,13 @@ export interface OsData {
   habits: Record<string, Habit>
   notes: Record<string, Note>
   debts: Record<string, Debt>
+  docs: Record<string, Doc>
   finance: FinanceByMonth
   settings: OsSettings
 }
 
 export const emptyOsData = (): OsData => ({
   modules: {}, goals: {}, tasks: {}, habits: {},
-  notes: {}, debts: {}, finance: {},
+  notes: {}, debts: {}, docs: {}, finance: {},
   settings: { currency: '£' },
 })

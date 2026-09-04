@@ -10,6 +10,7 @@ export const BUILTIN: OsModule[] = [
   { id: 'taskuri', name: 'Task-uri', kind: 'tasks' },
   { id: 'obiceiuri', name: 'Obiceiuri', kind: 'habits' },
   { id: 'jurnal', name: 'Jurnal', kind: 'notes' },
+  { id: 'documente', name: 'Documente', kind: 'docs' },
   { id: 'health', name: 'Health', kind: 'hub' },
   { id: 'gym', name: 'Gym', kind: 'gym', parent: 'health' },
 ]

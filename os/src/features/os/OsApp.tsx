@@ -10,6 +10,7 @@ import { today, ym } from './format'
 import { childrenOf, moduleById, moduleTree, pathOf } from './modules'
 import { CalendarScreen } from './screens/CalendarScreen'
 import { Debts } from './screens/Debts'
+import { Docs } from './screens/Docs'
 import { Finance } from './screens/Finance'
 import { Goals } from './screens/Goals'
 import { Habits } from './screens/Habits'
@@ -117,6 +118,12 @@ export function OsApp() {
         onDelete={h => open(core.confirm(`Ștergi „${h.name}”?`,
           'Se pierde tot istoricul de bife. Nu se poate anula.',
           () => update(draft => { delete draft.habits[h.id] })))} />
+      case 'docs': return <Docs data={data} mod={view}
+        onAdd={() => open(core.doc(view))} onOpen={d => open(core.doc(view, d))}
+        onToggle={d => update(draft => { draft.docs[d.id].done = !draft.docs[d.id].done })}
+        onDelete={d => open(core.confirm(`Ștergi „${d.title}”?`,
+          'Dispare din listă și din calendar. Nu se poate anula.',
+          () => update(draft => { delete draft.docs[d.id] })))} />
       case 'notes': return <Notes data={data} mod={view} search={search} onSearch={setSearch}
         onAdd={() => open(core.note(view))} onOpen={n => open(core.note(view, n))} />
       case 'calendar': return <CalendarScreen data={data} month={calMonth} day={calDay}

@@ -2,7 +2,7 @@ import type { DialogSpec } from './Dialog'
 import { money, num, today, uid, ym } from './format'
 import { moduleTree, descendants, itemsOf } from './modules'
 import { remainingDebt } from './goals'
-import type { Debt, Note, OsData, Task } from './types'
+import type { Debt, Doc, Note, OsData, Task } from './types'
 
 type Update = (change: (draft: OsData) => void) => void
 
@@ -99,6 +99,47 @@ export function coreDialogs(data: OsData, update: Update) {
     },
   })
 
+  /**
+   * O hârtie primită. Câmpurile sunt cele după care o cauți mai târziu — cine
+   * a trimis-o și cu ce referință — plus termenul, singurul care are ce căuta
+   * în calendar. Doar titlul e obligatoriu: o scrisoare pusă pe jumătate în
+   * aplicație e mai bună decât una rămasă pe masă.
+   */
+  const doc = (mod: string, existing?: Doc): DialogSpec => ({
+    title: existing ? 'Document' : 'Document nou',
+    fields: [
+      { key: 'title', label: 'Despre ce e', value: existing?.title ?? '', placeholder: 'ex: datorie DWP' },
+      { key: 'from', label: 'De la cine', value: existing?.from ?? '', placeholder: 'ex: DWP Debt Management' },
+      { key: 'date', label: 'Data de pe hârtie', type: 'date', value: existing?.date ?? '' },
+      { key: 'ref', label: 'Referința lor', value: existing?.ref ?? '', placeholder: 'ex: SY361954C' },
+      { key: 'amount', label: 'Sumă (dacă scrie una)', type: 'number', value: existing?.amount === undefined ? '' : String(existing.amount) },
+      { key: 'due', label: 'De rezolvat până când', type: 'date', value: existing?.due ?? '' },
+      { key: 'debt', label: 'Datoria pe care o privește', type: 'select', value: existing?.debt ?? '', options: [
+        { value: '', label: 'Niciuna' },
+        ...Object.values(data.debts).map(d => ({ value: d.id, label: d.name })),
+      ] },
+      { key: 'note', label: 'Ce spune, pe scurt', type: 'textarea', value: existing?.note ?? '' },
+    ],
+    submit(values) {
+      if (!values.title) return 'Scrie despre ce e.'
+      const id = existing?.id ?? `d${uid()}`
+      update(draft => {
+        draft.docs[id] = {
+          id, mod, title: values.title,
+          from: values.from || undefined,
+          date: values.date || undefined,
+          ref: values.ref || undefined,
+          amount: values.amount ? num(values.amount) : undefined,
+          due: values.due || undefined,
+          debt: values.debt || undefined,
+          note: values.note || undefined,
+          done: existing?.done ?? false,
+          createdAt: existing?.createdAt ?? new Date().toISOString(),
+        }
+      })
+    },
+  })
+
   const habit = (mod: string): DialogSpec => ({
     title: 'Obicei nou',
     note: 'Ceva ce vrei să faci în fiecare zi.',
@@ -183,7 +224,7 @@ export function coreDialogs(data: OsData, update: Update) {
     title, note, ok: 'Șterge', danger: true, fields: [], submit() { run() },
   })
 
-  return { movement, debt, pay, task, habit, note, module, removeModule, confirm }
+  return { movement, debt, pay, task, habit, note, doc, module, removeModule, confirm }
 }
 
 export type TaskLike = Task

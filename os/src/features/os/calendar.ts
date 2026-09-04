@@ -24,7 +24,7 @@ export function monthGrid(key: string): DayCell[] {
   return out
 }
 
-export type DayKind = 'task' | 'debt' | 'money' | 'habit' | 'goal' | 'gym'
+export type DayKind = 'task' | 'debt' | 'money' | 'habit' | 'goal' | 'gym' | 'doc'
 export type DayClass = 'acc' | 'good' | 'bad' | 'warn' | 'ochre'
 
 export interface DayItem {
@@ -66,6 +66,16 @@ export function dayItems(data: OsData, date: string): DayItem[] {
     for (const r of g.reads ?? [])
       if (r.date === date) out.push({ kind: 'goal', cls: 'ochre', title: g.name, sub: 'măsurătoare' })
   }
+
+  /* Termenul unei hârtii, nu data ei: ce e de făcut are un loc în calendar,
+     ziua în care a fost tipărită scrisoarea nu. */
+  for (const d of Object.values(data.docs ?? {}))
+    if (d.due === date)
+      out.push({
+        kind: 'doc', cls: d.done ? 'good' : 'warn',
+        title: d.title, sub: d.done ? 'rezolvat' : (d.from ?? 'document'),
+        amount: d.amount,
+      })
 
   for (const s of gymSessions())
     if (s.date === date) out.push({ kind: 'gym', cls: 'acc', title: s.name, sub: 'antrenament' })
