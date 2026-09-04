@@ -100,10 +100,13 @@ describe('sincronizarea pozelor de progres', () => {
 
   it('trimite codul de device, nu cheia Supabase', async () => {
     sets.push(fullSet('a1', '2026-09-01'))
-    const fetchMock = vi.fn(() => Promise.resolve(reply({ files: [] })))
-    vi.stubGlobal('fetch', fetchMock)
+    const seen: RequestInit[] = []
+    vi.stubGlobal('fetch', vi.fn((_url: string, init: RequestInit) => {
+      seen.push(init)
+      return Promise.resolve(reply({ files: [] }))
+    }))
     await syncPhotos()
-    const headers = (fetchMock.mock.calls[0][1] as { headers: Record<string, string> }).headers
+    const headers = seen[0].headers as Record<string, string>
     expect(headers['x-device-token']).toBe('token-de-test-1234567890')
     expect(JSON.stringify(headers)).not.toContain('apikey')
   })

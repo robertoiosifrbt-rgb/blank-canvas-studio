@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useExercises, useFieldTypes } from '../exercises'
 import { StorageNotice } from '../../shared/StorageNotice'
 import { todayLocal } from '../../shared/localDate'
+import { PlansFromHistory, useWorkoutPlans } from '../workout-plans'
 import { useWorkoutLog } from './useWorkoutLog'
 import { useWorkoutSessions } from './useWorkoutSessions'
 import { SessionCard } from './SessionCard'
@@ -49,6 +50,8 @@ export function WorkoutLogPage({ tabs }: WorkoutLogPageProps = {}) {
     error: entriesError,
     dismissError: dismissEntriesError,
   } = useWorkoutLog()
+  const { plans, addPlan } = useWorkoutPlans()
+  const [makingPlans, setMakingPlans] = useState(false)
   const [openSessionId, setOpenSessionId] = useState('')
   // Opens on the month you last trained in, not on today's: coming back after
   // a few weeks off, an empty current month is the least useful thing to show.
@@ -248,12 +251,23 @@ export function WorkoutLogPage({ tabs }: WorkoutLogPageProps = {}) {
         ) : (
           <>
             <h2>{selectedDay || monthLabel(month)}</h2>
+            {/* Antrenamentele făcute sunt deja liste de exerciții cu un nume —
+                adică planuri, doar că trecute. De aici se transformă în planuri
+                de pornit cu un buton, fără să fie tastate din nou. */}
+            <button type="button" onClick={() => setMakingPlans(true)}>
+              Planuri din istoric
+            </button>
             <button type="button" className="add-button" onClick={() => setCreating(true)}>
               + New session
             </button>
           </>
         )}
       </div>
+
+      {makingPlans && (
+        <PlansFromHistory sessions={sessions} entries={entries} plans={plans}
+          onSave={addPlan} onClose={() => setMakingPlans(false)} />
+      )}
 
       {creating && (
         <SessionForm onSubmit={handleCreate} onCancel={() => setCreating(false)} />
