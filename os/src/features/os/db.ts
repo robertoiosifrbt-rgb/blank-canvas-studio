@@ -1,5 +1,5 @@
 import { createClient, type Session } from '@supabase/supabase-js'
-import { TABLES, type Change, type Rows, type Table } from './dbRows'
+import { SETTINGS_ID, TABLES, rowForDb, type Change, type Rows, type Table } from './dbRows'
 
 /**
  * Legătura cu baza de date: rânduri, nu un text.
@@ -64,7 +64,9 @@ export async function loadRows(): Promise<Rows> {
 
   const rows = {} as Rows
   for (const [table, list] of results) {
-    rows[table] = Object.fromEntries(list.map(row => [String(row.id), strip(row)]))
+    rows[table] = table === 'settings'
+      ? Object.fromEntries(list.map(row => [SETTINGS_ID, { ...strip(row), id: SETTINGS_ID }]))
+      : Object.fromEntries(list.map(row => [String(row.id), strip(row)]))
   }
   return rows
 }
@@ -88,13 +90,15 @@ export async function applyChanges(changes: Change[], owner: string): Promise<vo
   for (const table of TABLES) {
     const upserts = at(table)?.upserts ?? []
     for (const batch of chunks(upserts)) {
-      const { error } = await db.from(table).upsert(batch.map(row => ({ ...row, owner })))
+      const { error } = await db.from(table).upsert(batch.map(row => ({ ...rowForDb(table, row), owner })))
       if (error) throw new Error(`${table}: ${error.message}`)
     }
   }
 
   for (const table of [...TABLES].reverse()) {
     const ids = at(table)?.deletes ?? []
+    /* Rândul setărilor nu se șterge niciodată: e unul singur și există mereu. */
+    if (table === 'settings') continue
     for (const batch of chunks(ids)) {
       const { error } = await db.from(table).delete().eq('owner', owner).in('id', batch)
       if (error) throw new Error(`${table}: ${error.message}`)

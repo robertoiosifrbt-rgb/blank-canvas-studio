@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { forgetKnown, persist, pull, setPushErrorHandler, type SyncMode } from './storage'
 import { onAuthChange, signIn as authIn, signOut as authOut, signUp as authUp } from './db'
 import { pullGym, watchGym } from './gymCloud'
@@ -37,7 +37,15 @@ export function useOs(): OsStore {
      capăt cu datele contului nou. */
   const [account, setAccount] = useState(0)
 
-  useEffect(() => onAuthChange(() => {
+  /* Supabase anunță și reîmprospătarea tokenului, nu doar logarea. Pornirea
+     se ia de la capăt numai când se schimbă omul: altfel o reîmprospătare
+     căzută la mijloc ar reciti baza peste ce tocmai ai scris și n-ai apucat
+     să urci. */
+  const who = useRef<string | null>(null)
+  useEffect(() => onAuthChange(session => {
+    const id = session?.user.id ?? null
+    if (id === who.current) return
+    who.current = id
     forgetKnown()
     setReady(false)
     setAccount(n => n + 1)

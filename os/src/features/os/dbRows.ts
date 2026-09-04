@@ -586,5 +586,19 @@ export function changesBetween(before: Rows, after: Rows): Change[] {
   }).filter(change => change.upserts.length > 0 || change.deletes.length > 0)
 }
 
+/**
+ * Rândul așa cum pleacă spre bază.
+ *
+ * Setările n-au `id`: e un singur rând, al tău, recunoscut după `owner`.
+ * Aplicația îi dă totuși un nume ca să stea în aceeași formă cu restul, iar
+ * aici i se scoate. Trimis, baza refuză toată cererea — iar `settings` fiind
+ * primul tabel scris, cu el pica tot ce venea după.
+ */
+export function rowForDb(table: Table, row: Row): Row {
+  if (table !== 'settings') return row
+  const { id: _id, ...rest } = row
+  return rest
+}
+
 export const isEmpty = (rows: Rows): boolean =>
   TABLES.every(table => Object.keys(rows[table] ?? {}).length === 0)
