@@ -1,4 +1,5 @@
 import type { DialogSpec } from './Dialog'
+import { GYM_METRICS, gymMetric } from './gymBridge'
 import { current, formatValue, hasTarget, isMetric } from './goals'
 import { money, num, today, uid } from './format'
 import type { Goal, OsData } from './types'
@@ -17,7 +18,14 @@ export function goalDialogs(data: OsData, update: Update) {
       { key: 'kind', label: 'Fel', type: 'select', value: 'sum', options: [
         { value: 'sum', label: 'Sumă de strâns — bani, contribuții' },
         { value: 'metric', label: 'Măsurătoare — kg, %, cm' }] },
-      { key: 'unit', label: 'Unitate (doar la măsurătoare)', placeholder: 'kg, %, cm' },
+      /* Legat de o măsurătoare din sală, obiectivul se actualizează singur
+         când completezi acolo — nu mai ai de introdus același număr de două
+         ori, în două locuri, cu riscul ca ele să nu mai fie de acord. */
+      { key: 'source', label: 'Măsurat unde', type: 'select', value: '', options: [
+        { value: '', label: 'Îl scriu eu de mână' },
+        ...GYM_METRICS.map(m => ({ value: `gym:${m.key}`, label: `Sală — ${m.name} (${m.unit})` })),
+      ] },
+      { key: 'unit', label: 'Unitate (doar dacă îl scrii de mână)', placeholder: 'kg, %, cm' },
       { key: 'start', label: 'De la ce valoare pornești', type: 'number', placeholder: '0' },
       { key: 'target', label: 'Ținta', type: 'number', placeholder: '0' },
       { key: 'due', label: 'Până când (opțional)', type: 'date' },
@@ -35,7 +43,12 @@ export function goalDialogs(data: OsData, update: Update) {
           id, name: values.name, kind: metric ? 'metric' : 'sum', target, due: values.due || undefined,
           main: true, habits: [], createdAt: new Date().toISOString(),
           ...(metric
-            ? { unit: values.unit || undefined, start, reads: [{ id: uid(), date: today(), value: start, note: 'Punct de pornire' }] }
+            ? {
+              source: values.source || undefined,
+              unit: gymMetric(values.source.slice(4))?.unit ?? values.unit ?? undefined,
+              start,
+              reads: [{ id: uid(), date: today(), value: start, note: 'Punct de pornire' }],
+            }
             : { contrib: start > 0 ? [{ id: uid(), date: today(), amount: start, note: 'Punct de pornire' }] : [] }),
         }
       })
@@ -47,6 +60,10 @@ export function goalDialogs(data: OsData, update: Update) {
     fields: [
       { key: 'name', label: 'Nume', value: goal.name },
       ...(isMetric(goal) ? [
+        { key: 'source', label: 'Măsurat unde', type: 'select' as const, value: goal.source ?? '', options: [
+        { value: '', label: 'Îl scriu eu de mână' },
+        ...GYM_METRICS.map(m => ({ value: `gym:${m.key}`, label: `Sală — ${m.name} (${m.unit})` })),
+      ] },
         { key: 'unit', label: 'Unitate', value: goal.unit ?? '', placeholder: 'kg, %, cm' },
         { key: 'start', label: 'Valoarea de plecare', type: 'number' as const, value: goal.start === undefined ? '' : String(goal.start) },
       ] : []),
@@ -67,7 +84,8 @@ export function goalDialogs(data: OsData, update: Update) {
         g.target = target
         g.due = values.due || undefined
         if (metric) {
-          g.unit = values.unit || undefined
+          g.source = values.source || undefined
+          g.unit = gymMetric((values.source ?? '').slice(4))?.unit ?? values.unit ?? undefined
           g.start = start
           if (!(g.reads ?? []).length) g.reads = [{ id: uid(), date: today(), value: start, note: 'Punct de pornire' }]
         }

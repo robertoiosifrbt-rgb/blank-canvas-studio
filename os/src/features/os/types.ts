@@ -28,6 +28,12 @@ export interface Goal {
   /** Doar la măsurători: unitatea și valoarea de plecare. */
   unit?: string
   start?: number
+  /**
+   * De unde vin citirile, când nu le scrii de mână: `gym:waistCm` înseamnă
+   * talia din măsurătorile aplicației de sală. Lipsește la obiectivele care
+   * se măsoară manual.
+   */
+  source?: string
   due?: string
   /** Ancoră: apare pe fiecare ecran. Pot fi mai multe. */
   main?: boolean

@@ -18,6 +18,7 @@ import { SettingsScreen } from './screens/SettingsScreen'
 import { Tasks } from './screens/Tasks'
 import { Today } from './screens/Today'
 import { deviceToken, setDeviceToken } from './cloud'
+import { resolveGoals } from './goalSources'
 import { useOs } from './useOs'
 import { UnitsProvider } from '../../shared/UnitsProvider'
 import './osTokens.css'
@@ -42,7 +43,10 @@ const GYM_PAGES: Array<{ key: GymPage; name: string }> = [
 ]
 
 export function OsApp() {
-  const { data, mode, error, photos, update } = useOs()
+  const { data: stored, mode, error, photos, update } = useOs()
+  /* Ecranele văd obiectivele cu citirile sălii deja aduse; scrierile merg tot
+     în ce e salvat, deci măsurătorile sălii nu ajung niciodată copiate aici. */
+  const data = useMemo(() => resolveGoals(stored), [stored])
   const [view, setView] = useState('azi')
   const [month, setMonth] = useState(ym())
   const [calMonth, setCalMonth] = useState(ym())
