@@ -27,6 +27,26 @@ function openDb(): Promise<IDBDatabase> {
   })
 }
 
+/**
+ * Cine vrea să afle că s-a salvat o poză.
+ *
+ * Sincronizarea în cloud a Roberto OS ascultă aici. Pozele nu trec prin
+ * `localStorage`, deci nu se văd în abonamentul de acolo, iar fără semnalul
+ * ăsta o poză nouă ar pleca spre cloud abia la următoarea pornire.
+ */
+const savedListeners = new Set<() => void>()
+
+export function onPhotoSetSaved(listener: () => void): () => void {
+  savedListeners.add(listener)
+  return () => {
+    savedListeners.delete(listener)
+  }
+}
+
+function announceSaved(): void {
+  for (const listener of savedListeners) listener()
+}
+
 export async function getAllPhotoSets(): Promise<ProgressPhotoSet[]> {
   const db = await openDb()
   return new Promise((resolve, reject) => {
@@ -43,7 +63,7 @@ export async function savePhotoSet(photoSet: ProgressPhotoSet): Promise<void> {
     tx.objectStore(STORE_NAME).put(photoSet)
     // Resolve on `oncomplete`, not on the put's `onsuccess`: only a completed
     // transaction means the data is actually durable.
-    tx.oncomplete = () => resolve()
+    tx.oncomplete = () => { announceSaved(); resolve() }
     tx.onerror = () => reject(tx.error ?? new Error('Could not save the photos'))
     tx.onabort = () => reject(tx.error ?? new Error('Saving the photos was interrupted'))
   })
@@ -61,7 +81,7 @@ export async function replaceAllPhotoSets(photoSets: ProgressPhotoSet[]): Promis
     const store = tx.objectStore(STORE_NAME)
     store.clear()
     for (const photoSet of photoSets) store.put(photoSet)
-    tx.oncomplete = () => resolve()
+    tx.oncomplete = () => { announceSaved(); resolve() }
     tx.onerror = () => reject(tx.error ?? new Error('Could not restore the progress photos'))
     tx.onabort = () => reject(tx.error ?? new Error('Restoring the progress photos was interrupted'))
   })

@@ -3,15 +3,17 @@ import { Rows, Row, Section } from '../parts'
 import { moduleTree } from '../modules'
 import type { OsData } from '../types'
 import type { SyncMode } from '../storage'
+import type { PhotoSync } from '../photoCloud'
 
 const BUILD = '2026-09-03 · React'
 const LS_MAX = 5_000_000
 
-export function SettingsScreen({ data, mode, error, token, onCurrency, onToken, onExport, onUpdate, onNewModule, onDeleteModule }: {
+export function SettingsScreen({ data, mode, error, token, photos, onCurrency, onToken, onExport, onUpdate, onNewModule, onDeleteModule }: {
   data: OsData
   mode: SyncMode
   error: string | null
   token: string
+  photos: PhotoSync | null
   onCurrency: (value: string) => void
   onToken: (value: string) => void
   onExport: () => void
@@ -83,6 +85,22 @@ export function SettingsScreen({ data, mode, error, token, onCurrency, onToken, 
             </span>
           </div>
           <span className={`os-pill ${mode === 'cloud' ? 'good' : 'warn'}`}>{mode === 'cloud' ? 'sincronizat' : 'local'}</span>
+        </div>
+
+        <div className="os-split">
+          <div>
+            <b>Poze de progres</b>
+            <span className="os-muted">
+              {photos === null
+                ? 'Se verifică…'
+                : photos.error
+                  ? `Nu urcă: ${photos.error}. Pozele rămân pe aparatul ăsta.`
+                  : `În Storage, în dosarul tău. Urcate acum: ${photos.uploaded}. Aduse: ${photos.downloaded}.`}
+            </span>
+          </div>
+          <span className={`os-pill ${photos && !photos.error ? 'good' : 'warn'}`}>
+            {photos === null ? '…' : photos.error ? 'local' : 'sincronizat'}
+          </span>
         </div>
 
         <div>

@@ -41,7 +41,7 @@ const GYM_PAGES: Array<{ key: GymPage; name: string }> = [
 ]
 
 export function OsApp() {
-  const { data, mode, error, update } = useOs()
+  const { data, mode, error, photos, update } = useOs()
   const [view, setView] = useState('azi')
   const [month, setMonth] = useState(ym())
   const [calMonth, setCalMonth] = useState(ym())
@@ -117,6 +117,7 @@ export function OsApp() {
       case 'calendar': return <CalendarScreen data={data} month={calMonth} day={calDay}
         onMonth={setCalMonth} onDay={setCalDay} onAddTask={() => open(core.task('taskuri', calDay))} />
       case 'settings': return <SettingsScreen data={data} mode={mode} error={error} token={deviceToken()}
+        photos={photos}
         onCurrency={value => update(draft => { draft.settings.currency = value })}
         onToken={value => { setDeviceToken(value); location.reload() }}
         onExport={exportData} onUpdate={hardReload}
