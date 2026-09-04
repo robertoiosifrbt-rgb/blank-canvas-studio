@@ -17,6 +17,17 @@ import { deviceToken } from './cloud'
 
 const PHOTO_API = 'https://xmhvkgoxhoiuiigimied.supabase.co/functions/v1/photo-api'
 
+/*
+ * Cheia publică a proiectului. Poarta Supabase cere una la fiecare apel de
+ * funcție, chiar cu verificarea JWT oprită, și o vrea din sistemul nou de
+ * chei — pe cea veche, `anon`, o refuză cu „matched no key configured".
+ *
+ * Nu dă niciun drept: e făcută să stea în codul unei pagini web. `photo-api`
+ * nici nu se uită la ea — cere `x-device-token` și ține pe server cheia care
+ * chiar poate scrie în Storage.
+ */
+const PUBLISHABLE_KEY = 'sb_publishable_0Qj9Bhx7hFvcRJ2AI_8R8g_WFw2uGwy'
+
 interface Reply {
   files?: string[]
   data?: string
@@ -31,14 +42,11 @@ interface Reply {
 async function call(body: Record<string, unknown>): Promise<Reply> {
   const response = await fetch(PHOTO_API, {
     method: 'POST',
-    /*
-     * Nicio cheie Supabase, ca la `state-api`: funcția are verificarea JWT
-     * oprită, iar ea nu se uită la chei — cere `x-device-token` și ține pe
-     * server cheia care are drepturi. Trimisă totuși, o cheie ar fi verificată
-     * de poartă, iar proiectul e pe sistemul nou de chei: una veche e
-     * respinsă cu 401 înainte ca funcția să vadă cererea.
-     */
-    headers: { 'Content-Type': 'application/json', 'x-device-token': deviceToken() },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-device-token': deviceToken(),
+      apikey: PUBLISHABLE_KEY,
+    },
     body: JSON.stringify(body),
   })
   /* Citit ca text întâi: un răspuns care nu e JSON — o pagină de eroare a

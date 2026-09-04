@@ -121,10 +121,11 @@ describe('sincronizarea pozelor de progres', () => {
     const headers = seen[0].headers as Record<string, string>
     expect(headers['x-device-token']).toBe('token-de-test-1234567890')
 
-    /* Nicio cheie Supabase în cerere. Una veche e respinsă de poartă cu 401,
-       iar una cu drepturi n-are ce căuta în codul unei pagini web. */
-    expect(Object.keys(headers).map(name => name.toLowerCase()))
-      .toEqual(['content-type', 'x-device-token'])
+    /* Cheia din cerere trece doar de poarta Supabase și trebuie să fie cea
+       publică: una `secret` în codul unei pagini web ar da oricui drepturi
+       depline pe baza de date. */
+    expect(headers.apikey.startsWith('sb_publishable_')).toBe(true)
+    expect(JSON.stringify(headers)).not.toContain('secret')
   })
 
   it('dă măcar numărul când răspunsul e gol', async () => {
