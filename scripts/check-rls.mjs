@@ -6,7 +6,8 @@
 
 import pg from 'pg'
 
-import { A, B, CASES, contextFor } from './lib/rls.mjs'
+import { CASES } from './lib/rls.mjs'
+import { A, B, contextFor } from './lib/rls-context.mjs'
 
 const DATABASE_URL = process.env.DATABASE_URL
 if (!DATABASE_URL) {

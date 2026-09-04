@@ -10,6 +10,7 @@ import {
   countLines,
   importsOf,
   LINE_LIMIT,
+  NOT_CODE,
   readTree,
   resolveImport,
 } from './structure.mjs'
@@ -45,11 +46,26 @@ describe('checkLineLimits', () => {
     expect(checkLineLimits([{ path: 'src/a.ts', contents: overLimit }])).toHaveLength(1)
   })
 
-  it('applies to .ts and .tsx, not to anything else', () => {
+  it('applies to every source file, wherever it lives', () => {
     const tooMany = `${'x\n'.repeat(LINE_LIMIT + 1)}`
-    expect(checkLineLimits([{ path: 'src/a.tsx', contents: tooMany }])).toHaveLength(1)
+    // The tools that do the checking are code too. A 315-line file sat in
+    // scripts/ unnoticed while this rule only looked at src/.
+    for (const path of [
+      'src/a.tsx',
+      'src/a.ts',
+      'scripts/a.mjs',
+      'scripts/lib/a.mjs',
+      'eslint.config.js',
+    ]) {
+      expect(checkLineLimits([{ path, contents: tooMany }])).toHaveLength(1)
+    }
+  })
+
+  it('does not apply to what is not source', () => {
+    const tooMany = `${'x\n'.repeat(LINE_LIMIT + 1)}`
     expect(checkLineLimits([{ path: 'src/a.css', contents: tooMany }])).toEqual([])
-    expect(checkLineLimits([{ path: 'src/a.md', contents: tooMany }])).toEqual([])
+    expect(checkLineLimits([{ path: 'docs/PLAN.md', contents: tooMany }])).toEqual([])
+    expect(checkLineLimits([{ path: 'package-lock.json', contents: tooMany }])).toEqual([])
   })
 })
 
@@ -185,5 +201,19 @@ describe('readTree', () => {
 
     expect(paths).toEqual(['module/new/deep/bottom.tsx', 'top.ts'])
     expect(files[0].contents).toBe('b\n')
+  })
+
+  it('steps over what is not code, and nothing else', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'structure-skip-'))
+    for (const skipped of NOT_CODE) {
+      mkdirSync(path.join(root, skipped), { recursive: true })
+      writeFileSync(path.join(root, skipped, 'huge.ts'), 'x\n'.repeat(9999))
+    }
+    mkdirSync(path.join(root, 'brand-new-folder'), { recursive: true })
+    writeFileSync(path.join(root, 'brand-new-folder/seen.ts'), 'a\n')
+
+    const paths = readTree(root).map((f) => f.path.slice(root.length + 1))
+
+    expect(paths).toEqual(['brand-new-folder/seen.ts'])
   })
 })
