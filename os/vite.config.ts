@@ -7,6 +7,11 @@ export default defineConfig({
   base: '/',
   plugins: [react()],
   define: {
-    __APP_VERSION__: JSON.stringify(process.env.VITE_COMMIT_SHA ?? 'dev'),
+    /* Din ce commit e construită aplicația. Vercel pune `VERCEL_GIT_COMMIT_SHA`
+       singur la fiecare build; `VITE_COMMIT_SHA` e pentru construit de mână.
+       Fără asta, „ce versiune am pe telefon?" e o discuție, nu o privire. */
+    __APP_VERSION__: JSON.stringify(
+      process.env.VITE_COMMIT_SHA ?? process.env.VERCEL_GIT_COMMIT_SHA ?? 'local',
+    ),
   },
 })

@@ -5,7 +5,8 @@ import type { OsData } from '../types'
 import type { SyncMode } from '../storage'
 import type { PhotoSync } from '../photoCloud'
 
-const BUILD = '2026-09-03 · React'
+/* Scurt, cât să se compare cu un commit din GitHub. */
+const BUILD = __APP_VERSION__.slice(0, 7)
 const LS_MAX = 5_000_000
 
 export function SettingsScreen({ data, mode, error, token, photos, onCurrency, onToken, onExport, onUpdate, onNewModule, onDeleteModule }: {
