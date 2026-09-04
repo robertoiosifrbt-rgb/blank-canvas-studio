@@ -11,11 +11,17 @@
   font-size: var(--text-s);
 }
 
+/* The head steps out of the body padding, like the grid below it. Inside it,
+   three buttons and a heading have to share 320px on the narrowest phone: kept
+   in the padding the title was left 108px for the 147px "September 2026"
+   needs, and rendered cut. Out here it has room to spare. */
 .month-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+  gap: var(--space-1);
+  margin-left: calc(-1 * var(--space-4));
+  margin-right: calc(-1 * var(--space-4));
+  padding: 0 var(--space-1);
 }
 
 .month-step {
@@ -33,13 +39,9 @@
   transform: translateY(1px);
 }
 
-/* Its own row, not squeezed into the month head: at 320px a button up there
-   left the title 108px for the 147px "September 2026" needs, and a heading cut
-   to "September 20…" is the kind of thing no check catches. */
 .month-today {
-  align-self: flex-start;
   min-height: var(--tap);
-  padding: 0 var(--space-3);
+  padding: 0 var(--space-2);
   border-radius: var(--radius-s);
   border: 1px solid var(--accent);
   background: var(--accent-wash);

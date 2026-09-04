@@ -78,9 +78,14 @@ describe('shiftMonth', () => {
 })
 
 describe('formatMonth', () => {
-  it('always names the year: a grid can be scrolled anywhere', () => {
-    expect(formatMonth('2026-09')).toBe('September 2026')
-    expect(formatMonth('2027-02')).toBe('February 2027')
+  it('leaves the year out inside the year you are in', () => {
+    expect(formatMonth('2026-09', '2026-09-04')).toBe('September')
+    expect(formatMonth('2026-02', '2026-09-04')).toBe('February')
+  })
+
+  it('names the year once the grid leaves it', () => {
+    expect(formatMonth('2027-02', '2026-09-04')).toBe('February 2027')
+    expect(formatMonth('2025-12', '2026-09-04')).toBe('December 2025')
   })
 })
 
