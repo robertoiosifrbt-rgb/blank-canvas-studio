@@ -21,11 +21,6 @@
   letter-spacing: -0.01em;
 }
 
-.signin-subtitle {
-  color: var(--text-dim);
-  font-size: var(--text-s);
-}
-
 .signin-form {
   display: flex;
   flex-direction: column;
