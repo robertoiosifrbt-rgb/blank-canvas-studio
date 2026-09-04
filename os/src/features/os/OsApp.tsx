@@ -20,6 +20,9 @@ import { Tasks } from './screens/Tasks'
 import { Today } from './screens/Today'
 import { deviceToken, setDeviceToken } from './cloud'
 import { resolveGoals } from './goalSources'
+import type { DocFile } from './types'
+import { describeImport, importInto } from './transfer'
+import { deleteDocFile, openDocFile, uploadDocFile } from './docFiles'
 import { useOs } from './useOs'
 import { UnitsProvider } from '../../shared/UnitsProvider'
 import './osTokens.css'
@@ -58,6 +61,8 @@ export function OsApp() {
   const [problem, setProblem] = useState<string | null>(null)
   const [sheet, setSheet] = useState(false)
   const [gymPage, setGymPage] = useState<GymPage>('home')
+  const [imported, setImported] = useState<string | null>(null)
+  const [busyDoc, setBusyDoc] = useState<string | null>(null)
 
   const goals = useMemo(() => goalDialogs(data, update), [data, update])
   const core = useMemo(() => coreDialogs(data, update), [data, update])
@@ -118,12 +123,18 @@ export function OsApp() {
         onDelete={h => open(core.confirm(`Ștergi „${h.name}”?`,
           'Se pierde tot istoricul de bife. Nu se poate anula.',
           () => update(draft => { delete draft.habits[h.id] })))} />
-      case 'docs': return <Docs data={data} mod={view}
+      case 'docs': return <Docs data={data} mod={view} busy={busyDoc}
         onAdd={() => open(core.doc(view))} onOpen={d => open(core.doc(view, d))}
         onToggle={d => update(draft => { draft.docs[d.id].done = !draft.docs[d.id].done })}
         onDelete={d => open(core.confirm(`Ștergi „${d.title}”?`,
-          'Dispare din listă și din calendar. Nu se poate anula.',
-          () => update(draft => { delete draft.docs[d.id] })))} />
+          `Dispare din listă și din calendar${(d.files ?? []).length ? ', împreună cu scanurile atașate' : ''}. Nu se poate anula.`,
+          () => {
+            /* Fișierele întâi: șterse după ce documentul dispare, n-am mai
+               ști niciodată că sunt acolo, și ar ocupa loc pe veci. */
+            for (const file of d.files ?? []) void deleteDocFile(d.id, file).catch(() => undefined)
+            update(draft => { delete draft.docs[d.id] })
+          }))}
+        onAttach={attachToDoc} onOpenFile={showDocFile} onDeleteFile={removeDocFile} />
       case 'notes': return <Notes data={data} mod={view} search={search} onSearch={setSearch}
         onAdd={() => open(core.note(view))} onOpen={n => open(core.note(view, n))} />
       case 'calendar': return <CalendarScreen data={data} month={calMonth} day={calDay}
@@ -132,7 +143,7 @@ export function OsApp() {
         photos={photos}
         onCurrency={value => update(draft => { draft.settings.currency = value })}
         onToken={value => { setDeviceToken(value); location.reload() }}
-        onExport={exportData} onUpdate={hardReload}
+        onExport={exportData} onImport={importFile} imported={imported} onUpdate={hardReload}
         onNewModule={() => open(core.module())}
         onDeleteModule={id => open(core.removeModule(id))} />
       case 'hub': return <div className="os-head"><div><h1>{current?.name}</h1>
@@ -149,6 +160,61 @@ export function OsApp() {
     link.download = `roberto-os-${today()}.json`
     link.click()
     URL.revokeObjectURL(link.href)
+  }
+
+  async function attachToDoc(doc: { id: string }, file: File) {
+    setBusyDoc(doc.id)
+    setProblem(null)
+    try {
+      const stored = await uploadDocFile(doc.id, file)
+      update(draft => { draft.docs[doc.id].files = [...(draft.docs[doc.id].files ?? []), stored] })
+    } catch (error) {
+      setProblem(error instanceof Error ? error.message : String(error))
+    } finally {
+      setBusyDoc(null)
+    }
+  }
+
+  async function showDocFile(doc: { id: string }, file: DocFile) {
+    setProblem(null)
+    try {
+      const url = await openDocFile(doc.id, file)
+      /* Deschis într-o filă nouă: browserul știe să arate un PDF mai bine
+         decât aș ști eu, iar poza se vede la mărimea ei. */
+      window.open(url, '_blank', 'noopener')
+      /* Adresa ține fișierul în memorie cât e vie; o eliberăm după ce fila a
+         apucat să-l citească. */
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch (error) {
+      setProblem(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  function removeDocFile(doc: { id: string }, file: DocFile) {
+    open(core.confirm(`Ștergi „${file.name}”?`, 'Dispare din cloud. Nu se poate anula.', () => {
+      update(draft => {
+        draft.docs[doc.id].files = (draft.docs[doc.id].files ?? []).filter(f => f.id !== file.id)
+      })
+      void deleteDocFile(doc.id, file).catch((error: unknown) => {
+        setProblem(error instanceof Error ? error.message : String(error))
+      })
+    }))
+  }
+
+  async function importFile(file: File) {
+    setImported('Se citește…')
+    try {
+      const parsed: unknown = JSON.parse(await file.text())
+      /* Contopirea se face pe datele salvate, nu pe cele arătate: altfel
+         citirile aduse din sală s-ar scrie în obiective ca și cum ar fi ale
+         lor, și ar rămâne acolo după ce le ștergi din sală. */
+      const result = importInto(stored, parsed)
+      if (result.error) { setImported(result.error); return }
+      update(draft => { Object.assign(draft, result.data) })
+      setImported(`Adăugate: ${describeImport(result.added)}.`)
+    } catch {
+      setImported('Fișierul nu e un JSON valid.')
+    }
   }
 
   async function hardReload() {

@@ -109,6 +109,14 @@ export interface OsSettings {
   seeded?: boolean
 }
 
+/** Un fișier atașat unui document: cât să-l poți arăta și regăsi. */
+export interface DocFile {
+  id: string
+  name: string
+  type: string
+  size: number
+}
+
 /**
  * O hârtie primită: o scrisoare, o factură, o decizie.
  *
@@ -132,6 +140,11 @@ export interface Doc {
   note?: string
   /** Datoria pe care o privește, dacă e cazul. */
   debt?: string
+  /**
+   * Scanurile atașate. Lista stă aici, deci se sincronizează cu restul
+   * datelor; conținutul stă în Storage, unde încape.
+   */
+  files?: DocFile[]
   done?: boolean
   createdAt?: string
 }

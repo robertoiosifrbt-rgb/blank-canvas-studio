@@ -9,7 +9,7 @@ import type { PhotoSync } from '../photoCloud'
 const BUILD = __APP_VERSION__.slice(0, 7)
 const LS_MAX = 5_000_000
 
-export function SettingsScreen({ data, mode, error, token, photos, onCurrency, onToken, onExport, onUpdate, onNewModule, onDeleteModule }: {
+export function SettingsScreen({ data, mode, error, token, photos, imported, onCurrency, onToken, onExport, onImport, onUpdate, onNewModule, onDeleteModule }: {
   data: OsData
   mode: SyncMode
   error: string | null
@@ -18,6 +18,8 @@ export function SettingsScreen({ data, mode, error, token, photos, onCurrency, o
   onCurrency: (value: string) => void
   onToken: (value: string) => void
   onExport: () => void
+  onImport: (file: File) => void
+  imported: string | null
   onUpdate: () => void
   onNewModule: () => void
   onDeleteModule: (id: string) => void
@@ -117,6 +119,26 @@ export function SettingsScreen({ data, mode, error, token, photos, onCurrency, o
             <span className="os-muted">Descarci tot într-un fișier pe care îl păstrezi tu.</span>
           </div>
           <button className="os-btn" onClick={onExport}>Exportă tot</button>
+        </div>
+
+        <div className="os-split">
+          <div>
+            <b>Import</b>
+            <span className="os-muted">
+              {imported ?? 'Aduce datele dintr-un fișier exportat. Adaugă și înlocuiește după id — nu șterge nimic din ce ai.'}
+            </span>
+          </div>
+          {/* Input-ul de fișier nu se poate stiliza, deci stă ascuns sub o
+              etichetă care arată ca restul butoanelor. */}
+          <label className="os-btn ghost">
+            Alege fișier
+            <input type="file" accept="application/json,.json" style={{ display: 'none' }}
+              onChange={event => {
+                const file = event.target.files?.[0]
+                if (file) onImport(file)
+                event.target.value = ''
+              }} />
+          </label>
         </div>
       </div>
 

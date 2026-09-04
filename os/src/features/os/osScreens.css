@@ -112,3 +112,18 @@
   .os-modal{max-width:none;border-radius:16px 16px 0 0;max-height:92vh;overflow-y:auto}
   .os-fld input,.os-fld select,.os-fld textarea,.os-in{font-size:16px}
 }
+
+/* Documentele: un card pe hârtie, cu loc pentru notă și pentru scanuri. */
+.os-doc{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.os-doc-head{display:flex;align-items:flex-start;gap:12px}
+.os-doc-head>div{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.os-doc-amount{font-family:var(--os-mono);font-size:15px;font-weight:600;
+  font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--os-ink)}
+.os-doc-files{display:flex;flex-direction:column;gap:6px}
+.os-doc-file{display:flex;align-items:center;gap:6px}
+.os-doc-open{flex:1;min-width:0;display:flex;align-items:center;gap:8px;text-align:left;
+  border:1px solid var(--os-line);background:var(--os-surface-2);color:var(--os-ink);
+  border-radius:8px;padding:8px 11px;font:inherit;font-size:13.5px;cursor:pointer;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.os-doc-open em{font-style:normal;color:var(--os-ink-3);font-family:var(--os-mono);font-size:11px}
+.os-btn.busy{opacity:.6}
