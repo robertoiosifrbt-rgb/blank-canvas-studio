@@ -96,12 +96,18 @@ export function shiftMonth(month: string, by: number): string {
   return `${at.getUTCFullYear()}-${pad(at.getUTCMonth() + 1)}`
 }
 
-/** "September 2026" — the heading above the grid. */
-export function formatMonth(month: string): string {
+/**
+ * "September", or "September 2027" when it falls in another year than today.
+ *
+ * The same rule as formatDay: the year appears only when leaving it out could
+ * mislead. It also buys the heading room it genuinely needs — three buttons
+ * and a title share 320px on the narrowest phone.
+ */
+export function formatMonth(month: string, today: string): string {
   const { year, month: m } = monthParts(month)
   const name = MONTHS[m - 1]
   if (name === undefined) throw new Error(`Invalid month: ${month}`)
-  return `${name} ${year}`
+  return year === parts(today).year ? name : `${name} ${year}`
 }
 
 /** Every day of the month, in order, as 'YYYY-MM-DD'. */

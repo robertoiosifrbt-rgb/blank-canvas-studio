@@ -76,7 +76,7 @@ export function CalendarScreen() {
         >
           ‹
         </button>
-        <h2 className="month-title">{formatMonth(month)}</h2>
+        <h2 className="month-title">{formatMonth(month, today)}</h2>
         <button
           className="month-step"
           type="button"
@@ -85,6 +85,11 @@ export function CalendarScreen() {
         >
           ›
         </button>
+        {away && (
+          <button className="month-today" type="button" onClick={backToToday}>
+            Today
+          </button>
+        )}
       </div>
 
       <div className="month-grid">
@@ -117,12 +122,6 @@ export function CalendarScreen() {
           </button>
         ))}
       </div>
-
-      {away && (
-        <button className="month-today" type="button" onClick={backToToday}>
-          Back to today
-        </button>
-      )}
 
       <section className={`day${selected === today ? ' day-today' : ''}`}>
         <h2 className="day-heading">{formatWeekday(selected, today)}</h2>
