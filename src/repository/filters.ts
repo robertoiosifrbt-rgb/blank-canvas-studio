@@ -73,9 +73,13 @@ export type CalendarDay = {
 /**
  * The days, with what you planned and what you did. No new table.
  *
- * A task due Monday and finished Wednesday shows up in both. A task with no
- * date, finished, shows up on Wednesday — that is why done_at exists, so that
- * nothing finished disappears from every screen.
+ * A task due Monday and finished Wednesday shows up in both — that is the
+ * point: you see the difference between the plan and what happened. When both
+ * fall on the same day there is no difference to see, only the same row twice,
+ * so it stays once, under done: done is what actually happened.
+ *
+ * A task with no date, finished, shows up on Wednesday — that is why done_at
+ * exists, so that nothing finished disappears from every screen.
  */
 export function forCalendar(items: readonly Item[]): CalendarDay[] {
   const days = new Map<string, CalendarDay>()
@@ -89,7 +93,8 @@ export function forCalendar(items: readonly Item[]): CalendarDay[] {
   }
 
   for (const item of alive(items)) {
-    if (item.due !== null) dayOf(item.due).planned.push(item)
+    const sameDay = item.due !== null && item.due === item.done_at
+    if (item.due !== null && !sameDay) dayOf(item.due).planned.push(item)
     if (item.done_at !== null) dayOf(item.done_at).done.push(item)
   }
 
