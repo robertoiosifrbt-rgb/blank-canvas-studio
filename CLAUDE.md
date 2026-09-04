@@ -13,7 +13,7 @@ n-o mai repete de fiecare dată.
 
 **Stau în GitHub Issues, permanent. Nu se face niciun fișier pentru ele.**
 
-    https://github.com/robertoiosifrbt-rgb/blank-canvas-studio/issues
+    https://github.com/robertoiosifrbt-rgb/lifeCc/issues
 
 Unealta ține numărul, data deschiderii, data închiderii, starea și
 proprietarul. Un fișier le ține pe niciuna, și le cere de mână pe toate — de-aia
