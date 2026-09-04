@@ -45,7 +45,6 @@ export function SignInScreen() {
   return (
     <div className="signin">
       <h1 className="signin-title">Life Control Centre</h1>
-      <p className="signin-subtitle">Your data follows the account, on any phone.</p>
 
       <form className="signin-form" onSubmit={(event) => void submit(event)}>
         <label className="signin-field">
