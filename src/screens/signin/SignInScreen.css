@@ -13,12 +13,19 @@
   max-width: 26rem;
   margin: 0 auto;
   width: 100%;
+  background: var(--bg);
+  background: radial-gradient(
+      120% 60% at 50% 0%,
+      color-mix(in srgb, var(--accent) 10%, var(--bg)) 0%,
+      var(--bg) 60%
+    ),
+    var(--bg);
 }
 
 .signin-title {
   font-size: var(--text-xl);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: 650;
+  letter-spacing: -0.025em;
 }
 
 .signin-form {
@@ -36,6 +43,7 @@
 
 .signin-label {
   font-size: var(--text-s);
+  font-weight: 550;
   color: var(--text-dim);
 }
 
@@ -49,37 +57,50 @@
   color: var(--text);
   background: var(--bg-raised);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-soft);
 }
 
 .signin-input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+  border-color: var(--accent);
 }
 
 .signin-message {
+  padding: var(--space-3);
+  border-radius: var(--radius-s);
   font-size: var(--text-s);
   overflow-wrap: anywhere;
 }
 
 .signin-message-error {
+  background: var(--danger-wash);
   color: var(--danger);
 }
 
 .signin-message-good {
-  color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent-text);
 }
 
 .signin-button {
   min-height: var(--tap);
   border-radius: var(--radius);
-  background: var(--accent);
-  color: #12100e;
-  font-weight: 600;
+  border: 1px solid var(--accent-strong);
+  background: linear-gradient(180deg, var(--accent-strong), var(--accent));
+  box-shadow: var(--shadow-soft);
+  color: var(--accent-ink);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.signin-button:active {
+  transform: translateY(1px);
 }
 
 .signin-button:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
 .signin-switch {

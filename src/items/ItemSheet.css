@@ -9,6 +9,8 @@
 .item-label {
   color: var(--text-dim);
   font-size: var(--text-s);
+  font-weight: 550;
+  letter-spacing: 0.01em;
 }
 
 .item-input {
@@ -18,14 +20,15 @@
   font: inherit;
   font-size: var(--text-m);
   color: var(--text);
-  background: var(--bg);
+  background: var(--bg-sunken);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-s);
 }
 
 .item-input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+  border-color: var(--accent);
 }
 
 .item-hint {
@@ -42,29 +45,40 @@
 .item-button {
   min-height: var(--tap);
   padding: 0 var(--space-4);
-  border-radius: var(--radius);
+  border-radius: var(--radius-s);
   border: 1px solid var(--line);
+  background: var(--bg);
   color: var(--text);
   font-size: var(--text-m);
 }
 
+.item-button:active {
+  transform: translateY(1px);
+}
+
 .item-button:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
 .item-primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #12100e;
-  font-weight: 600;
+  border-color: var(--accent-strong);
+  background: linear-gradient(180deg, var(--accent-strong), var(--accent));
+  box-shadow: var(--shadow-soft);
+  color: var(--accent-ink);
+  font-weight: 650;
 }
 
 .item-danger {
+  border-color: var(--line);
+  background: var(--bg);
   color: var(--danger);
 }
 
 .item-error,
 .item-unsaved {
+  padding: var(--space-3);
+  border-radius: var(--radius-s);
+  background: var(--danger-wash);
   color: var(--danger);
   font-size: var(--text-s);
   overflow-wrap: anywhere;

@@ -1,5 +1,6 @@
 /* The only place colours, spacing and sizes are written.
    Imported exclusively from main.tsx. */
+
 :root {
   /* The phone's safe areas. Overridden by the layout checker, which
      simulates a phone with a notch. */
@@ -8,13 +9,28 @@
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
 
-  --bg: #12100e;
-  --bg-raised: #1c1917;
-  --line: #2f2a26;
-  --text: #f5f1ea;
-  --text-dim: #a8a09a;
-  --accent: #e8b04b;
-  --danger: #e06c5a;
+  /* Light is the default, so a browser that reports nothing gets a readable
+     screen rather than a dark one it never asked for. */
+  --bg: #f7f5f1;
+  --bg-raised: #fffefc;
+  --bg-sunken: #efece6;
+  --line: #e2ddd3;
+  --line-strong: #cfc8ba;
+  --text: #1b1917;
+  --text-dim: #6d665c;
+  /* The accent fill is the same warm amber in both themes, lit from above,
+     with dark ink on it. A dark fill with pale ink reads muddy on paper. */
+  --accent: #dd9a2e;
+  --accent-strong: #f0b451;
+  --accent-ink: #241a06;
+  /* Accent as text on the page background, dark enough to be read there. */
+  --accent-text: #8a5a0d;
+  --accent-wash: #f7ebd6;
+  --danger: #a8362a;
+  --danger-wash: #f8e6e2;
+  --shadow-soft: 0 1px 2px rgb(27 25 23 / 6%), 0 4px 12px rgb(27 25 23 / 5%);
+  --shadow-lift: 0 -1px 0 rgb(27 25 23 / 5%), 0 -12px 32px rgb(27 25 23 / 8%);
+  --veil: rgb(27 25 23 / 32%);
 
   --space-1: 4px;
   --space-2: 8px;
@@ -23,14 +39,40 @@
   --space-5: 24px;
   --space-6: 32px;
 
-  --radius: 12px;
+  --radius: 14px;
+  --radius-s: 10px;
 
   /* The minimum tap target. The layout checker fails below it. */
   --tap: 44px;
 
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --text-s: 13px;
   --text-m: 16px;
   --text-l: 20px;
-  --text-xl: 28px;
+  --text-xl: 30px;
+}
+
+/* Follows the phone. No switch in the app: the setting already exists on the
+   device, and a second one would be a second truth. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111013;
+    --bg-raised: #1a181d;
+    --bg-sunken: #0b0a0d;
+    --line: #292630;
+    --line-strong: #3b3745;
+    --text: #f4f1ec;
+    --text-dim: #a19a92;
+    --accent: #e5ad55;
+    --accent-strong: #f3c274;
+    --accent-ink: #241a06;
+    --accent-text: #e9b769;
+    --accent-wash: #2c2317;
+    --danger: #e58274;
+    --danger-wash: #33201d;
+    --shadow-soft: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 16px rgb(0 0 0 / 30%);
+    --shadow-lift: 0 -1px 0 rgb(255 255 255 / 4%), 0 -14px 34px rgb(0 0 0 / 45%);
+    --veil: rgb(0 0 0 / 58%);
+  }
 }

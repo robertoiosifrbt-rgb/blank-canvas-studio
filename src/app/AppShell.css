@@ -4,11 +4,12 @@
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
+  background: var(--bg);
 }
 
 .shell-body {
   flex: 1;
-  padding: var(--space-4);
+  padding: var(--space-5) var(--space-4) var(--space-4);
   padding-left: calc(var(--safe-left) + var(--space-4));
   padding-right: calc(var(--safe-right) + var(--space-4));
 }
@@ -21,26 +22,39 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  background: var(--bg-raised);
-  border-top: 1px solid var(--line);
-  padding: var(--space-2);
+  padding: var(--space-3) var(--space-3) 0;
   padding-bottom: calc(var(--safe-bottom) + var(--space-2));
-  padding-left: calc(var(--safe-left) + var(--space-2));
-  padding-right: calc(var(--safe-right) + var(--space-2));
+  padding-left: calc(var(--safe-left) + var(--space-3));
+  padding-right: calc(var(--safe-right) + var(--space-3));
+  border-top: 1px solid var(--line);
+  /* Solid, not translucent: a blurred bar let the list read faintly through
+     its own bottom padding, which looked unfinished rather than layered. */
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-lift);
 }
 
 .shell-capture {
   min-height: var(--tap);
   border-radius: var(--radius);
-  background: var(--accent);
-  color: #12100e;
+  border: 1px solid var(--accent-strong);
+  background: linear-gradient(180deg, var(--accent-strong), var(--accent));
+  box-shadow: var(--shadow-soft);
+  color: var(--accent-ink);
   font-size: var(--text-m);
-  font-weight: 600;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.shell-capture:active {
+  transform: translateY(1px);
 }
 
 .shell-nav {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
 }
 
 .shell-nav-button {
@@ -51,12 +65,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius);
+  border-radius: var(--radius-s);
   color: var(--text-dim);
   font-size: var(--text-m);
 }
 
 .shell-nav-button.active {
-  background: var(--bg);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-soft);
   color: var(--text);
+  font-weight: 600;
 }
