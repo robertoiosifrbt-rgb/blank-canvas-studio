@@ -69,6 +69,7 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
               <div>
                 <b>{day.date}</b>
                 <span className="os-muted">{[
+                  day.archived ? 'istoric' : '',
                   day.done ? '' : 'neterminată',
                   day.from && day.to ? `${day.from}–${day.to}` : '',
                   t.hours ? `${t.hours.toFixed(1)} h` : '',
@@ -87,7 +88,11 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
               {t.hours ? <div><b>{money(t.availablePerHour, currency)}</b><span>rămas/oră</span></div> : null}
             </div>
 
-            {day.done && day.toDebt !== undefined ? (
+            {day.archived ? (
+              <span className="os-pill">Nu atinge Finanțele</span>
+            ) : null}
+
+            {day.done && !day.archived && day.toDebt !== undefined ? (
               <span className={`os-pill ${Math.abs(t.debtDifference) < 0.01 ? 'good' : 'warn'}`}>
                 {money(day.toDebt, currency)} la datorii
                 {Math.abs(t.debtDifference) < 0.01 ? '' :

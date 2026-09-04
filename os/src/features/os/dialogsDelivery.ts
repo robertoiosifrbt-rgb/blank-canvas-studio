@@ -81,6 +81,11 @@ export function deliveryDialogs(data: OsData, update: Update) {
       { key: 'parking', label: 'Parcare', type: 'number', value: existing?.parking === undefined ? '' : String(existing.parking) },
       { key: 'tolls', label: 'Taxe de drum', type: 'number', value: existing?.tolls === undefined ? '' : String(existing.tolls) },
       { key: 'otherCost', label: 'Alte costuri ale turei', type: 'number', value: existing?.otherCost === undefined ? '' : String(existing.otherCost) },
+      { key: 'archived', label: 'Intrare veche', type: 'select',
+        value: existing?.archived ? 'da' : '', options: [
+          { value: '', label: 'Nu — banii intră în Finanțe' },
+          { value: 'da', label: 'Da — doar pentru istoric, fără bani în Finanțe' },
+        ] },
       { key: 'notes', label: 'Note', type: 'textarea', value: existing?.notes ?? '' },
     ],
     submit(values) {
@@ -96,6 +101,7 @@ export function deliveryDialogs(data: OsData, update: Update) {
           to: values.to || undefined,
           vehicle: values.vehicle || undefined,
           notes: values.notes || undefined,
+          archived: values.archived === 'da' ? true : undefined,
           done: existing?.done ?? false,
           createdAt: existing?.createdAt ?? new Date().toISOString(),
         }
@@ -116,12 +122,15 @@ export function deliveryDialogs(data: OsData, update: Update) {
    */
   const finish = (day: Workday): DialogSpec => {
     const totals = totalsOf(data, day)
+    const money_ = `Brut ${money(totals.gross, currency)}, cheltuieli ${money(totals.totalExpenses, currency)}, ` +
+      `rezerve ${money(totals.reserves, currency)}. Rămâne ${money(totals.available, currency)}.`
     return {
       title: `Închizi tura din ${day.date}?`,
-      note: `Brut ${money(totals.gross, currency)}, cheltuieli ${money(totals.totalExpenses, currency)}, ` +
-        `rezerve ${money(totals.reserves, currency)}. Rămâne ${money(totals.available, currency)}.`,
+      note: day.archived
+        ? `${money_} Fiind intrare veche, nu se scrie nimic în Finanțe.`
+        : money_,
       ok: 'Închide tura',
-      fields: [
+      fields: day.archived ? [] : [
         { key: 'toDebt', label: 'Cât trimiți la datorii', type: 'number', value: totals.available.toFixed(2) },
         { key: 'debt', label: 'Către care', type: 'select', value: '', options: [
           { value: '', label: '— niciuna anume —' },
@@ -136,6 +145,10 @@ export function deliveryDialogs(data: OsData, update: Update) {
           target.rates = data.settings.delivery ?? DEFAULT_RATES
           target.toDebt = values.toDebt ? num(values.toDebt) : undefined
           target.debt = values.debt || undefined
+
+          /* Intrările vechi se opresc aici: rămân în istoric, cu socoteala
+             lor, dar registrul de azi nu le vede niciodată. */
+          if (day.archived) return
 
           draft.finance[month] ??= { items: [] }
           const items = draft.finance[month].items

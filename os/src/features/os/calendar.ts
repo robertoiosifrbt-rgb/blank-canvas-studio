@@ -146,7 +146,10 @@ export function dayItems(data: OsData, date: string): DayItem[] {
     const t = totalsOf(data, day)
     out.push({
       kind: 'work', cls: day.done ? 'good' : 'acc',
-      title: 'Tură livrări', sub: day.done ? `${t.hours.toFixed(1)} h · ${Math.round(t.businessKm)} km` : 'neterminată',
+      title: 'Tură livrări',
+      sub: [day.archived ? 'istoric' : '',
+        day.done ? `${t.hours.toFixed(1)} h · ${Math.round(t.businessKm)} km` : 'neterminată',
+      ].filter(Boolean).join(' · '),
       amount: t.available, inflow: true, goto: day.mod,
       lines: [`brut ${t.gross.toFixed(2)}`, `cheltuieli ${t.totalExpenses.toFixed(2)}`,
         `rezerve ${t.reserves.toFixed(2)}`],

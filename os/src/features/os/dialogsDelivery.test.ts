@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { deliveryDialogs } from './dialogsDelivery'
-import { DEFAULT_RATES, totalsOf } from './delivery'
+import { DEFAULT_RATES, daysOf, summarise, totalsOf } from './delivery'
 import { emptyOsData, type OsData, type Workday } from './types'
 
 function run(spec: { fields: Array<{ key: string; value?: string }>
@@ -76,5 +76,41 @@ describe('procentele de livrări', () => {
     const data = ready()
     run(dialogs(data).settings(), { taxPct: '25', niPct: '9', fuelPerKm: '0.15', vehPerKm: '0.06' })
     expect(data.settings.delivery).toEqual({ taxPct: 0.25, niPct: 0.09, fuelPerKm: 0.15, vehPerKm: 0.06 })
+  })
+})
+
+describe('intrările vechi din istoric', () => {
+  it('nu scriu nimic în Finanțe', () => {
+    const data = ready()
+    data.workdays.w1.archived = true
+    run(dialogs(data).finish(data.workdays.w1))
+    expect(data.finance['2026-09']).toBeUndefined()
+  })
+
+  it('se închid totuși, cu procentele lor', () => {
+    const data = ready()
+    data.workdays.w1.archived = true
+    run(dialogs(data).finish(data.workdays.w1))
+    expect(data.workdays.w1.done).toBe(true)
+    expect(data.workdays.w1.rates).toEqual(DEFAULT_RATES)
+  })
+
+  it('nu întreabă la ce datorie merg banii, pentru că nu merg nicăieri', () => {
+    const data = ready()
+    data.workdays.w1.archived = true
+    expect(dialogs(data).finish(data.workdays.w1).fields).toEqual([])
+  })
+
+  it('spun în fereastră că nu ating Finanțele', () => {
+    const data = ready()
+    data.workdays.w1.archived = true
+    expect(String(dialogs(data).finish(data.workdays.w1).note)).toContain('nu se scrie nimic în Finanțe')
+  })
+
+  it('se socotesc ca oricare altă tură', () => {
+    const data = ready()
+    data.workdays.w1.archived = true
+    data.workdays.w1.done = true
+    expect(summarise(data, daysOf(data, 'livrari')).days).toBe(1)
   })
 })

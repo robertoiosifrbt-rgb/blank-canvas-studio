@@ -268,6 +268,15 @@ export interface Workday {
   notes?: string
   /** `false` cât timp o completezi. Zilele neterminate nu intră în totaluri. */
   done?: boolean
+  /**
+   * Intrare veche, adusă din istoric.
+   *
+   * Se socotește ca oricare alta — ore, kilometri, cât a rămas — dar nu scrie
+   * nimic în Finanțe. Banii aceia au fost câștigați și cheltuiți demult;
+   * trecuți acum prin registru, ți-ar umfla soldul de azi cu o sumă care nu
+   * există.
+   */
+  archived?: boolean
   /** Procentele cu care a fost calculată, înghețate la terminare. */
   rates?: DeliveryRates
   createdAt?: string
