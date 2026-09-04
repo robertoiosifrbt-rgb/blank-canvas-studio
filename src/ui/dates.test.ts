@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest'
 
-import { dayOf, formatDay, formatWeekday, minusDays } from './dates'
+import {
+  dayOf,
+  formatDay,
+  formatMonth,
+  formatWeekday,
+  minusDays,
+  monthDays,
+  monthOf,
+  plusDays,
+  shiftMonth,
+  weekdayIndex,
+} from './dates'
 
 const TODAY = '2026-09-04'
 
@@ -45,5 +56,62 @@ describe('minusDays', () => {
 describe('dayOf', () => {
   it('takes the day out of a timestamp', () => {
     expect(dayOf('2026-08-12T10:00:00+00:00')).toBe('2026-08-12')
+  })
+})
+
+describe('monthOf', () => {
+  it('is the month the day falls in', () => {
+    expect(monthOf('2026-09-04')).toBe('2026-09')
+  })
+})
+
+describe('shiftMonth', () => {
+  it('steps forward and back', () => {
+    expect(shiftMonth('2026-09', 1)).toBe('2026-10')
+    expect(shiftMonth('2026-09', -1)).toBe('2026-08')
+  })
+
+  it('crosses the year in both directions', () => {
+    expect(shiftMonth('2026-12', 1)).toBe('2027-01')
+    expect(shiftMonth('2026-01', -1)).toBe('2025-12')
+  })
+})
+
+describe('formatMonth', () => {
+  it('always names the year: a grid can be scrolled anywhere', () => {
+    expect(formatMonth('2026-09')).toBe('September 2026')
+    expect(formatMonth('2027-02')).toBe('February 2027')
+  })
+})
+
+describe('monthDays', () => {
+  it('runs the whole month, in order', () => {
+    const days = monthDays('2026-09')
+    expect(days.length).toBe(30)
+    expect(days[0]).toBe('2026-09-01')
+    expect(days[29]).toBe('2026-09-30')
+  })
+
+  it('knows a leap February from a common one', () => {
+    expect(monthDays('2028-02').length).toBe(29)
+    expect(monthDays('2027-02').length).toBe(28)
+  })
+})
+
+describe('plusDays', () => {
+  it('crosses a month end', () => {
+    expect(plusDays('2026-08-31', 1)).toBe('2026-09-01')
+  })
+
+  it('crosses a year end', () => {
+    expect(plusDays('2026-12-31', 1)).toBe('2027-01-01')
+  })
+})
+
+describe('weekdayIndex', () => {
+  it('starts the week on Monday', () => {
+    // 31 August 2026 is a Monday, 6 September a Sunday.
+    expect(weekdayIndex('2026-08-31')).toBe(0)
+    expect(weekdayIndex('2026-09-06')).toBe(6)
   })
 })
