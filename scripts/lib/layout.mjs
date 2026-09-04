@@ -46,13 +46,23 @@ export function inspect({ minTap, safe, tappable }) {
     return `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}${classes}`
   }
 
-  // Is the element held in place on screen, rather than scrolling away?
-  // Only pinned things can sit permanently in a safe area; scrollable content
-  // passing under the home indicator is not a defect, you just scroll it up.
+  /**
+   * Is the element held in the safe area, unable to be scrolled out of it?
+   *
+   * Only something held there is a defect; content that can be scrolled up is
+   * not. Being inside a fixed container is not enough: a sheet is fixed but
+   * its own body scrolls, so a button near the bottom of that scroll can be
+   * brought up like any other content. So the walk stops at the first
+   * scrollable ancestor and answers no.
+   */
   const pinned = (element) => {
     for (let el = element; el instanceof Element; el = el.parentElement) {
-      const position = getComputedStyle(el).position
-      if (position === 'fixed' || position === 'sticky') return true
+      const style = getComputedStyle(el)
+      if (el !== element) {
+        const scrolls = /auto|scroll/.test(style.overflowY)
+        if (scrolls && el.scrollHeight > el.clientHeight + 1) return false
+      }
+      if (style.position === 'fixed' || style.position === 'sticky') return true
     }
     return false
   }
