@@ -1,0 +1,50 @@
+/* Imported by exactly one .tsx in this directory: TodayScreen.tsx */
+
+.today {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.today-note {
+  color: var(--text-dim);
+  font-size: var(--text-s);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.group-heading {
+  font-size: var(--text-s);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.group-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.group-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--space-3);
+  text-align: left;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+.group-count {
+  color: var(--text);
+  font-size: var(--text-m);
+}

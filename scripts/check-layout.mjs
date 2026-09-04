@@ -2,9 +2,12 @@
 // Starts the app at phone width and fails if anything sticks out of the
 // screen, if text sits under the status bar, or if a tap target is too small.
 //
-// It checks both the sign-in screen and the screens behind it — so it needs an
-// account on the local Supabase. Without one it stops: a checker that silently
-// skips half the app is a green check that checks nothing.
+// It checks the sign-in screen, the screens behind it, and the two sheets — so
+// it needs an account on the local Supabase. Without one it stops: a checker
+// that silently skips half the app is a green check that checks nothing.
+//
+// It writes one row of its own first, so the lists are never empty: an empty
+// screen cannot show a row that overflows.
 //
 // At the end it checks itself, with four deliberately broken elements.
 
@@ -83,6 +86,16 @@ async function signIn(page) {
   }
 }
 
+/** Makes sure there is at least one row on screen to measure. */
+async function ensureARow(page) {
+  await open(page, '/today')
+  if ((await page.locator('.row').count()) > 0) return
+  await page.click('button[name="capture"]')
+  await page.fill('.capture-input', 'a row for the layout check')
+  await page.click('.capture-save')
+  await page.waitForSelector('.row', { timeout: 20000 })
+}
+
 const problems = []
 const server = startServer()
 let browser
@@ -108,10 +121,23 @@ try {
     }
 
     await signIn(page)
+    await ensureARow(page)
     for (const path of PRIVATE_PATHS) {
       await open(page, path)
       collect(await page.evaluate(inspect, ARGUMENTS), path, size)
     }
+
+    // The sheets are exactly where a small tap target or an overflow hides.
+    await open(page, '/today')
+    await page.click('button[name="capture"]')
+    await page.waitForSelector('.capture-input')
+    collect(await page.evaluate(inspect, ARGUMENTS), 'the capture sheet', size)
+    await page.click('.sheet-close')
+
+    await page.locator('.row').first().click()
+    await page.waitForSelector('input[name="due"]')
+    collect(await page.evaluate(inspect, ARGUMENTS), 'the item sheet', size)
+    await page.click('.sheet-close')
 
     if (size === SIZES[0]) await checkItself(page)
     await context.close()

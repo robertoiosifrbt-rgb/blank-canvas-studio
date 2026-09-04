@@ -12,7 +12,8 @@
     "test": "vitest run",
     "check:structure": "node scripts/check-structure.mjs",
     "check:layout": "node scripts/check-layout.mjs",
-    "check:rls": "node scripts/check-rls.mjs"
+    "check:rls": "node scripts/check-rls.mjs",
+    "check:cycle": "node scripts/check-cycle.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",

@@ -1,0 +1,71 @@
+/* Imported by exactly one .tsx in this directory: ItemSheet.tsx */
+
+.item-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.item-label {
+  color: var(--text-dim);
+  font-size: var(--text-s);
+}
+
+.item-input {
+  min-height: var(--tap);
+  width: 100%;
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: var(--text-m);
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.item-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.item-hint {
+  color: var(--text-dim);
+  font-size: var(--text-s);
+}
+
+.item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.item-button {
+  min-height: var(--tap);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: var(--text-m);
+}
+
+.item-button:disabled {
+  opacity: 0.6;
+}
+
+.item-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #12100e;
+  font-weight: 600;
+}
+
+.item-danger {
+  color: var(--danger);
+}
+
+.item-error,
+.item-unsaved {
+  color: var(--danger);
+  font-size: var(--text-s);
+  overflow-wrap: anywhere;
+}

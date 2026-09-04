@@ -1,0 +1,43 @@
+/* Imported by exactly one .tsx in this directory: CaptureSheet.tsx */
+
+.capture {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.capture-input {
+  min-height: var(--tap);
+  width: 100%;
+  padding: 0 var(--space-3);
+  font: inherit;
+  /* 16px keeps iOS from zooming when the field takes focus. */
+  font-size: var(--text-m);
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.capture-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.capture-error {
+  color: var(--danger);
+  font-size: var(--text-s);
+  overflow-wrap: anywhere;
+}
+
+.capture-save {
+  min-height: var(--tap);
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #12100e;
+  font-weight: 600;
+}
+
+.capture-save:disabled {
+  opacity: 0.6;
+}

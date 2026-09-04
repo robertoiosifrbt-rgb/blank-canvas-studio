@@ -8,11 +8,11 @@ Construit până acum:
 - **pasul 2** — regulile impuse
 - **pasul 3** — autentificare (email și parolă) și coloana, în bază
 - **pasul 4** — stratul de date: snapshot, delta, scriere, export
+- **pasul 5** — Captura, Azi, Calendarul, foaia de item și „Descarcă tot"
 
-Stratul de date există și e verificat, dar **niciun ecran nu-l folosește încă**:
-Captura, Azi, Calendarul, foaia de item și butonul „Descarcă tot" vin la pasul
-5. Tot ce ține de sincronizare stă în `src/repository/`, iar ESLint nu lasă
-niciun alt fișier să atingă Supabase.
+Ciclul complet e închis: scrii un rând, îl procesezi, îl bifezi, îl descarci,
+și îl găsești pe alt dispozitiv și după refresh. Tot ce ține de date stă în
+`src/repository/`, iar ESLint nu lasă niciun alt fișier să atingă Supabase.
 
 ## Comenzi
 
@@ -23,6 +23,7 @@ niciun alt fișier să atingă Supabase.
     npm run build        tsc -b && vite build
     npm run check:structure   300 de linii, convenția CSS
     npm run check:rls         RLS, negative și pozitive
+    npm run check:cycle       ciclul complet, prin browser
     npm run check:layout      așezarea la lățime de telefon
 
 ## Limba
@@ -50,11 +51,18 @@ bază rulează pe Supabase local, efemer — niciodată pe producție.
     DATABASE_URL="$(supabase status -o env | grep '^DB_URL' | cut -d= -f2- | tr -d '\"')" \
       npm run check:rls
 
-`check:layout` are nevoie de un cont, pentru că ecranele aplicației stau după
-autentificare. Se face unul pe baza locală (vezi jobul `local-database` din
-`.github/workflows/ci.yml` pentru comanda exactă), apoi:
+`check:cycle` și `check:layout` au nevoie de un cont, pentru că ecranele stau
+după autentificare. Se face unul pe baza locală (vezi jobul `local-database`
+din `.github/workflows/ci.yml` pentru comanda exactă), apoi:
 
+    npm run build
+    CHECK_EMAIL=... CHECK_PASSWORD=... npm run check:cycle
     CHECK_EMAIL=... CHECK_PASSWORD=... npm run check:layout
+
+`check:cycle` e testul de acceptanță al pasului 5, exact cum e scris în plan:
+scrii „call X", apare în Inbox, îl procesezi ca task pe mâine, apare în
+Calendar pe mâine, îl bifezi, apare ca făcut în ziua în care l-ai bifat, îl
+descarci și îl vezi în fișier, îl găsești pe alt dispozitiv și după refresh.
 
 Dacă ai deja un Chromium, i-l dai direct în loc să-l descarci:
 
@@ -73,3 +81,6 @@ Astea nu se pot automatiza aici și nu se sar.
    verifică doar așa.
 3. **Marginile de siguranță pe telefon adevărat.** Verificatorul de așezare
    simulează crestătura; un telefon real o are.
+4. **Timpul de scriere la Captură.** Criteriul din plan e al omului, nu al unui
+   test: câmpul e focalizat la deschidere, salvarea e un singur gest, și nu
+   există formular intermediar. Se verifică cu degetul, pe telefon.
