@@ -1,4 +1,5 @@
 import { Head, Rows, Row, Section } from '../parts'
+import { itemsUnder, moduleById } from '../modules'
 import { money, today } from '../format'
 import type { Doc, OsData } from '../types'
 
@@ -31,7 +32,7 @@ export function Docs({ data, mod, onAdd, onOpen, onToggle, onDelete }: {
   onDelete: (doc: Doc) => void
 }) {
   const currency = data.settings.currency
-  const list = Object.values(data.docs ?? {}).filter(doc => doc.mod === mod).sort(byUrgency)
+  const list = itemsUnder(data, data.docs ?? {}, mod).sort(byUrgency)
   const open = list.filter(doc => !doc.done)
 
   if (list.length === 0) {
@@ -58,6 +59,9 @@ export function Docs({ data, mod, onAdd, onOpen, onToggle, onDelete }: {
           <Row key={doc.id} stripe={stripeOf(doc)}
             title={doc.title}
             sub={[
+              /* Numele submodulului, dar numai când te uiți de mai sus:
+                 înăuntru în el ar fi scris pe fiecare rând degeaba. */
+              doc.mod !== mod ? moduleById(data, doc.mod)?.name : '',
               doc.from,
               doc.ref ? `ref. ${doc.ref}` : '',
               doc.date ? `din ${doc.date}` : '',

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { dayItems } from './calendar'
+import { itemsUnder } from './modules'
 import { emptyOsData, type Doc, type OsData } from './types'
 
 const withDocs = (docs: Doc[]): OsData => ({
@@ -40,8 +41,40 @@ describe('documentele în calendar', () => {
   })
 
   it('nu cad pe date salvate înainte ca modulul să existe', () => {
-    const old = { ...emptyOsData() } as OsData & { docs?: unknown }
-    delete old.docs
+    /* Datele vechi din cloud n-au deloc cheia `docs`. */
+    const { docs: _dropped, ...old } = emptyOsData()
     expect(() => dayItems(old as OsData, '2026-09-10')).not.toThrow()
+  })
+})
+
+describe('documentele pe submodule', () => {
+  const tree = (): OsData => ({
+    ...emptyOsData(),
+    modules: {
+      dwp: { id: 'dwp', name: 'DWP', kind: 'docs', parent: 'documente' },
+      apel: { id: 'apel', name: 'Apeluri', kind: 'docs', parent: 'dwp' },
+      hmrc: { id: 'hmrc', name: 'HMRC', kind: 'docs', parent: 'documente' },
+    },
+    docs: {
+      a: doc({ id: 'a', mod: 'documente', title: 'Direct' }),
+      b: doc({ id: 'b', mod: 'dwp', title: 'Din DWP' }),
+      c: doc({ id: 'c', mod: 'apel', title: 'Din apeluri' }),
+      d: doc({ id: 'd', mod: 'hmrc', title: 'Din HMRC' }),
+    },
+  })
+
+  it('părintele le arată pe toate cele de sub el, la orice adâncime', () => {
+    const under = itemsUnder(tree(), tree().docs, 'documente')
+    expect(under.map(x => x.title).sort())
+      .toEqual(['Din DWP', 'Din HMRC', 'Din apeluri', 'Direct'].sort())
+  })
+
+  it('un submodul arată doar ce e sub el, nu ce e la fratele lui', () => {
+    expect(itemsUnder(tree(), tree().docs, 'dwp').map(x => x.title).sort())
+      .toEqual(['Din DWP', 'Din apeluri'])
+  })
+
+  it('o frunză arată doar ce e în ea', () => {
+    expect(itemsUnder(tree(), tree().docs, 'hmrc').map(x => x.title)).toEqual(['Din HMRC'])
   })
 })

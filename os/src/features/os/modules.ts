@@ -70,3 +70,17 @@ export function pathOf(data: OsData, id: string): OsModule[] {
 
 export const itemsOf = <T extends { mod?: string }>(bag: Record<string, T>, mod: string): T[] =>
   Object.values(bag).filter(item => (item.mod ?? '') === mod)
+
+/**
+ * Ce e în modul plus ce e în tot ce atârnă sub el.
+ *
+ * Un modul părinte fără asta arată gol de îndată ce ți-ai împărțit lucrurile
+ * pe submodule — exact când începi să ai destule cât să merite împărțite.
+ * Așa, părintele e privirea de ansamblu, iar submodulul e filtrul.
+ */
+export function itemsUnder<T extends { mod?: string }>(
+  data: OsData, bag: Record<string, T>, mod: string,
+): T[] {
+  const ids = new Set([mod, ...descendants(data, mod).map(child => child.id)])
+  return Object.values(bag).filter(item => ids.has(item.mod ?? ''))
+}
