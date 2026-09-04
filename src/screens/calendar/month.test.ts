@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { CalendarDay } from '../../repository/items'
 import type { Item } from '../../repository/items'
-import { monthCells, monthGrid, openingDay } from './month'
+import { awayFromToday, monthCells, monthGrid, openingDay } from './month'
 
 const TODAY = '2026-09-04'
 
@@ -97,5 +97,19 @@ describe('openingDay', () => {
   it('opens any other month on its first day', () => {
     expect(openingDay('2026-10', TODAY)).toBe('2026-10-01')
     expect(openingDay('2026-08', TODAY)).toBe('2026-08-01')
+  })
+})
+
+describe('awayFromToday', () => {
+  it('is false sitting on today, in today\'s month', () => {
+    expect(awayFromToday('2026-09', TODAY, TODAY)).toBe(false)
+  })
+
+  it('is true in another month', () => {
+    expect(awayFromToday('2026-10', '2026-10-01', TODAY)).toBe(true)
+  })
+
+  it('is true on another day of this month: the day moved, not just the month', () => {
+    expect(awayFromToday('2026-09', '2026-09-12', TODAY)).toBe(true)
   })
 })

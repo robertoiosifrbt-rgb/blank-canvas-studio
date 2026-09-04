@@ -33,7 +33,31 @@
   transform: translateY(1px);
 }
 
+/* Its own row, not squeezed into the month head: at 320px a button up there
+   left the title 108px for the 147px "September 2026" needs, and a heading cut
+   to "September 20…" is the kind of thing no check catches. */
+.month-today {
+  align-self: flex-start;
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-s);
+  border: 1px solid var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent-text);
+  font-size: var(--text-s);
+  font-weight: 650;
+}
+
+.month-today:active {
+  transform: translateY(1px);
+}
+
 .month-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--text-m);
   font-weight: 650;
   letter-spacing: -0.01em;
