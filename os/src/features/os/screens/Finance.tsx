@@ -2,13 +2,15 @@ import { Row, Rows, Section, Tile } from '../parts'
 import { MONTHS, MONTHS_L, dayLabel, money, num, ym } from '../format'
 import { monthTotals } from '../goals'
 import { accountBalance, accountsOf } from '../accounts'
-import type { OsData } from '../types'
+import type { Account, OsData } from '../types'
 
-export function Finance({ data, month, onMonth, onAdd, onDelete }: {
+export function Finance({ data, month, onMonth, onAdd, onAccount, onDelete }: {
   data: OsData
   month: string
   onMonth: (key: string) => void
   onAdd: () => void
+  /** Conturile bancare și cash-ul se fac de aici: sunt ale banilor, nu ale livrărilor. */
+  onAccount: (account?: Account) => void
   onDelete: (id: string) => void
 }) {
   const currency = data.settings.currency
@@ -60,6 +62,14 @@ export function Finance({ data, month, onMonth, onAdd, onDelete }: {
           tone={totals.bal < 0 ? 'bad' : 'good'} />
       </div>
 
+      <div className="os-chips" style={{ margin: '14px 0' }}>
+        <button className="os-chip" onClick={() => onAccount()}>Cont nou</button>
+      </div>
+
+      <div className="os-chips" style={{ margin: '14px 0' }}>
+        <button className="os-chip" onClick={() => onAccount()}>Cont nou</button>
+      </div>
+
       {accountsOf(data).filter(a => a.kind !== 'platform').length ? (
         <>
           <Section title="Conturi" />
@@ -69,9 +79,11 @@ export function Finance({ data, month, onMonth, onAdd, onDelete }: {
             {accountsOf(data).filter(a => a.kind !== 'platform').map(account => {
               const balance = accountBalance(data, account.id)
               return (
-                <Tile key={account.id} label={account.name} value={money(balance, currency)}
-                  sub={account.kind === 'bank' ? 'în bancă' : 'în buzunar'}
-                  tone={balance < 0 ? 'bad' : undefined} />
+                <button className="os-tile-btn" key={account.id} onClick={() => onAccount(account)}>
+                  <Tile label={account.name} value={money(balance, currency)}
+                    sub={account.kind === 'bank' ? 'în bancă' : 'în buzunar'}
+                    tone={balance < 0 ? 'bad' : undefined} />
+                </button>
               )
             })}
           </div>

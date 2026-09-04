@@ -177,6 +177,7 @@ export function OsApp() {
         })} />
       case 'finance': return <Finance data={data} month={month} onMonth={setMonth}
         onAdd={() => open(core.movement(month))}
+        onAccount={a => open(drive.account(a, 'bank'))}
         onDelete={id => update(draft => {
           draft.finance[month] = { items: (draft.finance[month]?.items ?? []).filter(i => i.id !== id) }
         })} />
@@ -228,7 +229,7 @@ export function OsApp() {
         onVehicle={v => open(drive.vehicle(v))} onSettings={() => open(drive.settings())}
         onFuel={f => open(drive.fuel(view, f))}
         onCarCost={c => open(drive.carCost(view, c))}
-        onAccount={a => open(drive.account(a))}
+        onAccount={a => open(drive.account(a, 'platform'))}
         onCashOut={a => open(drive.cashOut(a))}
         onPeriod={(d, p) => open(drive.period(d, p))}
         onDropPeriod={(d, p) => update(draft => {

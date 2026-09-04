@@ -5,7 +5,7 @@ import { daysOf, spanHours, summarise, totalsOf, vehicleName } from '../delivery
 import { fuelRate, intervalsOf, pricePerLitre } from '../fuelChain'
 import { businessPart } from '../carCosts'
 import { searchCarCosts, searchDays, searchFuel } from '../deliverySearch'
-import { accountsOf, accountBalance, nextPayout, platformBalance } from '../accounts'
+import { accountsOf, nextPayout, platformBalance } from '../accounts'
 import { dayLabel } from '../format'
 import type { Account, CarExpense, Fuel, OsData, Vehicle, Workday, WorkPeriod } from '../types'
 
@@ -57,7 +57,7 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
       <div className="os-chips" style={{ marginBottom: 14 }}>
         <button className="os-chip" onClick={() => on.onFuel()}>Alimentare</button>
         <button className="os-chip" onClick={() => on.onCarCost()}>Cheltuială mașină</button>
-        <button className="os-chip" onClick={() => on.onAccount()}>Cont nou</button>
+        <button className="os-chip" onClick={() => on.onAccount()}>Platformă nouă</button>
         <button className="os-chip" onClick={() => on.onVehicle()}>Mașină nouă</button>
         <button className="os-chip" onClick={on.onSettings}>Procente și costuri</button>
       </div>
@@ -74,7 +74,7 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
         </div>
       ) : null}
 
-      {!searching && accountsOf(data).length ? (
+      {!searching && accountsOf(data, 'platform').length ? (
         <>
           <Section title="Conturi" />
           {accountsOf(data, 'platform').map(account => {
@@ -103,20 +103,6 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
               </div>
             )
           })}
-
-          {accountsOf(data).filter(a => a.kind !== 'platform').length ? (
-            <div className="os-doc-files">
-              {accountsOf(data).filter(a => a.kind !== 'platform').map(account => (
-                <span className="os-doc-file" key={account.id}>
-                  <button className="os-doc-open" onClick={() => on.onAccount(account)}>
-                    {account.name}
-                    <em>{account.kind === 'bank' ? 'bancă' : 'cash'}</em>
-                    <em>{money(accountBalance(data, account.id), currency)}</em>
-                  </button>
-                </span>
-              ))}
-            </div>
-          ) : null}
         </>
       ) : null}
 

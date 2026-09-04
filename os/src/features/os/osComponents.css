@@ -76,3 +76,5 @@
 .os-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--os-ink);
   color:var(--os-bg);padding:10px 18px;border-radius:9px;font-size:14px;z-index:80}
 @media (max-width:860px){ .os-grid2{grid-template-columns:1fr} .os-tiles{grid-template-columns:1fr 1fr;gap:9px} }
+/* Un cartonaș pe care se poate apăsa: aceeași față, dar duce undeva. */
+.os-tile-btn{display:contents;background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}

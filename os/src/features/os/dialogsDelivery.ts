@@ -69,13 +69,13 @@ export function deliveryDialogs(data: OsData, update: Update) {
    * care intră banii. Alea nu sunt bătute în cuie nicăieri: dacă Deliveroo
    * mută plata de marți pe miercuri, o schimbi aici.
    */
-  const account = (existing?: Account): DialogSpec => {
+  const account = (existing?: Account, fresh: Account['kind'] = 'platform'): DialogSpec => {
     const banks = accountsOf(data, 'bank')
     return {
       title: existing ? `Modifică „${existing.name}”` : 'Cont nou',
       fields: [
         { key: 'name', label: 'Cum îi zici', value: existing?.name ?? '', placeholder: 'ex: Stuart, Monzo' },
-        { key: 'kind', label: 'Ce fel de cont', type: 'select', value: existing?.kind ?? 'platform', options: [
+        { key: 'kind', label: 'Ce fel de cont', type: 'select', value: existing?.kind ?? fresh, options: [
           { value: 'platform', label: 'Platformă de livrări' },
           { value: 'bank', label: 'Cont bancar' },
           { value: 'cash', label: 'Cash' },
