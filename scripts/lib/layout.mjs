@@ -46,6 +46,17 @@ export function inspect({ minTap, safe, tappable }) {
     return `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}${classes}`
   }
 
+  // Is the element held in place on screen, rather than scrolling away?
+  // Only pinned things can sit permanently in a safe area; scrollable content
+  // passing under the home indicator is not a defect, you just scroll it up.
+  const pinned = (element) => {
+    for (let el = element; el instanceof Element; el = el.parentElement) {
+      const position = getComputedStyle(el).position
+      if (position === 'fixed' || position === 'sticky') return true
+    }
+    return false
+  }
+
   const all = [...document.body.querySelectorAll('*')].filter(visible)
 
   // 1. Nothing sticks out sideways.
@@ -91,7 +102,8 @@ export function inspect({ minTap, safe, tappable }) {
     }
   }
 
-  // 3. No tap target smaller than a finger, and none under the home indicator.
+  // 3. No tap target smaller than a finger, and nothing pinned to the bottom
+  //    reaching into the home indicator.
   const taps = [...document.body.querySelectorAll(tappable)].filter(visible)
   for (const element of taps) {
     const box = element.getBoundingClientRect()
@@ -102,11 +114,11 @@ export function inspect({ minTap, safe, tappable }) {
         detail: `${Math.round(box.width)}×${Math.round(box.height)}px, the minimum is ${minTap}px`,
       })
     }
-    if (box.bottom > height - safe.bottom + 0.5) {
+    if (pinned(element) && box.bottom > height - safe.bottom + 0.5) {
       problems.push({
         kind: 'under-indicator',
         element: name(element),
-        detail: `ends at ${Math.round(box.bottom)}px, the bottom indicator takes ${safe.bottom}px`,
+        detail: `pinned, and ends at ${Math.round(box.bottom)}px, while the bottom indicator takes ${safe.bottom}px`,
       })
     }
   }
