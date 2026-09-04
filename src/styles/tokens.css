@@ -1,8 +1,8 @@
-/* Singurul loc în care se scriu culori, spații și dimensiuni.
-   Importat exclusiv din main.tsx. */
+/* The only place colours, spacing and sizes are written.
+   Imported exclusively from main.tsx. */
 :root {
-  /* Marginile de siguranță ale telefonului. Suprascrise de verificatorul
-     de așezare, care simulează un telefon cu crestătură. */
+  /* The phone's safe areas. Overridden by the layout checker, which
+     simulates a phone with a notch. */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
@@ -25,7 +25,7 @@
 
   --radius: 12px;
 
-  /* Zona apăsabilă minimă. Verificatorul de așezare cade sub ea. */
+  /* The minimum tap target. The layout checker fails below it. */
   --tap: 44px;
 
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;

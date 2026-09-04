@@ -24,8 +24,14 @@ Două dintre ele se încalcă cel mai ușor, deci merită repetate:
 
 ## Limba
 
-Interfața în română. Comentariile din cod, la fel. Mesajele de commit sunt în
-engleză la titlu, ca restul istoricului, cu explicația în română dedesubt.
+**Codul e în engleză, tot.** Identificatori, comentarii, textele din interfață,
+clasele CSS, numele de fișiere, mesajele de eroare, ieșirea scripturilor de
+verificare, numele constrângerilor din SQL și mesajele de commit.
+
+**Doar documentele rămân în română**: planul, README-ul și fișierul ăsta.
+
+Regula e a proprietarului repo-ului și a înlocuit o linie din plan care cerea
+interfața și comentariile în română. Nu se întoarce înapoi.
 
 ## Înainte de fiecare împingere
 

@@ -1,4 +1,4 @@
-/* Importat de exact un .tsx din acest director: AppShell.tsx */
+/* Imported by exactly one .tsx in this directory: AppShell.tsx */
 
 .shell {
   display: flex;
@@ -6,28 +6,28 @@
   min-height: 100dvh;
 }
 
-.shell-cap {
-  /* Bara de status a telefonului nu stă peste text. */
+.shell-header {
+  /* The phone's status bar never sits over text. */
   padding: calc(var(--safe-top) + var(--space-4)) var(--space-4) var(--space-3);
   padding-left: calc(var(--safe-left) + var(--space-4));
   padding-right: calc(var(--safe-right) + var(--space-4));
   border-bottom: 1px solid var(--line);
 }
 
-.shell-cap-rând {
+.shell-header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
 }
 
-.shell-titlu {
+.shell-title {
   font-size: var(--text-xl);
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 
-.shell-ieși {
+.shell-signout {
   flex: none;
   min-height: var(--tap);
   min-width: var(--tap);
@@ -38,21 +38,21 @@
   font-size: var(--text-s);
 }
 
-.shell-cont {
+.shell-account {
   margin-top: var(--space-1);
   color: var(--text-dim);
   font-size: var(--text-s);
   overflow-wrap: anywhere;
 }
 
-.shell-eroare {
+.shell-error {
   margin-top: var(--space-2);
   color: var(--danger);
   font-size: var(--text-s);
   overflow-wrap: anywhere;
 }
 
-.shell-corp {
+.shell-body {
   flex: 1;
   padding: var(--space-4);
   padding-left: calc(var(--safe-left) + var(--space-4));
@@ -72,9 +72,9 @@
   bottom: 0;
 }
 
-.shell-nav-buton {
+.shell-nav-button {
   flex: 1;
-  /* Zona apăsabilă nu coboară niciodată sub minim. */
+  /* A tap target never drops below the minimum. */
   min-height: var(--tap);
   min-width: var(--tap);
   display: flex;
@@ -85,7 +85,7 @@
   font-size: var(--text-m);
 }
 
-.shell-nav-buton.active {
+.shell-nav-button.active {
   background: var(--bg);
   color: var(--text);
 }

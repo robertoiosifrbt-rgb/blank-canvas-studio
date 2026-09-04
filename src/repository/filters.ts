@@ -1,0 +1,102 @@
+// Today and the Calendar are filters over the snapshot, here, in one place.
+//
+// The rule "no filtering in JavaScript" still holds: what it forbade was logic
+// scattered across screens, not where it runs.
+//
+// An item moved to next week does not leave the snapshot, it only leaves the
+// Today result — "no longer in Today" cannot be confused with "no longer
+// exists".
+
+import type { Item } from './item'
+
+/** The deleted_at is null filter, in exactly one place. */
+export function alive(items: readonly Item[]): Item[] {
+  return items.filter((item) => item.deleted_at === null)
+}
+
+const byCreated = (a: Item, b: Item) => a.created_at.localeCompare(b.created_at)
+
+const byDue = (a: Item, b: Item) =>
+  (a.due ?? '').localeCompare(b.due ?? '') || byCreated(a, b)
+
+export type TodayGroups = {
+  /** Things captured, that you do not yet know the shape of. */
+  inbox: Item[]
+  today: Item[]
+  overdue: Item[]
+  undated: Item[]
+}
+
+/**
+ * What you have to do now.
+ *
+ * The OR on state is mandatory: Capture creates an item with no due, and
+ * `null <= today` is false — without it you write "call X" and it appears
+ * nowhere.
+ *
+ * The OR on "due is null" is just as mandatory: you process "buy a drill" as a
+ * task with no date, it leaves the inbox, becomes active — and without it, it
+ * would vanish. A correct action must never make a thing evaporate.
+ */
+export function forToday(items: readonly Item[], today: string): TodayGroups {
+  const relevant = alive(items).filter(
+    (item) =>
+      item.state === 'inbox' ||
+      (item.state === 'active' && (item.due === null || item.due <= today)),
+  )
+
+  return {
+    inbox: relevant.filter((item) => item.state === 'inbox').sort(byCreated),
+    today: relevant
+      .filter((item) => item.state === 'active' && item.due === today)
+      .sort(byDue),
+    overdue: relevant
+      .filter(
+        (item) => item.state === 'active' && item.due !== null && item.due < today,
+      )
+      .sort(byDue),
+    undated: relevant
+      .filter((item) => item.state === 'active' && item.due === null)
+      .sort(byCreated),
+  }
+}
+
+export type CalendarDay = {
+  /** The day, as 'YYYY-MM-DD'. */
+  day: string
+  /** What you planned for this day: due. */
+  planned: Item[]
+  /** What happened on this day: done_at. */
+  done: Item[]
+}
+
+/**
+ * The days, with what you planned and what you did. No new table.
+ *
+ * A task due Monday and finished Wednesday shows up in both. A task with no
+ * date, finished, shows up on Wednesday — that is why done_at exists, so that
+ * nothing finished disappears from every screen.
+ */
+export function forCalendar(items: readonly Item[]): CalendarDay[] {
+  const days = new Map<string, CalendarDay>()
+
+  const dayOf = (day: string): CalendarDay => {
+    const existing = days.get(day)
+    if (existing !== undefined) return existing
+    const fresh: CalendarDay = { day, planned: [], done: [] }
+    days.set(day, fresh)
+    return fresh
+  }
+
+  for (const item of alive(items)) {
+    if (item.due !== null) dayOf(item.due).planned.push(item)
+    if (item.done_at !== null) dayOf(item.done_at).done.push(item)
+  }
+
+  for (const day of days.values()) {
+    day.planned.sort(byCreated)
+    day.done.sort(byCreated)
+  }
+
+  return [...days.values()].sort((a, b) => a.day.localeCompare(b.day))
+}

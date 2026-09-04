@@ -1,24 +1,24 @@
 import type { ReactElement } from 'react'
 
-import { AziScreen } from '../screens/azi/AziScreen'
 import { CalendarScreen } from '../screens/calendar/CalendarScreen'
+import { TodayScreen } from '../screens/today/TodayScreen'
 
-export type Ecran = {
-  /** URL-ul ecranului. Fiecare ecran are unul, și se poate intra direct pe el. */
-  cale: string
-  /** Eticheta din bara de navigație. */
-  etichetă: string
+export type Screen = {
+  /** The screen's URL. Every screen has one, and can be opened directly. */
+  path: string
+  /** The label in the navigation bar. */
+  label: string
   element: ReactElement
 }
 
 /**
- * O singură listă de ecrane. Rutele și bara de navigație se generează din ea,
- * ca să nu poată ajunge niciodată să spună lucruri diferite.
+ * A single list of screens. The routes and the navigation bar are generated
+ * from it, so they can never end up saying different things.
  */
-export const ECRANE: readonly Ecran[] = [
-  { cale: '/azi', etichetă: 'Azi', element: <AziScreen /> },
-  { cale: '/calendar', etichetă: 'Calendar', element: <CalendarScreen /> },
+export const SCREENS: readonly Screen[] = [
+  { path: '/today', label: 'Today', element: <TodayScreen /> },
+  { path: '/calendar', label: 'Calendar', element: <CalendarScreen /> },
 ]
 
-/** Unde ajungi de pe `/` și de pe orice URL care nu există. */
-export const ACASĂ = '/azi'
+/** Where you land from `/` and from any URL that does not exist. */
+export const HOME = '/today'

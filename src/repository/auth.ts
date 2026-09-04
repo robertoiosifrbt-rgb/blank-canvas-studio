@@ -1,68 +1,62 @@
-// Autentificare: email și parolă. Datele vin după cont, pe orice telefon.
-// Ecranele nu văd Supabase niciodată — cer și primesc de aici.
+// Authentication: email and password. Your data follows the account, on any
+// phone. Screens never see Supabase — they ask, and get answers, from here.
 
-import { mesajulErorii } from './erori'
-import { clientul } from './supabase'
+import { errorMessage } from './errors'
+import { supabase } from './supabase'
 
-export type Sesiune = {
-  /** Ancora tuturor datelor utilizatorului: auth.uid() din bază. */
-  utilizator: string
+export type Session = {
+  /** The anchor of all of a user's data: auth.uid() in the database. */
+  userId: string
   email: string | null
 }
 
-function dinSesiuneaSupabase(
-  sesiune: { user: { id: string; email?: string | undefined } } | null,
-): Sesiune | null {
-  if (sesiune === null) return null
-  return { utilizator: sesiune.user.id, email: sesiune.user.email ?? null }
+function fromSupabaseSession(
+  session: { user: { id: string; email?: string | undefined } } | null,
+): Session | null {
+  if (session === null) return null
+  return { userId: session.user.id, email: session.user.email ?? null }
 }
 
-/** Sesiunea salvată pe dispozitivul ăsta, dacă există. */
-export async function sesiuneaCurentă(): Promise<Sesiune | null> {
-  const { data, error } = await clientul().auth.getSession()
-  if (error !== null) throw new Error(mesajulErorii(error))
-  return dinSesiuneaSupabase(data.session)
+/** The session stored on this device, if there is one. */
+export async function currentSession(): Promise<Session | null> {
+  const { data, error } = await supabase().auth.getSession()
+  if (error !== null) throw new Error(errorMessage(error))
+  return fromSupabaseSession(data.session)
 }
 
-/** Anunță la fiecare intrare, ieșire sau reîmprospătare de token. */
-export function laSchimbareaSesiunii(
-  ascultător: (sesiune: Sesiune | null) => void,
+/** Fires on every sign-in, sign-out and token refresh. */
+export function onSessionChange(
+  listener: (session: Session | null) => void,
 ): () => void {
-  const { data } = clientul().auth.onAuthStateChange((_eveniment, sesiune) => {
-    ascultător(dinSesiuneaSupabase(sesiune))
+  const { data } = supabase().auth.onAuthStateChange((_event, session) => {
+    listener(fromSupabaseSession(session))
   })
   return () => {
     data.subscription.unsubscribe()
   }
 }
 
-export async function intră(email: string, parolă: string): Promise<void> {
-  const { error } = await clientul().auth.signInWithPassword({
-    email,
-    password: parolă,
-  })
-  if (error !== null) throw new Error(mesajulErorii(error))
+export async function signIn(email: string, password: string): Promise<void> {
+  const { error } = await supabase().auth.signInWithPassword({ email, password })
+  if (error !== null) throw new Error(errorMessage(error))
 }
 
-export type Înregistrare = {
-  /** True când contul s-a creat, dar nu ești încă înăuntru. */
-  cereConfirmareaEmailului: boolean
+export type SignUpResult = {
+  /** True when the account was created but you are not inside yet. */
+  needsEmailConfirmation: boolean
 }
 
-export async function înregistrează(
+export async function signUp(
   email: string,
-  parolă: string,
-): Promise<Înregistrare> {
-  const { data, error } = await clientul().auth.signUp({
-    email,
-    password: parolă,
-  })
-  if (error !== null) throw new Error(mesajulErorii(error))
-  // Fără sesiune înapoi înseamnă că proiectul cere confirmare pe email.
-  return { cereConfirmareaEmailului: data.session === null }
+  password: string,
+): Promise<SignUpResult> {
+  const { data, error } = await supabase().auth.signUp({ email, password })
+  if (error !== null) throw new Error(errorMessage(error))
+  // No session back means the project requires email confirmation.
+  return { needsEmailConfirmation: data.session === null }
 }
 
-export async function ieși(): Promise<void> {
-  const { error } = await clientul().auth.signOut()
-  if (error !== null) throw new Error(mesajulErorii(error))
+export async function signOut(): Promise<void> {
+  const { error } = await supabase().auth.signOut()
+  if (error !== null) throw new Error(errorMessage(error))
 }

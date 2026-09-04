@@ -1,52 +1,52 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 
-import { ieși } from '../repository/auth'
-import { ECRANE } from './screens'
+import { signOut } from '../repository/auth'
+import { SCREENS } from './screens'
 import './AppShell.css'
 
 type Props = {
-  /** Contul în care ești. Fără el nu s-ar ști ale cui sunt datele de pe ecran. */
+  /** The account you are in. Without it, you cannot tell whose data is shown. */
   email: string | null
 }
 
 export function AppShell({ email }: Props) {
-  const locație = useLocation()
-  const curent = ECRANE.find((ecran) => ecran.cale === locație.pathname)
-  const [eroare, setEroare] = useState<string | null>(null)
+  const location = useLocation()
+  const current = SCREENS.find((screen) => screen.path === location.pathname)
+  const [error, setError] = useState<string | null>(null)
 
-  function ieșire() {
-    setEroare(null)
-    void ieși().catch((motiv: unknown) => {
-      setEroare(motiv instanceof Error ? motiv.message : String(motiv))
+  function leave() {
+    setError(null)
+    void signOut().catch((reason: unknown) => {
+      setError(reason instanceof Error ? reason.message : String(reason))
     })
   }
 
   return (
     <div className="shell">
-      <header className="shell-cap">
-        <div className="shell-cap-rând">
-          <h1 className="shell-titlu">{curent?.etichetă ?? 'Life Control Centre'}</h1>
-          <button className="shell-ieși" type="button" onClick={ieșire}>
-            Ieși
+      <header className="shell-header">
+        <div className="shell-header-row">
+          <h1 className="shell-title">{current?.label ?? 'Life Control Centre'}</h1>
+          <button className="shell-signout" type="button" onClick={leave}>
+            Sign out
           </button>
         </div>
-        {email !== null && <p className="shell-cont">{email}</p>}
-        {eroare !== null && (
-          <p className="shell-eroare" role="alert">
-            {eroare}
+        {email !== null && <p className="shell-account">{email}</p>}
+        {error !== null && (
+          <p className="shell-error" role="alert">
+            {error}
           </p>
         )}
       </header>
 
-      <main className="shell-corp">
+      <main className="shell-body">
         <Outlet />
       </main>
 
-      <nav className="shell-nav" aria-label="Ecrane">
-        {ECRANE.map((ecran) => (
-          <NavLink key={ecran.cale} to={ecran.cale} className="shell-nav-buton">
-            {ecran.etichetă}
+      <nav className="shell-nav" aria-label="Screens">
+        {SCREENS.map((screen) => (
+          <NavLink key={screen.path} to={screen.path} className="shell-nav-button">
+            {screen.label}
           </NavLink>
         ))}
       </nav>

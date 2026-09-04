@@ -1,6 +1,6 @@
-/* Importat de exact un .tsx din acest director: Poarta.tsx */
+/* Imported by exactly one .tsx in this directory: Gate.tsx */
 
-.poarta-așteptare {
+.gate-waiting {
   min-height: 100dvh;
   display: flex;
   align-items: center;

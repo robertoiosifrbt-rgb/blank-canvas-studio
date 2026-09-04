@@ -1,38 +1,38 @@
 #!/usr/bin/env node
-// Testul de RLS, pe o bază Supabase locală și efemeră.
+// The RLS test, on a local, ephemeral Supabase database.
 //
-// Nu atinge niciodată baza de producție: cere DATABASE_URL explicit și cade
-// dacă nu-l primește. CI îl pornește după `supabase start`.
+// It never touches production: it requires DATABASE_URL explicitly and stops
+// without it. CI starts it after `supabase start`.
 
 import pg from 'pg'
 
-import { A, B, CAZURI, contextul } from './lib/rls.mjs'
+import { A, B, CASES, contextFor } from './lib/rls.mjs'
 
-const URL_BAZĂ = process.env.DATABASE_URL
-if (!URL_BAZĂ) {
+const DATABASE_URL = process.env.DATABASE_URL
+if (!DATABASE_URL) {
   console.error(
-    'Lipsește DATABASE_URL. Testul de RLS rulează numai pe o bază locală:\n' +
+    'DATABASE_URL is missing. The RLS test runs only against a local database:\n' +
       '  supabase start\n' +
       '  DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres npm run check:rls',
   )
   process.exit(1)
 }
 
-// Fiecare grup trebuie să aibă cazuri. Un test de RLS cu zero negative sau
-// zero pozitive e o verificare verde care nu verifică nimic.
-const GRUPURI_CERUTE = ['negativ', 'pozitiv', 'scriere', 'constrângere']
+// Every group must have cases. An RLS test with zero negatives or zero
+// positives is a green check that checks nothing.
+const REQUIRED_GROUPS = ['negative', 'positive', 'writing', 'constraint']
 
-const client = new pg.Client({ connectionString: URL_BAZĂ })
-const căzute = []
+const client = new pg.Client({ connectionString: DATABASE_URL })
+const failures = []
 
 await client.connect()
 
 try {
-  // Doi utilizatori, semănați ca administrator. Cazurile rulează fiecare în
-  // propria tranzacție și o dau înapoi, deci rândurile nu se scurg între ele.
+  // Two users, seeded as the administrator. Each case runs inside its own
+  // transaction and rolls it back, so rows do not leak between them.
   for (const [uid, email] of [
-    [A, 'a@verificare.local'],
-    [B, 'b@verificare.local'],
+    [A, 'a@check.local'],
+    [B, 'b@check.local'],
   ]) {
     await client.query(
       'insert into auth.users (id, email) values ($1, $2) on conflict (id) do nothing',
@@ -40,46 +40,46 @@ try {
     )
   }
 
-  for (const grup of GRUPURI_CERUTE) {
-    const dinGrup = CAZURI.filter((caz) => caz.grup === grup)
-    if (dinGrup.length === 0) {
-      căzute.push({ nume: `grupul „${grup}"`, motiv: 'nu are niciun caz' })
+  for (const group of REQUIRED_GROUPS) {
+    const inGroup = CASES.filter((testCase) => testCase.group === group)
+    if (inGroup.length === 0) {
+      failures.push({ name: `the "${group}" group`, reason: 'has no cases' })
       continue
     }
-    console.log(`\n  ${grup}:`)
-    for (const caz of dinGrup) {
-      // Fiecare caz stă în propria tranzacție, dată înapoi la final: nici
-      // pregătirea lui nu se comite, deci cazurile nu se pot influența.
+    console.log(`\n  ${group}:`)
+    for (const testCase of inGroup) {
+      // Each case sits in its own transaction, rolled back at the end: even
+      // its setup is not committed, so cases cannot influence one another.
       await client.query('begin')
       try {
-        await caz.rulează(contextul(client))
-        console.log(`    ✓ ${caz.nume}`)
-      } catch (eroare) {
-        console.log(`    ✗ ${caz.nume}`)
-        căzute.push({ nume: caz.nume, motiv: eroare.message })
+        await testCase.run(contextFor(client))
+        console.log(`    ✓ ${testCase.name}`)
+      } catch (error) {
+        console.log(`    ✗ ${testCase.name}`)
+        failures.push({ name: testCase.name, reason: error.message })
       } finally {
         await client.query('rollback')
       }
     }
   }
 } finally {
-  // Baza e efemeră, dar verificatorul nu lasă totuși rânduri după el.
+  // The database is ephemeral, but the checker still leaves no rows behind.
   try {
     await client.query('delete from public.items where owner in ($1, $2)', [A, B])
     await client.query('delete from auth.users where id in ($1, $2)', [A, B])
-  } catch (eroare) {
-    căzute.push({ nume: 'curățenia de la final', motiv: eroare.message })
+  } catch (error) {
+    failures.push({ name: 'the cleanup at the end', reason: error.message })
   }
   await client.end()
 }
 
-if (căzute.length === 0) {
-  console.log(`\nRLS în regulă: ${CAZURI.length} cazuri.`)
+if (failures.length === 0) {
+  console.log(`\nRLS is fine: ${CASES.length} cases.`)
   process.exit(0)
 }
 
-console.error(`\nRLS: ${căzute.length} cazuri căzute din ${CAZURI.length}\n`)
-for (const cădere of căzute) {
-  console.error(`  ${cădere.nume}: ${cădere.motiv}`)
+console.error(`\nRLS: ${failures.length} cases failed out of ${CASES.length}\n`)
+for (const failure of failures) {
+  console.error(`  ${failure.name}: ${failure.reason}`)
 }
 process.exit(1)

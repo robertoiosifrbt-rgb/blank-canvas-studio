@@ -1,6 +1,6 @@
-# Supabase local, efemer. Se ridică în CI, rulează testul de RLS și
-# verificarea așezării cu autentificare adevărată, apoi se stinge.
-# Nu are nicio legătură cu baza de producție și nu-i știe URL-ul.
+# The local, ephemeral Supabase. CI brings it up, runs the RLS test and the
+# layout check with real authentication, then shuts it down.
+# It has nothing to do with the production database and does not know its URL.
 
 project_id = "life-control-centre"
 
@@ -17,9 +17,9 @@ shadow_port = 54320
 enabled = true
 site_url = "http://127.0.0.1:4319"
 
-# Email și parolă. Fără confirmare pe email local, ca verificările din CI să
-# poată intra în cont fără cutie poștală. În producție e o setare a
-# proiectului, nu a fișierului ăsta.
+# Email and password. No email confirmation locally, so the CI checks can sign
+# in without a mailbox. In production this is a project setting, not a setting
+# of this file.
 [auth.email]
 enabled = true
 enable_signup = true

@@ -25,6 +25,11 @@ niciun alt fișier să atingă Supabase.
     npm run check:rls         RLS, negative și pozitive
     npm run check:layout      așezarea la lățime de telefon
 
+## Limba
+
+Codul e în engleză, tot. Doar documentele — planul, fișierul ăsta și
+`CLAUDE.md` — rămân în română.
+
 ## Configurație
 
 Se copiază `.env.example` în `.env.local` și se completează. Aceleași două
@@ -46,10 +51,10 @@ bază rulează pe Supabase local, efemer — niciodată pe producție.
       npm run check:rls
 
 `check:layout` are nevoie de un cont, pentru că ecranele aplicației stau după
-autentificare. Se face unul pe baza locală (vezi jobul `baza-locala` din
+autentificare. Se face unul pe baza locală (vezi jobul `local-database` din
 `.github/workflows/ci.yml` pentru comanda exactă), apoi:
 
-    VERIFICARE_EMAIL=... VERIFICARE_PAROLA=... npm run check:layout
+    CHECK_EMAIL=... CHECK_PASSWORD=... npm run check:layout
 
 Dacă ai deja un Chromium, i-l dai direct în loc să-l descarci:
 

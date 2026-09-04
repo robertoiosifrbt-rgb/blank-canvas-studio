@@ -1,125 +1,124 @@
 /**
- * Verificarea așezării, la lățime de telefon.
+ * The layout check, at phone width.
  *
- * typecheck verifică tipurile, testele verifică logica. Niciunul nu prinde un
- * element ieșit din ecran, un text sub bara de status sau un buton prea mic
- * pentru un deget. De-aia asta e un script, nu o intenție.
+ * typecheck checks types, the tests check logic. Neither catches an element
+ * pushed off the screen, text under the status bar, or a button too small for
+ * a finger. That is why this is a script, not an intention.
  */
 
-/** Zona apăsabilă minimă, în pixeli. */
-export const ZONA_MINIMĂ = 44
+/** The minimum tap target, in pixels. */
+export const MIN_TAP = 44
 
-/** Marginile de siguranță simulate: un telefon cu crestătură. */
-export const SIGURANȚĂ = { sus: 47, jos: 34 }
+/** The simulated safe areas: a phone with a notch. */
+export const SAFE = { top: 47, bottom: 34 }
 
-/** Lățimile pe care se verifică. 320 e cel mai îngust telefon real. */
-export const LĂȚIMI = [
-  { lățime: 320, înălțime: 568 },
-  { lățime: 390, înălțime: 844 },
+/** The widths that get checked. 320 is the narrowest real phone. */
+export const SIZES = [
+  { width: 320, height: 568 },
+  { width: 390, height: 844 },
 ]
 
-/** Ce se consideră zonă apăsabilă. */
-export const APĂSABILE =
-  'a, button, input, select, textarea, [role="button"]'
+/** What counts as a tap target. */
+export const TAPPABLE = 'a, button, input, select, textarea, [role="button"]'
 
 /**
- * Rulează în pagină. Întoarce abaterile găsite, plus ce a numărat — dacă n-a
- * numărat nimic, verificarea a trecut verde fără să verifice nimic.
+ * Runs inside the page. Returns the problems found, plus what it counted — if
+ * it counted nothing, the check went green without checking anything.
  */
-export function inspectează({ zonaMinimă, siguranță, apăsabile }) {
-  const abateri = []
-  const lățime = window.innerWidth
-  const înălțime = window.innerHeight
+export function inspect({ minTap, safe, tappable }) {
+  const problems = []
+  const width = window.innerWidth
+  const height = window.innerHeight
 
-  const evidentă = (element) => {
-    const stil = getComputedStyle(element)
-    if (stil.display === 'none' || stil.visibility === 'hidden') return false
-    if (Number(stil.opacity) === 0) return false
-    const cutie = element.getBoundingClientRect()
-    return cutie.width > 0 && cutie.height > 0
+  const visible = (element) => {
+    const style = getComputedStyle(element)
+    if (style.display === 'none' || style.visibility === 'hidden') return false
+    if (Number(style.opacity) === 0) return false
+    const box = element.getBoundingClientRect()
+    return box.width > 0 && box.height > 0
   }
 
-  const numește = (element) => {
-    const clase =
+  const name = (element) => {
+    const classes =
       typeof element.className === 'string' && element.className !== ''
         ? `.${element.className.trim().split(/\s+/).join('.')}`
         : ''
-    return `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}${clase}`
+    return `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}${classes}`
   }
 
-  const toate = [...document.body.querySelectorAll('*')].filter(evidentă)
+  const all = [...document.body.querySelectorAll('*')].filter(visible)
 
-  // 1. Nimic nu iese lateral din ecran.
-  if (document.documentElement.scrollWidth > lățime + 1) {
-    abateri.push({
-      fel: 'ieșit',
+  // 1. Nothing sticks out sideways.
+  if (document.documentElement.scrollWidth > width + 1) {
+    problems.push({
+      kind: 'overflow',
       element: 'document',
-      detaliu: `se derulează lateral: ${document.documentElement.scrollWidth}px > ${lățime}px`,
+      detail: `scrolls sideways: ${document.documentElement.scrollWidth}px > ${width}px`,
     })
   }
-  for (const element of toate) {
-    const cutie = element.getBoundingClientRect()
-    if (cutie.right > lățime + 0.5) {
-      abateri.push({
-        fel: 'ieșit',
-        element: numește(element),
-        detaliu: `marginea dreaptă la ${Math.round(cutie.right)}px, ecranul are ${lățime}px`,
+  for (const element of all) {
+    const box = element.getBoundingClientRect()
+    if (box.right > width + 0.5) {
+      problems.push({
+        kind: 'overflow',
+        element: name(element),
+        detail: `right edge at ${Math.round(box.right)}px, the screen is ${width}px`,
       })
     }
-    if (cutie.left < -0.5) {
-      abateri.push({
-        fel: 'ieșit',
-        element: numește(element),
-        detaliu: `marginea stângă la ${Math.round(cutie.left)}px`,
+    if (box.left < -0.5) {
+      problems.push({
+        kind: 'overflow',
+        element: name(element),
+        detail: `left edge at ${Math.round(box.left)}px`,
       })
     }
   }
 
-  // 2. Niciun text sub bara de status.
-  const cuText = toate.filter((element) =>
+  // 2. No text under the status bar.
+  const withText = all.filter((element) =>
     [...element.childNodes].some(
-      (nod) => nod.nodeType === 3 && nod.textContent.trim() !== '',
+      (node) => node.nodeType === 3 && node.textContent.trim() !== '',
     ),
   )
-  for (const element of cuText) {
-    const cutie = element.getBoundingClientRect()
-    if (cutie.top < siguranță.sus - 0.5) {
-      abateri.push({
-        fel: 'sub-bară',
-        element: numește(element),
-        detaliu: `textul începe la ${Math.round(cutie.top)}px, bara de status ține ${siguranță.sus}px`,
+  for (const element of withText) {
+    const box = element.getBoundingClientRect()
+    if (box.top < safe.top - 0.5) {
+      problems.push({
+        kind: 'under-status-bar',
+        element: name(element),
+        detail: `text starts at ${Math.round(box.top)}px, the status bar takes ${safe.top}px`,
       })
     }
   }
 
-  // 3. Nicio zonă apăsabilă mai mică decât un deget, și niciuna sub indicator.
-  const deApăsat = [...document.body.querySelectorAll(apăsabile)].filter(evidentă)
-  for (const element of deApăsat) {
-    const cutie = element.getBoundingClientRect()
-    if (cutie.width < zonaMinimă - 0.5 || cutie.height < zonaMinimă - 0.5) {
-      abateri.push({
-        fel: 'prea-mic',
-        element: numește(element),
-        detaliu: `${Math.round(cutie.width)}×${Math.round(cutie.height)}px, minimul e ${zonaMinimă}px`,
+  // 3. No tap target smaller than a finger, and none under the home indicator.
+  const taps = [...document.body.querySelectorAll(tappable)].filter(visible)
+  for (const element of taps) {
+    const box = element.getBoundingClientRect()
+    if (box.width < minTap - 0.5 || box.height < minTap - 0.5) {
+      problems.push({
+        kind: 'too-small',
+        element: name(element),
+        detail: `${Math.round(box.width)}×${Math.round(box.height)}px, the minimum is ${minTap}px`,
       })
     }
-    if (cutie.bottom > înălțime - siguranță.jos + 0.5) {
-      abateri.push({
-        fel: 'sub-indicator',
-        element: numește(element),
-        detaliu: `se termină la ${Math.round(cutie.bottom)}px, indicatorul de jos ține ${siguranță.jos}px`,
+    if (box.bottom > height - safe.bottom + 0.5) {
+      problems.push({
+        kind: 'under-indicator',
+        element: name(element),
+        detail: `ends at ${Math.round(box.bottom)}px, the bottom indicator takes ${safe.bottom}px`,
       })
     }
   }
 
-  return { abateri, numărate: { text: cuText.length, apăsabile: deApăsat.length } }
+  return { problems, counted: { text: withText.length, taps: taps.length } }
 }
 
-/** CSS-ul care simulează marginile de siguranță ale telefonului. */
-export function cssSiguranță(siguranță = SIGURANȚĂ) {
+/** The CSS that simulates the phone's safe areas. */
+export function safeAreaCss(safe = SAFE) {
   return `:root {
-    --safe-top: ${siguranță.sus}px !important;
-    --safe-bottom: ${siguranță.jos}px !important;
+    --safe-top: ${safe.top}px !important;
+    --safe-bottom: ${safe.bottom}px !important;
     --safe-left: 0px !important;
     --safe-right: 0px !important;
   }`

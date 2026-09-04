@@ -1,22 +1,22 @@
-// Forma unui item, și cele două reguli care nu au voie să fie scrise de două
-// ori: ce zi e azi, și când se pune done_at.
+// The shape of an item, and the two rules that must never be written twice:
+// what day it is today, and when done_at gets set.
 //
-// Numele câmpurilor sunt numele coloanelor din bază, nu traduceri. Un al doilea
-// vocabular pentru același lucru e un loc în care se ascund greșeli, iar un
-// patch trebuie să se potrivească pe coloane fără nicio conversie.
+// The field names are the column names from the database, not translations. A
+// second vocabulary for the same thing is a place where mistakes hide, and a
+// patch has to line up with the columns without any conversion.
 
-export type Stare = 'inbox' | 'active' | 'done'
-export type Fel = 'task' | 'letter'
+export type State = 'inbox' | 'active' | 'done'
+export type Kind = 'task' | 'letter'
 
 export type Item = {
   id: string
   owner: string
-  kind: Fel | null
-  state: Stare
+  kind: Kind | null
+  state: State
   title: string
-  /** Ce ai planificat. Dată, nu dată-și-oră. */
+  /** What you planned. A date, not a date and time. */
   due: string | null
-  /** Ce s-a întâmplat: ziua în care ai bifat. */
+  /** What actually happened: the day you ticked it off. */
   done_at: string | null
   version: number
   created_at: string
@@ -25,105 +25,105 @@ export type Item = {
 }
 
 /**
- * Ce poate schimba un client.
+ * What a client is allowed to change.
  *
- * Lista e exact lista de coloane din `grant update` — id, owner, version,
- * created_at și updated_at nu apar, pentru că baza le refuză oricum. Aici
- * tipul le refuză mai devreme.
+ * The list is exactly the column list in `grant update` — id, owner, version,
+ * created_at and updated_at do not appear, because the database refuses them
+ * anyway. Here the type refuses them earlier.
  */
 export type Patch = Partial<
   Pick<Item, 'kind' | 'state' | 'title' | 'due' | 'done_at' | 'deleted_at'>
 >
 
-const STĂRI: readonly string[] = ['inbox', 'active', 'done']
-const FELURI: readonly string[] = ['task', 'letter']
+const STATES: readonly string[] = ['inbox', 'active', 'done']
+const KINDS: readonly string[] = ['task', 'letter']
 
-function text(rând: Record<string, unknown>, cheie: string): string {
-  const valoare = rând[cheie]
-  if (typeof valoare !== 'string' || valoare === '') {
-    throw new Error(`Rând fără ${cheie}`)
+function requiredText(row: Record<string, unknown>, key: string): string {
+  const value = row[key]
+  if (typeof value !== 'string' || value === '') {
+    throw new Error(`Row without ${key}`)
   }
-  return valoare
+  return value
 }
 
-function textSauNimic(
-  rând: Record<string, unknown>,
-  cheie: string,
+function optionalText(
+  row: Record<string, unknown>,
+  key: string,
 ): string | null {
-  const valoare = rând[cheie]
-  if (valoare === null || valoare === undefined) return null
-  if (typeof valoare !== 'string') throw new Error(`${cheie} nu e text`)
-  return valoare
+  const value = row[key]
+  if (value === null || value === undefined) return null
+  if (typeof value !== 'string') throw new Error(`${key} is not text`)
+  return value
 }
 
 /**
- * Un rând venit de la server, verificat.
+ * A row that came from the server, checked.
  *
- * Un răspuns parțial nu e niciodată tratat ca adevăr întreg: un rând căruia îi
- * lipsește un câmp nu intră în cache ca item pe jumătate.
+ * A partial answer is never treated as the whole truth: a row missing a field
+ * does not enter the cache as half an item.
  */
-export function dinRând(rând: unknown): Item {
-  if (typeof rând !== 'object' || rând === null) {
-    throw new Error('Rândul nu e un obiect')
+export function fromRow(row: unknown): Item {
+  if (typeof row !== 'object' || row === null) {
+    throw new Error('The row is not an object')
   }
-  const brut = rând as Record<string, unknown>
+  const raw = row as Record<string, unknown>
 
-  const state = text(brut, 'state')
-  if (!STĂRI.includes(state)) throw new Error(`Stare necunoscută: ${state}`)
+  const state = requiredText(raw, 'state')
+  if (!STATES.includes(state)) throw new Error(`Unknown state: ${state}`)
 
-  const kind = textSauNimic(brut, 'kind')
-  if (kind !== null && !FELURI.includes(kind)) {
-    throw new Error(`Fel necunoscut: ${kind}`)
+  const kind = optionalText(raw, 'kind')
+  if (kind !== null && !KINDS.includes(kind)) {
+    throw new Error(`Unknown kind: ${kind}`)
   }
 
-  const version = brut['version']
+  const version = raw['version']
   if (typeof version !== 'number' || !Number.isInteger(version)) {
-    throw new Error('Rând fără version')
+    throw new Error('Row without version')
   }
 
   return {
-    id: text(brut, 'id'),
-    owner: text(brut, 'owner'),
-    kind: kind as Fel | null,
-    state: state as Stare,
-    title: text(brut, 'title'),
-    due: textSauNimic(brut, 'due'),
-    done_at: textSauNimic(brut, 'done_at'),
+    id: requiredText(raw, 'id'),
+    owner: requiredText(raw, 'owner'),
+    kind: kind as Kind | null,
+    state: state as State,
+    title: requiredText(raw, 'title'),
+    due: optionalText(raw, 'due'),
+    done_at: optionalText(raw, 'done_at'),
     version,
-    created_at: text(brut, 'created_at'),
-    updated_at: text(brut, 'updated_at'),
-    deleted_at: textSauNimic(brut, 'deleted_at'),
+    created_at: requiredText(raw, 'created_at'),
+    updated_at: requiredText(raw, 'updated_at'),
+    deleted_at: optionalText(raw, 'deleted_at'),
   }
 }
 
 /**
- * Ziua de azi, din ceasul dispozitivului.
+ * Today, from the device clock.
  *
- * Nu din bază: `current_date` depinde de timezone-ul sesiunii PostgreSQL, iar
- * „azi" e ziua în care stă omul, nu serverul.
+ * Not from the database: `current_date` depends on the PostgreSQL session
+ * timezone, and "today" is the day the person is in, not the server.
  */
-export function aziLocal(acum: Date): string {
-  const an = acum.getFullYear()
-  const lună = String(acum.getMonth() + 1).padStart(2, '0')
-  const zi = String(acum.getDate()).padStart(2, '0')
-  return `${an}-${lună}-${zi}`
+export function localToday(now: Date): string {
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 /**
- * Patch-ul, cu done_at pus de repository — singurul loc care decide.
+ * The patch, with done_at set by the repository — the only place that decides.
  *
- * Când un item devine done, done_at ia ziua locală. Când iese din done, se
- * șterge. Un done_at trimis explicit în patch e respectat: foaia de item are
- * dreptul să corecteze ziua.
+ * When an item becomes done, done_at takes the local day. When it leaves done,
+ * it is cleared. A done_at passed explicitly is respected: the item sheet is
+ * allowed to correct the day.
  */
-export function cuFăcutLa(item: Item, patch: Patch, azi: string): Patch {
+export function withDoneAt(item: Item, patch: Patch, today: string): Patch {
   if ('done_at' in patch) return patch
 
-  const stareaNouă = patch.state ?? item.state
-  if (stareaNouă === 'done' && item.state !== 'done') {
-    return { ...patch, done_at: azi }
+  const nextState = patch.state ?? item.state
+  if (nextState === 'done' && item.state !== 'done') {
+    return { ...patch, done_at: today }
   }
-  if (stareaNouă !== 'done' && item.state === 'done') {
+  if (nextState !== 'done' && item.state === 'done') {
     return { ...patch, done_at: null }
   }
   return patch

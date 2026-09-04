@@ -5,14 +5,14 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 /**
- * Legea 4 a coloanei: niciun ecran nu vorbește direct cu Supabase.
+ * Law 4 of the spine: no screen talks to Supabase directly.
  *
- * Scrisă aici, nu într-un document, pentru că o lege care depinde de
- * bunăvoință nu e o lege. Interzice și pachetul (singura cale de a construi
- * un client) și fișierele de client din interiorul repository-ului, ca să nu
- * poată fi ocolită cu un import relativ.
+ * Written here, not in a document, because a law that depends on goodwill is
+ * not a law. It forbids both the package (the only way to build a client) and
+ * the client files inside the repository, so it cannot be dodged with a
+ * relative import.
  */
-export const IMPORTURI_INTERZISE = [
+export const RESTRICTED_IMPORTS = [
   'error',
   {
     patterns: [
@@ -26,8 +26,8 @@ export const IMPORTURI_INTERZISE = [
           '../**/repository/supabase*',
         ],
         message:
-          'Legea 4: clientul Supabase se folosește numai în src/repository/. ' +
-          'Ecranele cer și primesc de la repository.',
+          'Law 4: the Supabase client is used only in src/repository/. ' +
+          'Screens ask the repository and receive answers from it.',
       },
     ],
   },
@@ -36,7 +36,7 @@ export const IMPORTURI_INTERZISE = [
 export default tseslint.config(
   { ignores: ['dist/**', 'node_modules/**', 'coverage/**'] },
 
-  // Codul aplicației.
+  // Application code.
   {
     files: ['src/**/*.{ts,tsx}'],
     extends: [js.configs.recommended, tseslint.configs.recommendedTypeChecked],
@@ -53,27 +53,25 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      'react-refresh/only-export-components': [
-        'error',
-        { allowConstantExport: true },
-      ],
-      // Varianta din typescript-eslint, nu regula de bază: aceea lasă să
-      // treacă `import type`, iar un tip importat din pachet e tot un import.
+      'react-refresh/only-export-components': ['error', { allowConstantExport: true }],
+      // The typescript-eslint variant, not the base rule: the base rule lets
+      // `import type` through, and a type imported from the package is still
+      // an import.
       'no-restricted-imports': 'off',
-      '@typescript-eslint/no-restricted-imports': IMPORTURI_INTERZISE,
+      '@typescript-eslint/no-restricted-imports': RESTRICTED_IMPORTS,
       eqeqeq: ['error', 'always'],
       'no-console': ['error', { allow: ['error', 'warn'] }],
     },
   },
 
-  // Singurul loc care are voie să atingă Supabase.
+  // The only place allowed to touch Supabase.
   {
     files: ['src/repository/**/*.{ts,tsx}'],
     rules: { '@typescript-eslint/no-restricted-imports': 'off' },
   },
 
-  // Verificatorul de așezare: codul lui rulează parte în Node, parte în
-  // pagină, deci vede globalele amândurora.
+  // The layout checker: part of its code runs in Node and part in the page, so
+  // it sees the globals of both.
   {
     files: ['scripts/check-layout.mjs', 'scripts/lib/layout.mjs'],
     extends: [js.configs.recommended],
@@ -83,7 +81,7 @@ export default tseslint.config(
     },
   },
 
-  // Fișierele de configurare și scripturile de verificare rulează în Node.
+  // Configuration files and the checker scripts run in Node.
   {
     files: ['*.{js,ts,mjs}', 'scripts/**/*.mjs'],
     extends: [js.configs.recommended],

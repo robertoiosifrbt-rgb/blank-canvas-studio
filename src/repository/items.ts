@@ -1,118 +1,118 @@
-// Fața pe care o văd ecranele. Cer și primesc; Supabase nu se vede niciodată.
+// The face the screens see. They ask and receive; Supabase is never visible.
 //
 //     UI → repository → Supabase
 
-import { sesiuneaCurentă } from './auth'
-import type { Sesiune } from './auth'
-import { depozitul } from './depozit'
-import { fișierDeExport } from './export'
-import type { Fișier } from './export'
-import { pentruAzi, pentruCalendar } from './filtre'
-import type { GrupuriAzi, ZiDeCalendar } from './filtre'
-import { aziLocal } from './item'
+import { currentSession } from './auth'
+import type { Session } from './auth'
+import { exportFile } from './export'
+import type { ExportFile } from './export'
+import { forCalendar, forToday } from './filters'
+import type { CalendarDay, TodayGroups } from './filters'
+import { localToday } from './item'
 import type { Item, Patch } from './item'
-import { aplicăPatch, creează, șterge } from './scriere'
-import { sincronizează } from './sincronizare'
-import type { Sincronizare } from './sincronizare'
-import { scriitorulSupabase, sursaSupabase } from './sursa'
+import { supabaseSource, supabaseWriter } from './source'
+import { store } from './store'
+import { sync } from './sync'
+import type { SyncResult } from './sync'
+import { applyPatch, create, softDelete } from './write'
 
 export type { Item, Patch } from './item'
-export type { GrupuriAzi, ZiDeCalendar } from './filtre'
-export type { Sincronizare } from './sincronizare'
-export { Conflict } from './scriere'
+export type { CalendarDay, TodayGroups } from './filters'
+export type { SyncResult } from './sync'
+export type { ExportFile } from './export'
+export { Conflict } from './write'
 
 /**
- * Verifică că namespace-ul cerut e chiar al utilizatorului autentificat acum.
+ * Checks that the requested namespace really belongs to the user signed in
+ * right now.
  *
- * Cache-ul nu se citește niciodată fără user-ul curent: altfel logout din A și
- * login în B ar arăta, măcar o clipă, datele lui A.
+ * The cache is never read without the current user: otherwise signing out of A
+ * and into B would show, if only for a moment, A's data.
  */
-export function confirmăContul(owner: string, sesiune: Sesiune | null): void {
-  if (sesiune === null) {
-    throw new Error('Nu e nimeni autentificat. Cache-ul nu se citește.')
+export function assertAccount(owner: string, session: Session | null): void {
+  if (session === null) {
+    throw new Error('Nobody is signed in. The cache is not read.')
   }
-  if (sesiune.utilizator !== owner) {
-    throw new Error(
-      `Cache-ul cerut e al lui ${owner}, dar contul curent e altul.`,
-    )
+  if (session.userId !== owner) {
+    throw new Error(`The requested cache belongs to ${owner}, but the current account is another.`)
   }
 }
 
-async function contul(owner: string): Promise<void> {
-  confirmăContul(owner, await sesiuneaCurentă())
+async function requireAccount(owner: string): Promise<void> {
+  assertAccount(owner, await currentSession())
 }
 
-/** Aduce ce s-a schimbat și pune în cache. Prima dată, tot. */
-export async function sincronizeazăContul(owner: string): Promise<Sincronizare> {
-  await contul(owner)
-  return sincronizează(owner, sursaSupabase(), depozitul)
+/** Fetches what changed and puts it in the cache. The first time, everything. */
+export async function syncAccount(owner: string): Promise<SyncResult> {
+  await requireAccount(owner)
+  return sync(owner, supabaseSource(), store)
 }
 
-/** Tot ce e în cache pentru contul ăsta, inclusiv rândurile șterse. */
-export async function totul(owner: string): Promise<Item[]> {
-  await contul(owner)
-  return depozitul.citeșteTot(owner)
+/** Everything cached for this account, deleted rows included. */
+export async function all(owner: string): Promise<Item[]> {
+  await requireAccount(owner)
+  return store.readAll(owner)
 }
 
-/** Ce ai de făcut acum. Filtru peste snapshot, nu interogare nouă. */
-export async function azi(owner: string, acum: Date): Promise<GrupuriAzi> {
-  await contul(owner)
-  return pentruAzi(await depozitul.citeșteTot(owner), aziLocal(acum))
+/** What you have to do now. A filter over the snapshot, not a new query. */
+export async function today(owner: string, now: Date): Promise<TodayGroups> {
+  await requireAccount(owner)
+  return forToday(await store.readAll(owner), localToday(now))
 }
 
-/** Zilele, cu ce ai planificat și ce ai făcut. */
-export async function calendar(owner: string): Promise<ZiDeCalendar[]> {
-  await contul(owner)
-  return pentruCalendar(await depozitul.citeșteTot(owner))
+/** The days, with what you planned and what you did. */
+export async function calendar(owner: string): Promise<CalendarDay[]> {
+  await requireAccount(owner)
+  return forCalendar(await store.readAll(owner))
 }
 
-/** Captura: un titlu, nimic altceva. */
-export async function capturează(owner: string, titlu: string): Promise<Item> {
-  await contul(owner)
-  return păstrează(owner, await creează(scriitorulSupabase(owner), titlu))
+/** Capture: a title, nothing else. */
+export async function capture(owner: string, title: string): Promise<Item> {
+  await requireAccount(owner)
+  return cache(owner, await create(supabaseWriter(owner), title))
 }
 
-/** Modifică un item, cu verificare de versiune. Aruncă Conflict dacă nu ține. */
-export async function modifică(
+/** Changes an item, with a version check. Throws Conflict if it will not hold. */
+export async function update(
   owner: string,
   item: Item,
   patch: Patch,
-  acum: Date,
+  now: Date,
 ): Promise<Item> {
-  await contul(owner)
-  return păstrează(
+  await requireAccount(owner)
+  return cache(
     owner,
-    await aplicăPatch(scriitorulSupabase(owner), item, patch, aziLocal(acum)),
+    await applyPatch(supabaseWriter(owner), item, patch, localToday(now)),
   )
 }
 
-/** Ștergerea e un UPDATE pe deleted_at. Rândul rămâne, ca sync-ul să-l ducă. */
-export async function aruncă(owner: string, item: Item, acum: Date): Promise<Item> {
-  await contul(owner)
-  return păstrează(
+/** Deleting is an UPDATE on deleted_at. The row stays, so sync can carry it. */
+export async function discard(owner: string, item: Item, now: Date): Promise<Item> {
+  await requireAccount(owner)
+  return cache(
     owner,
-    await șterge(scriitorulSupabase(owner), item, acum, aziLocal(acum)),
+    await softDelete(supabaseWriter(owner), item, now, localToday(now)),
   )
 }
 
-/** „Descarcă tot": snapshot-ul întreg, ca fișier. */
-export async function exportăTot(owner: string, acum: Date): Promise<Fișier> {
-  await contul(owner)
-  const [itemi, cursor] = await Promise.all([
-    depozitul.citeșteTot(owner),
-    depozitul.cursorul(owner),
+/** "Download everything": the entire snapshot, as a file. */
+export async function exportAll(owner: string, now: Date): Promise<ExportFile> {
+  await requireAccount(owner)
+  const [items, cursor] = await Promise.all([
+    store.readAll(owner),
+    store.cursor(owner),
   ])
-  return fișierDeExport(owner, itemi, cursor, acum)
+  return exportFile(owner, items, cursor, now)
 }
 
 /**
- * Rândul întors de server intră în cache pe loc.
+ * The row the server returned goes into the cache straight away.
  *
- * Cursorul nu se mișcă: rândul ăsta va veni oricum la următorul delta, iar un
- * cursor mutat pe o singură scriere ar putea sări peste ce a scris altcineva
- * între timp.
+ * The cursor does not move: this row will come back on the next delta anyway,
+ * and a cursor moved on a single write could skip past what somebody else
+ * wrote in the meantime.
  */
-async function păstrează(owner: string, item: Item): Promise<Item> {
-  await depozitul.upsertă(owner, [item], null)
+async function cache(owner: string, item: Item): Promise<Item> {
+  await store.upsert(owner, [item], null)
   return item
 }

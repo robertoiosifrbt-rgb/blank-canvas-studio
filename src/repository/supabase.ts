@@ -1,32 +1,33 @@
-// Singurul loc din aplicație care construiește clientul Supabase.
-// Legea 4 e impusă de ESLint: orice alt fișier care importă pachetul ăsta
-// face lintul roșu.
+// The only place in the app that builds the Supabase client.
+// Law 4 is enforced by ESLint: any other file importing the package turns the
+// lint red.
 
 import { createClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-import { configurațiaSupabase } from '../config/env'
+import { supabaseConfig } from '../config/env'
 
-let client: SupabaseClient | null = null
+let instance: SupabaseClient | null = null
 
 /**
- * Clientul, construit la prima cerere.
+ * The client, built on first request.
  *
- * Nu la încărcarea modulului: o configurație lipsă aruncată la import ar da un
- * ecran alb, în afara error boundary-ului. Aruncată la prima folosire, se vede
- * ca mesaj.
+ * Not at module load: a missing configuration thrown at import time would give
+ * a blank screen, outside the error boundary. Thrown on first use, it shows up
+ * as a message.
  */
-export function clientul(): SupabaseClient {
-  if (client === null) {
-    const configurație = configurațiaSupabase()
-    client = createClient(configurație.url, configurație.cheiePublishable, {
+export function supabase(): SupabaseClient {
+  if (instance === null) {
+    const config = supabaseConfig()
+    instance = createClient(config.url, config.publishableKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        // Nu folosim magic link sau OAuth, deci nu căutăm sesiuni în URL.
+        // We use neither magic links nor OAuth, so we do not look for a
+        // session in the URL.
         detectSessionInUrl: false,
       },
     })
   }
-  return client
+  return instance
 }

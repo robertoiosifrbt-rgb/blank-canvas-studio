@@ -1,0 +1,95 @@
+// The only place that actually talks to the items table.
+//
+// The rest of the repository works against the Source and Writer interfaces,
+// so the sync and write logic can be checked without a network.
+
+import type { Patch } from './item'
+import { supabase } from './supabase'
+import type { Source } from './sync'
+import type { Writer } from './write'
+
+const TABLE = 'items'
+const ALL = '*'
+
+function fail(operation: string, error: { message: string }): never {
+  throw new Error(`${operation}: ${error.message}`)
+}
+
+/**
+ * The user's rows, paginated.
+ *
+ * It fetches the rows with deleted_at as well — that is why we keep them:
+ * without them, an item deleted on the phone would stay forever in the
+ * laptop's cache.
+ */
+export function supabaseSource(): Source {
+  return {
+    async page({ from, to, sinceCursor }) {
+      let query = supabase()
+        .from(TABLE)
+        .select(ALL)
+        // A stable order, otherwise pagination can skip or repeat rows.
+        .order('id', { ascending: true })
+        .range(from, to)
+
+      if (sinceCursor !== null) {
+        // Inclusive on purpose: the upsert is idempotent, so a row fetched
+        // twice breaks nothing, and this way a second change sharing an
+        // updated_at is not lost.
+        query = query.gte('updated_at', sinceCursor)
+      }
+
+      // Without types generated from the schema, PostgREST returns `any`. It
+      // goes through `unknown` on purpose: the only thing that validates a row
+      // is fromRow.
+      const response = await query
+      if (response.error !== null) fail('Fetching rows', response.error)
+      return response.data as unknown[]
+    },
+  }
+}
+
+/**
+ * The writes, row by row.
+ *
+ * `owner` is put in the conditions as well, even though the RLS policy already
+ * enforces it: if the policy were ever wrong, the condition still stands.
+ */
+export function supabaseWriter(owner: string): Writer {
+  return {
+    async insert(values: { title: string }) {
+      const response = await supabase()
+        .from(TABLE)
+        .insert(values)
+        .select(ALL)
+        .single()
+      if (response.error !== null) fail('Writing the new row', response.error)
+      return response.data as unknown
+    },
+
+    async update(id: string, version: number, patch: Patch) {
+      // update items set <patch>
+      // where id = :id and owner = auth.uid() and version = :version
+      const response = await supabase()
+        .from(TABLE)
+        .update(patch)
+        .eq('id', id)
+        .eq('owner', owner)
+        .eq('version', version)
+        .select(ALL)
+      if (response.error !== null) fail('Updating the row', response.error)
+      return response.data as unknown[]
+    },
+
+    async read(id: string) {
+      const response = await supabase()
+        .from(TABLE)
+        .select(ALL)
+        .eq('id', id)
+        .eq('owner', owner)
+        .maybeSingle()
+      if (response.error !== null) fail('Re-reading the row', response.error)
+      return response.data as unknown
+    },
+  }
+}
