@@ -20,7 +20,7 @@ if (!URL_BAZĂ) {
 
 // Fiecare grup trebuie să aibă cazuri. Un test de RLS cu zero negative sau
 // zero pozitive e o verificare verde care nu verifică nimic.
-const GRUPURI_CERUTE = ['negativ', 'pozitiv', 'constrângere']
+const GRUPURI_CERUTE = ['negativ', 'pozitiv', 'scriere', 'constrângere']
 
 const client = new pg.Client({ connectionString: URL_BAZĂ })
 const căzute = []

@@ -236,6 +236,43 @@ export const CAZURI = [
       }),
   },
 
+  // ── Scrierea: verificarea de versiune, impusă de bază ──────────────────
+  {
+    grup: 'scriere',
+    nume: 'UPDATE-ul condiționat atinge un rând cu versiunea curentă, zero cu una veche',
+    rulează: (t) =>
+      t.caA(async () => {
+        const { rows } = await t.q(
+          "insert into public.items (title) values ('sun la X') returning id, version",
+        )
+        const { id, version } = rows[0]
+
+        // Cu versiunea curentă: exact un rând.
+        const potrivit = await t.q(
+          `update public.items set title = 'schimbat'
+             where id = $1 and owner = auth.uid() and version = $2
+           returning version`,
+          [id, version],
+        )
+        t.cere(potrivit.rowCount === 1, `a atins ${potrivit.rowCount} rânduri, se aștepta 1`)
+        t.cere(potrivit.rows[0].version === version + 1, 'versiunea nu a crescut')
+
+        // Cu versiunea de dinainte: niciunul. Ăsta e mecanismul pe care se
+        // sprijină toată scrierea — nu o verificare în JavaScript.
+        const depășit = await t.q(
+          `update public.items set title = 'peste'
+             where id = $1 and owner = auth.uid() and version = $2
+           returning id`,
+          [id, version],
+        )
+        t.cere(depășit.rowCount === 0, `a atins ${depășit.rowCount} rânduri, se aștepta 0`)
+
+        // Iar rândul a rămas cum l-a lăsat scrierea care a trecut.
+        const acum = await t.q('select title from public.items where id = $1', [id])
+        t.cere(acum.rows[0].title === 'schimbat', 'rândul a fost călcat de scrierea depășită')
+      }),
+  },
+
   // ── Constrângerile pe care planul le trece drept impuse de mașină ───────
   {
     grup: 'constrângere',
