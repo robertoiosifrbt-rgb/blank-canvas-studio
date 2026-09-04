@@ -70,11 +70,6 @@ export function minusDays(day: string, days: number): string {
   return `${y}-${m}-${d}`
 }
 
-/** The day `days` days after the given one, as 'YYYY-MM-DD'. */
-export function plusDays(day: string, days: number): string {
-  return minusDays(day, -days)
-}
-
 /** The day out of a timestamp, as 'YYYY-MM-DD'. */
 export function dayOf(timestamp: string): string {
   return timestamp.slice(0, 10)
