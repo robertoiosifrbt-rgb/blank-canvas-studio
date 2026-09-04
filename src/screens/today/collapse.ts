@@ -6,14 +6,10 @@
 
 import type { Item } from '../../repository/items'
 import { dayOf, formatDay, minusDays } from '../../ui/dates'
+import { plural } from '../../ui/plural'
 
 /** Overdue items from the last this-many days stay expanded. */
 export const EXPANDED_DAYS = 7
-
-/** "1 item" / "14 items". */
-export function plural(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`
-}
 
 export type SplitOverdue = {
   /** Due within the last seven days. A task overdue yesterday must be seen. */
