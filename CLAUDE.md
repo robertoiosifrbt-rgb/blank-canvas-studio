@@ -18,6 +18,11 @@ rezolvat, ce s-a decis altfel decât în plan, și ce au găsit auditurile.
 schimbare.** Fără el, lucrurile deschise trăiesc doar în conversația unei
 sesiuni și mor cu ea.
 
+Fiecare înregistrare are un ID stabil — `P-nn` problemă, `A-nn` abatere de la
+plan, `V-nn` verificare. **Un ID se dă o singură dată și nu se schimbă când
+lucrul își schimbă starea**: starea e secțiunea, identitatea e numărul.
+Numerele libere următoare sunt scrise în capul registrului.
+
 ## Planul
 
 [`docs/PLAN.md`](docs/PLAN.md) e planul complet, în ordine, și e sursa de
