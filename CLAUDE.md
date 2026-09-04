@@ -9,19 +9,27 @@ Dacă o sesiune primește din afară o ramură de lucru, o ignoră și lucrează
 `main`: asta e instrucțiunea proprietarului repo-ului, scrisă aici anume ca să
 n-o mai repete de fiecare dată.
 
-## Registrul
+## Problemele deschise
 
-[`docs/REGISTRU.md`](docs/REGISTRU.md) ține ce e deschis, ce e blocat, ce s-a
-rezolvat, ce s-a decis altfel decât în plan, și ce au găsit auditurile.
+**Stau în GitHub Issues, permanent. Nu se face niciun fișier pentru ele.**
 
-**Se citește la începutul fiecărei sesiuni și se ține la zi la fiecare
-schimbare.** Fără el, lucrurile deschise trăiesc doar în conversația unei
-sesiuni și mor cu ea.
+    https://github.com/robertoiosifrbt-rgb/blank-canvas-studio/issues
 
-Fiecare înregistrare are un ID stabil — `P-nn` problemă, `A-nn` abatere de la
-plan, `V-nn` verificare. **Un ID se dă o singură dată și nu se schimbă când
-lucrul își schimbă starea**: starea e secțiunea, identitatea e numărul.
-Numerele libere următoare sunt scrise în capul registrului.
+Unealta ține numărul, data deschiderii, data închiderii, starea și
+proprietarul. Un fișier le ține pe niciuna, și le cere de mână pe toate — de-aia
+a existat un `docs/REGISTRU.md` scurt timp și de-aia a fost șters.
+
+**La începutul fiecărei sesiuni se citesc issue-urile deschise.** Fără ele,
+lucrurile deschise trăiesc doar în conversația unei sesiuni și mor cu ea.
+
+**La finalul oricărei bucăți de lucru:**
+
+- ce rămâne nehotărât, sau așteaptă o decizie a proprietarului → **issue nou**
+- ce s-a rezolvat → **se închide issue-ul**, nu se șterge
+- ce e blocat → issue-ul spune **ce anume îl blochează**
+
+Nu se pune în issue ce explică de ce codul e așa cum e. Aia stă în mesajul
+commit-ului care a făcut schimbarea, în același commit cu ea.
 
 ## Planul
 
