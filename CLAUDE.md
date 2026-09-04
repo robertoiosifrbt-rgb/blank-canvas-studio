@@ -8,6 +8,29 @@
 
 Panou personal: finanțe, datorii, task-uri, obiceiuri, jurnal și obiective.
 
+## Regula lui Roberto — cât mai simplu
+
+**Se construiește numai ce există deja. Ce apare, se adaugă atunci.**
+
+Când vine un model de altundeva — o schemă, o altă aplicație, o listă de
+câmpuri — nu se copiază întreg. Se ia partea care are astăzi date în ea.
+Restul se notează și se așteaptă.
+
+Exemplu, ca să fie limpede: modulul de datorii a fost gândit după o schemă cu
+douăsprezece tabele. S-au făcut șase. CCJ-uri, oferte de stingere, plăți
+planificate una câte una și istoric de sold declarat au rămas afară — sunt
+reale, dar Roberto n-are niciunul acum. Când primește primul CCJ, se face
+atunci, cu datele lui adevărate în față.
+
+Motivul nu e lenea. Un câmp gol pe care nu l-ai cerut e un câmp pe care îl
+sari de fiecare dată când completezi ceva, și o decizie luată fără să știi
+cum arată cazul real. Se ghicește mai prost înainte decât după.
+
+Corolarul, valabil oriunde: **nu se adaugă nimic nesolicitat.** Nici un modul
+pe lângă, nici un task pe lângă, nici un câmp „că poate o să trebuiască".
+Dacă pare că mai trebuie ceva, se întreabă înainte, nu se livrează și se
+explică după.
+
 ## Regula principală — codul stă în module
 
 **Un fișier = o singură responsabilitate. Maxim 300 de linii.**
