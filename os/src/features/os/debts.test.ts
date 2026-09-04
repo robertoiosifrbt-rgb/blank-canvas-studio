@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { currentHolder, currentRef, nextDue, openFollowUps, paidOn, paymentsFor, progress, remaining } from './debts'
+import { allRefs, currentHolder, currentRef, nextDue, openFollowUps, paidOn, paymentsFor, progress, remaining } from './debts'
 import { emptyOsData, type Debt, type OsData } from './types'
 
 const debt = (extra: Partial<Debt> = {}): Debt =>
@@ -100,5 +100,36 @@ describe('follow-up-urile din jurnal', () => {
       { id: 'a3', date: '2026-09-02', kind: 'Email', summary: 'Fără urmare' },
     ] })
     expect(openFollowUps(d, '2026-09-04')).toEqual([{ date: '2026-09-20', about: 'Resunat' }])
+  })
+})
+
+describe('referințele unei datorii', () => {
+  it('le arată pe toate, și pe cele scrise pe firme', () => {
+    const d = debt({
+      refs: [{ id: 'r1', value: 'CLI-1', label: 'număr de client' }],
+      holders: [{ id: 'h1', org: 'o1', role: 'Proprietar curent', ref: 'LW-77' }],
+    })
+    expect(allRefs(d).map(r => r.value)).toEqual(['CLI-1', 'LW-77'])
+  })
+
+  it('nu o repetă pe cea care e și în listă, și pe firmă', () => {
+    const d = debt({
+      refs: [{ id: 'r1', value: 'LW-77' }],
+      holders: [{ id: 'h1', org: 'o1', role: 'Proprietar curent', ref: 'LW-77' }],
+    })
+    expect(allRefs(d)).toHaveLength(1)
+  })
+
+  it('la telefon o dă pe cea a firmei care o ține acum', () => {
+    const d = debt({
+      refs: [{ id: 'r1', value: 'VECHI-1', org: 'o9' }, { id: 'r2', value: 'NOU-2', org: 'o2' }],
+      holders: [{ id: 'h1', org: 'o2', role: 'Proprietar curent' }],
+    })
+    expect(currentRef(d)).toBe('NOU-2')
+  })
+
+  it('dacă nu se știe a cui e, o dă pe prima', () => {
+    const d = debt({ refs: [{ id: 'r1', value: 'UNU' }, { id: 'r2', value: 'DOI' }] })
+    expect(currentRef(d)).toBe('UNU')
   })
 })

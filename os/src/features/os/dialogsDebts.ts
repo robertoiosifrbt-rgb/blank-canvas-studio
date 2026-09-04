@@ -4,7 +4,7 @@ import {
   PLAN_STATUSES, ROLES, STAGES, STATUSES, remaining,
 } from './debts'
 import { money, num, today, uid, ym } from './format'
-import type { Debt, DebtAction, DebtHolder, DebtPlan, Org, OsData, PlanEvery } from './types'
+import type { Debt, DebtAction, DebtHolder, DebtPlan, DebtRef, Org, OsData, PlanEvery } from './types'
 
 type Update = (change: (draft: OsData) => void) => void
 
@@ -29,16 +29,35 @@ export function debtDialogs(data: OsData, update: Update) {
       { key: 'since', label: 'De când există', type: 'date', value: existing?.since ?? '' },
       { key: 'defaulted', label: 'Data intrării în default', type: 'date', value: existing?.defaulted ?? '' },
       { key: 'due', label: 'Termen (opțional)', type: 'date', value: existing?.due ?? '' },
+      /* Firma și referința se scriu aici, nu în alt ecran. Cazul obișnuit e o
+         datorie cu o firmă; drumul obișnuit nu trebuie să treacă prin trei
+         ferestre. Restul referințelor se adaugă după, de pe card. */
+      ...(existing ? [] : [
+        { key: 'org', label: 'Cine ți-o cere', placeholder: 'ex: Lowell, DWP' },
+        { key: 'ref', label: 'Referința lor', placeholder: 'ex: SY361954C' },
+      ]),
       { key: 'notes', label: 'Note', type: 'textarea', value: existing?.notes ?? '' },
     ],
     submit(values) {
       if (!values.name) return 'Scrie pentru ce e datoria.'
       if (num(values.total) <= 0) return 'Scrie cât e în total.'
       const id = existing?.id ?? `d${uid()}`
+      /* Firma scrisă de mână: o găsim după nume, altfel o facem. Fără asta,
+         fiecare datorie ar fi creat încă o copie a aceleiași firme. */
+      const typed = (values.org ?? '').trim()
+      const found = Object.values(data.orgs)
+        .find(o => o.name.toLowerCase() === typed.toLowerCase())
+      const orgId = typed ? found?.id ?? `o${uid()}` : ''
       update(draft => {
+        if (typed && !found) {
+          draft.orgs[orgId] = { id: orgId, name: typed, createdAt: new Date().toISOString() }
+        }
         draft.debts[id] = {
           ...(existing ?? {}),
           id, mod, name: values.name,
+          holders: existing?.holders ?? (orgId
+            ? [{ id: `h${uid()}`, org: orgId, role: 'Proprietar curent', ref: values.ref || undefined }]
+            : []),
           direction: values.direction === 'owed' ? 'owed' : 'owe',
           total: num(values.total),
           category: values.category || undefined,
@@ -198,5 +217,27 @@ export function debtDialogs(data: OsData, update: Update) {
     },
   })
 
-  return { debt, pay, org, holder, plan, action }
+  const reference = (target: Debt, existing?: DebtRef): DialogSpec => ({
+    title: existing ? 'Modifică referința' : 'Încă o referință',
+    note: 'O scrisoare poate purta mai multe numere deodată. Pune-le pe toate, cu ce sunt.',
+    fields: [
+      { key: 'value', label: 'Numărul', value: existing?.value ?? '' },
+      { key: 'label', label: 'Ce e', value: existing?.label ?? '', placeholder: 'ex: număr de client, dosar, cont' },
+      { key: 'org', label: 'De la cine', type: 'select', value: existing?.org ?? '', options: [
+        { value: '', label: '— nu se știe —' },
+        ...Object.values(data.orgs).map(o => ({ value: o.id, label: o.name })),
+      ] },
+    ],
+    submit(values) {
+      if (!values.value) return 'Scrie numărul.'
+      const id = existing?.id ?? `r${uid()}`
+      update(draft => {
+        const list = (draft.debts[target.id].refs ?? []).filter(r => r.id !== id)
+        list.push({ id, value: values.value, label: values.label || undefined, org: values.org || undefined })
+        draft.debts[target.id].refs = list
+      })
+    },
+  })
+
+  return { debt, pay, org, holder, plan, action, reference }
 }

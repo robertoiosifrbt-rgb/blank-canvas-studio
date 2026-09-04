@@ -152,6 +152,10 @@ export function OsApp() {
         onAdd={() => open(owed.debt(view))} onEdit={d => open(owed.debt(view, d))}
         onPay={d => open(owed.pay(d))}
         onNewOrg={() => open(owed.org())}
+        onRef={(d, r) => open(owed.reference(d, r))}
+        onDropRef={(d, r) => update(draft => {
+          draft.debts[d.id].refs = (draft.debts[d.id].refs ?? []).filter(x => x.id !== r.id)
+        })}
         onHolder={(d, h) => open(owed.holder(d, h))}
         onDropHolder={(d, h) => update(draft => {
           draft.debts[d.id].holders = (draft.debts[d.id].holders ?? []).filter(x => x.id !== h.id)

@@ -2,9 +2,9 @@ import { Head, Section } from '../parts'
 import { money, today } from '../format'
 import { itemsUnder } from '../modules'
 import {
-  activePlan, currentHolder, everyLabel, nextDue, paymentsFor, progress, remaining,
+  activePlan, allRefs, currentHolder, everyLabel, nextDue, paymentsFor, progress, remaining,
 } from '../debts'
-import type { Debt, DebtAction, DebtHolder, DebtPlan, DocFile, OsData } from '../types'
+import type { Debt, DebtAction, DebtHolder, DebtPlan, DebtRef, DocFile, OsData } from '../types'
 
 /**
  * Controlul datoriilor.
@@ -47,6 +47,8 @@ export interface DebtsActions {
   onOpenFile: (debt: Debt, file: DocFile) => void
   onDeleteFile: (debt: Debt, file: DocFile) => void
   onNewOrg: () => void
+  onRef: (debt: Debt, ref?: DebtRef) => void
+  onDropRef: (debt: Debt, ref: DebtRef) => void
 }
 
 export function Debts({ data, mod, busy, ...on }: DebtsActions & {
@@ -130,6 +132,24 @@ export function Debts({ data, mod, busy, ...on }: DebtsActions & {
               <span className="os-muted">Nu știi cine o ține. Adaugă firma.</span>
             )}
 
+            {allRefs(debt).length ? (
+              <div className="os-doc-files">
+                {allRefs(debt).map(ref => (
+                  <span className="os-doc-file" key={ref.id}>
+                    <button className="os-doc-open" onClick={() => on.onRef(debt, ref.id.startsWith('h:') ? undefined : ref)}>
+                      {ref.value}
+                      {ref.label ? <em>{ref.label}</em> : null}
+                      {ref.org && data.orgs[ref.org] ? <em>{data.orgs[ref.org].name}</em> : null}
+                    </button>
+                    {ref.id.startsWith('h:') ? null : (
+                      <button className="os-icon del" aria-label={`Șterge ${ref.value}`}
+                        onClick={() => on.onDropRef(debt, ref)}>🗑</button>
+                    )}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+
             {plan ? (
               <span className={`os-pill ${due && due < today() ? 'bad' : 'warn'}`}>
                 {money(plan.amount, currency)} {everyLabel(plan.every)}{due ? ` · ${due}` : ''}
@@ -169,6 +189,7 @@ export function Debts({ data, mod, busy, ...on }: DebtsActions & {
               </button>
               <button className="os-btn ghost sm" onClick={() => on.onAction(debt)}>Ce s-a întâmplat</button>
               <button className="os-btn ghost sm" onClick={() => on.onHolder(debt)}>Firmă</button>
+              <button className="os-btn ghost sm" onClick={() => on.onRef(debt)}>Referință</button>
               <button className="os-btn ghost sm" onClick={() => on.onPlan(debt, plan)}>
                 {plan ? 'Planul' : 'Plan de plată'}
               </button>

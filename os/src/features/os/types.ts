@@ -101,6 +101,20 @@ export interface DebtHolder {
   notes?: string
 }
 
+/**
+ * Un număr de referință. O scrisoare poate purta mai multe deodată — numărul
+ * de client, numărul de cont, numărul de dosar — și fiecare firmă îl cere pe
+ * al ei. `label` spune care e care, altfel rămâi cu trei numere și niciun
+ * indiciu pe care să-l citești la telefon.
+ */
+export interface DebtRef {
+  id: string
+  value: string
+  label?: string
+  /** Firma care ți l-a dat, dacă se știe. */
+  org?: string
+}
+
 export type PlanEvery = 'week' | 'fortnight' | 'month' | 'quarter' | 'once'
 
 /** Înțelegerea de plată: cât, cât de des, de când, și dacă mai ține. */
@@ -160,6 +174,8 @@ export interface Debt {
   defaulted?: string
   due?: string
   holders?: DebtHolder[]
+  /** Toate referințele datoriei, nu doar cea a firmei curente. */
+  refs?: DebtRef[]
   plans?: DebtPlan[]
   actions?: DebtAction[]
   /** Scrisorile scanate. Stau la datoria lor, nu în Documente. */

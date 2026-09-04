@@ -1,5 +1,5 @@
 import { iso, num } from './format'
-import type { Debt, DebtHolder, DebtPlan, Movement, OsData, PlanEvery } from './types'
+import type { Debt, DebtHolder, DebtPlan, DebtRef, Movement, OsData, PlanEvery } from './types'
 
 /**
  * Ce se poate ști despre o datorie fără să întrebi pe nimeni.
@@ -79,8 +79,27 @@ export function currentHolder(debt: Debt): DebtHolder | undefined {
     ?? holders[holders.length - 1]
 }
 
-/** Referința cu care te caută firma care o ține acum. */
-export const currentRef = (debt: Debt): string | undefined => currentHolder(debt)?.ref
+/**
+ * Referința cu care te caută firma care o ține acum.
+ *
+ * Întâi cea trecută pe firmă, apoi una din lista datoriei dată de aceeași
+ * firmă, apoi prima din listă. O datorie poate avea mai multe numere, dar la
+ * telefon îți trebuie unul, și anume al lor.
+ */
+export function currentRef(debt: Debt): string | undefined {
+  const holder = currentHolder(debt)
+  if (holder?.ref) return holder.ref
+  const refs = debt.refs ?? []
+  return refs.find(ref => ref.org && ref.org === holder?.org)?.value ?? refs[0]?.value
+}
+
+/** Toate referințele, cu eticheta lor, pentru afișare. */
+export const allRefs = (debt: Debt): DebtRef[] => [
+  ...(debt.refs ?? []),
+  ...(debt.holders ?? [])
+    .filter(h => h.ref && !(debt.refs ?? []).some(r => r.value === h.ref))
+    .map(h => ({ id: `h:${h.id}`, value: h.ref as string, label: h.role, org: h.org })),
+]
 
 export const activePlan = (debt: Debt): DebtPlan | undefined =>
   (debt.plans ?? []).find(plan => plan.status === 'Activ')
