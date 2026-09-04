@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { dayOf, formatDay, formatWeekday, minusDays, plusDays } from './dates'
+import { dayOf, formatDay, formatWeekday, minusDays } from './dates'
 
 const TODAY = '2026-09-04'
 
@@ -28,13 +28,11 @@ describe('formatWeekday', () => {
   })
 })
 
-describe('minusDays and plusDays', () => {
+describe('minusDays', () => {
   it('crosses the end of a month and of a year', () => {
     expect(minusDays('2026-09-04', 7)).toBe('2026-08-28')
     expect(minusDays('2026-09-01', 1)).toBe('2026-08-31')
     expect(minusDays('2026-01-01', 1)).toBe('2025-12-31')
-    expect(plusDays('2026-08-31', 1)).toBe('2026-09-01')
-    expect(plusDays('2026-12-31', 1)).toBe('2027-01-01')
   })
 
   it('does not shift by a day because of a timezone', () => {

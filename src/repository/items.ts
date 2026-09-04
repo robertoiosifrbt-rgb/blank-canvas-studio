@@ -6,8 +6,6 @@ import { currentSession } from './auth'
 import type { Session } from './auth'
 import { exportFile } from './export'
 import type { ExportFile } from './export'
-import { forCalendar, forToday } from './filters'
-import type { CalendarDay, TodayGroups } from './filters'
 import { localToday } from './item'
 import type { Item, Patch } from './item'
 import { supabaseSource, supabaseWriter } from './source'
@@ -56,18 +54,6 @@ export async function syncAccount(owner: string): Promise<SyncResult> {
 export async function all(owner: string): Promise<Item[]> {
   await requireAccount(owner)
   return store.readAll(owner)
-}
-
-/** What you have to do now. A filter over the snapshot, not a new query. */
-export async function today(owner: string, now: Date): Promise<TodayGroups> {
-  await requireAccount(owner)
-  return forToday(await store.readAll(owner), localToday(now))
-}
-
-/** The days, with what you planned and what you did. */
-export async function calendar(owner: string): Promise<CalendarDay[]> {
-  await requireAccount(owner)
-  return forCalendar(await store.readAll(owner))
 }
 
 /** Capture: a title, nothing else. */
