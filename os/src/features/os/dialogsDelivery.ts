@@ -133,7 +133,10 @@ export function deliveryDialogs(data: OsData, update: Update) {
         ? `${money_} Fiind intrare veche, nu se scrie nimic în Finanțe.`
         : money_,
       ok: 'Închide tura',
-      fields: day.archived ? [] : [
+      /* Fără nicio datorie, întrebarea n-are răspuns: ar cere o sumă pentru
+         un loc care nu există, iar tura ar rămâne cu o cifră care nu înseamnă
+         nimic. Câmpurile apar singure când bagi prima datorie. */
+      fields: day.archived || Object.keys(data.debts).length === 0 ? [] : [
         { key: 'toDebt', label: 'Cât trimiți la datorii', type: 'number', value: totals.available.toFixed(2) },
         { key: 'debt', label: 'Către care', type: 'select', value: '', options: [
           { value: '', label: '— niciuna anume —' },

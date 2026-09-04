@@ -128,7 +128,7 @@ export function Delivery({ data, mod, ...on }: DeliveryActions & { data: OsData;
               <span className="os-pill">Nu atinge Finanțele</span>
             ) : null}
 
-            {day.done && !day.archived && day.toDebt !== undefined ? (
+            {day.done && !day.archived && day.debt && day.toDebt !== undefined ? (
               <span className={`os-pill ${Math.abs(t.debtDifference) < 0.01 ? 'good' : 'warn'}`}>
                 {money(day.toDebt, currency)} la datorii
                 {Math.abs(t.debtDifference) < 0.01 ? '' :

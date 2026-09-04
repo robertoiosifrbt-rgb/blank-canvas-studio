@@ -179,3 +179,24 @@ describe('intervalele unei ture', () => {
     expect(run(dialogs(data).period(data.workdays.w1), { from: '19:00', to: '' })).toMatch(/ora/)
   })
 })
+
+describe('închiderea fără nicio datorie', () => {
+  it('nu întreabă cât trimiți la datorii', () => {
+    const data = ready()
+    delete data.debts.d1
+    expect(dialogs(data).finish(data.workdays.w1).fields).toEqual([])
+  })
+
+  it('întreabă din nou de cum ai o datorie', () => {
+    const data = ready()
+    expect(dialogs(data).finish(data.workdays.w1).fields.map(f => f.key)).toEqual(['toDebt', 'debt'])
+  })
+
+  it('închide tura la fel, cu banii în Finanțe', () => {
+    const data = ready()
+    delete data.debts.d1
+    run(dialogs(data).finish(data.workdays.w1))
+    expect(data.workdays.w1.done).toBe(true)
+    expect(data.finance['2026-09'].items.some(i => i.type === 'in' && i.amount === 90)).toBe(true)
+  })
+})
