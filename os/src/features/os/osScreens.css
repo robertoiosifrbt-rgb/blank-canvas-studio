@@ -141,3 +141,11 @@
 .os-cal-item .amt{font-family:var(--os-mono);font-weight:600;font-variant-numeric:tabular-nums;
   white-space:nowrap;align-self:center}
 .os-cal-item .amt.good{color:var(--os-good)}
+
+/* Ușa aplicației. Titlul își spune culoarea și fereastra își spune aranjarea,
+   din același motiv ca la dialog: sala stilează `h1` și `form` pe element. */
+.os-gate{max-width:420px;margin:0 auto;padding:48px 16px;display:flex;flex-direction:column;gap:12px}
+.os-gate h1{color:var(--os-ink);font-size:24px;font-weight:650;margin:0}
+.os-gate p{margin:0}
+.os-gate .os-modal{padding:16px;gap:12px}
+.os-gate .os-bad{color:var(--os-bad);margin:0}

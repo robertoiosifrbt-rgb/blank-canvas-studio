@@ -22,6 +22,7 @@ import { Notes } from './screens/Notes'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { Tasks } from './screens/Tasks'
 import { Today } from './screens/Today'
+import { SignIn } from './screens/SignIn'
 import { deviceToken, setDeviceToken } from './cloud'
 import { DEFAULT_ALERTS, buildAlarms } from './alerts'
 import { enablePush, pushState, syncAlarms, type PushState } from './push'
@@ -53,7 +54,7 @@ const GYM_PAGES: Array<{ key: GymPage; name: string }> = [
 ]
 
 export function OsApp() {
-  const { data: stored, mode, error, photos, ready, update } = useOs()
+  const { data: stored, mode, error, photos, ready, signedIn, update, signIn, signUp, signOut } = useOs()
   /* Ecranele văd obiectivele cu citirile sălii deja aduse; scrierile merg tot
      în ce e salvat, deci măsurătorile sălii nu ajung niciodată copiate aici. */
   const data = useMemo(() => resolveGoals(stored), [stored])
@@ -259,7 +260,7 @@ export function OsApp() {
           ? current.filter(k => k !== kind) : [...current, kind])}
         onAddTask={() => open(core.task('taskuri', calDay))} />
       case 'settings': return <SettingsScreen data={data} mode={mode} error={error} token={deviceToken()}
-        photos={photos}
+        photos={photos} onSignOut={() => { void signOut() }}
         onCurrency={value => update(draft => { draft.settings.currency = value })}
         onToken={value => { setDeviceToken(value); location.reload() }}
         onExport={exportData} onImport={importFile} imported={imported} onUpdate={hardReload}
@@ -381,6 +382,10 @@ export function OsApp() {
   const tree = moduleTree(data)
   const trail = current ? pathOf(data, current.id) : []
   const kids = current ? childrenOf(data, current.id) : []
+
+  /* Fără cont nu se poate sincroniza nimic, deci nu se intră: altfel ai
+     scrie ore întregi pe un telefon și n-ai găsi nimic pe celălalt. */
+  if (ready && !signedIn) return <SignIn onSignIn={signIn} onSignUp={signUp} />
 
   return (
     <UnitsProvider>

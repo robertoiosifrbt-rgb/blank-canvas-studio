@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { persist, pull, setPushErrorHandler, type SyncMode } from './storage'
+import { forgetKnown, persist, pull, setPushErrorHandler, type SyncMode } from './storage'
+import { onAuthChange, signIn as authIn, signOut as authOut, signUp as authUp } from './db'
 import { pullGym, watchGym } from './gymCloud'
 import { syncPhotos, watchPhotos, type PhotoSync } from './photoCloud'
 import { readLocal } from './storage'
@@ -17,7 +18,12 @@ export interface OsStore {
   ready: boolean
   /** Ultima sincronizare a pozelor. `null` până se termină prima. */
   photos: PhotoSync | null
+  /** Fără cont, datele rămân pe telefonul ăsta. */
+  signedIn: boolean
   update: (change: (draft: OsData) => void) => void
+  signIn: (email: string, password: string) => Promise<string | null>
+  signUp: (email: string, password: string) => Promise<string | null>
+  signOut: () => Promise<void>
 }
 
 export function useOs(): OsStore {
@@ -26,6 +32,16 @@ export function useOs(): OsStore {
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const [photos, setPhotos] = useState<PhotoSync | null>(null)
+  const [signedIn, setSignedIn] = useState(false)
+  /* Se schimbă la logare și la delogare, ca pornirea de mai jos s-o ia de la
+     capăt cu datele contului nou. */
+  const [account, setAccount] = useState(0)
+
+  useEffect(() => onAuthChange(() => {
+    forgetKnown()
+    setReady(false)
+    setAccount(n => n + 1)
+  }), [])
 
   useEffect(() => {
     let alive = true
@@ -37,6 +53,7 @@ export function useOs(): OsStore {
       setData(result.data)
       setMode(result.mode)
       setError(result.error)
+      setSignedIn(result.signedIn)
       setReady(true)
       /* Sala își ține datele în aceleași chei de browser, în alt sertar din
          cloud. Se aduc înainte ca ecranul de sală să se monteze, ca să pornească
@@ -56,7 +73,7 @@ export function useOs(): OsStore {
       stopPhotos = watchPhotos(result => { if (alive) setPhotos(result) })
     })
     return () => { alive = false; stopGym?.(); stopPhotos?.() }
-  }, [])
+  }, [account])
 
   const update = useCallback((change: (draft: OsData) => void) => {
     setData(current => {
@@ -67,6 +84,23 @@ export function useOs(): OsStore {
     })
   }, [mode])
 
-  return useMemo(() => ({ data, mode, error, ready, photos, update }),
-    [data, mode, error, ready, photos, update])
+  /* Erorile de logare se întorc ca text, ca ecranul să le arate sub câmp în
+     loc să pice toată aplicația. */
+  const guard = async (run: () => Promise<void>): Promise<string | null> => {
+    try {
+      await run()
+      return null
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error)
+    }
+  }
+
+  const signIn = useCallback((email: string, password: string) =>
+    guard(() => authIn(email, password)), [])
+  const signUp = useCallback((email: string, password: string) =>
+    guard(() => authUp(email, password)), [])
+  const signOut = useCallback(async () => { await authOut() }, [])
+
+  return useMemo(() => ({ data, mode, error, ready, photos, signedIn, update, signIn, signUp, signOut }),
+    [data, mode, error, ready, photos, signedIn, update, signIn, signUp, signOut])
 }

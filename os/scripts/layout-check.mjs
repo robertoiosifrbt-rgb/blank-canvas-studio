@@ -54,10 +54,42 @@ page.on('pageerror', e => problems.push(`eroare: ${e.message}`))
 
 /* Fără rețea: sincronizarea ar încerca Supabase, care de aici e blocat. */
 await page.route('**/functions/v1/**', route => route.fulfill({ status: 200, body: '{}' }))
-await page.goto(base, { waitUntil: 'networkidle' })
-await page.waitForTimeout(1200)
+/* Baza răspunde gol: aplicația pornește ca la primul cont, fără erori care
+   ar acoperi ce măsurăm. */
+await page.route('**/rest/v1/**', route => route.fulfill({
+  status: 200, headers: { 'Content-Type': 'application/json' }, body: '[]' }))
+await page.route('**/auth/v1/**', route => route.fulfill({
+  status: 200, headers: { 'Content-Type': 'application/json' }, body: '{}' }))
 
 const box = async (sel) => page.locator(sel).first().boundingBox()
+
+// 0. Fără cont se vede ușa, nu aplicația goală
+await page.goto(base, { waitUntil: 'networkidle' })
+await page.waitForTimeout(1200)
+const gate = await box('.os-gate')
+if (!gate) problems.push('ecranul de logare nu apare fără cont')
+else {
+  const readable = await page.locator('.os-gate h1').first().evaluate(el => {
+    const s = getComputedStyle(el)
+    return { color: s.color, bg: getComputedStyle(document.body).backgroundColor }
+  })
+  if (readable.color === readable.bg) problems.push('titlul ecranului de logare are culoarea fundalului')
+}
+
+/* De aici încolo se măsoară aplicația, deci îi trebuie o sesiune. Una
+   inventată e de ajuns: baza o va refuza, aplicația rămâne pe datele locale,
+   iar ecranele se randează exact ca la tine. */
+await page.evaluate(() => {
+  const ref = 'xmhvkgoxhoiuiigimied'
+  const far = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 365
+  localStorage.setItem(`sb-${ref}-auth-token`, JSON.stringify({
+    access_token: 'verificare', token_type: 'bearer', expires_at: far, expires_in: 31536000,
+    refresh_token: 'verificare',
+    user: { id: '00000000-0000-4000-8000-000000000000', email: 'verificare@local' },
+  }))
+})
+await page.goto(base, { waitUntil: 'networkidle' })
+await page.waitForTimeout(1200)
 
 // 1. Bara de jos există și e jos
 const nav = await box('.os-rail')

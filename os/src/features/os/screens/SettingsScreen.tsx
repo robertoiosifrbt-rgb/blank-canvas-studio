@@ -20,7 +20,7 @@ const PUSH_NOTES: Record<PushState, string> = {
   'de-instalat': 'Pe iPhone merg doar din aplicația instalată: Share → Add to Home Screen, apoi deschide-o de acolo.',
 }
 
-export function SettingsScreen({ data, mode, error, token, photos, imported, push, pushNote, onPush, onAlerts, onCurrency, onToken, onExport, onImport, onUpdate, onNewModule, onDeleteModule }: {
+export function SettingsScreen({ data, mode, error, token, photos, imported, push, pushNote, onPush, onAlerts, onCurrency, onToken, onExport, onImport, onUpdate, onNewModule, onDeleteModule, onSignOut }: {
   data: OsData
   mode: SyncMode
   error: string | null
@@ -38,6 +38,7 @@ export function SettingsScreen({ data, mode, error, token, photos, imported, pus
   onUpdate: () => void
   onNewModule: () => void
   onDeleteModule: (id: string) => void
+  onSignOut: () => void
 }) {
   let used = 0
   try { used = new TextEncoder().encode(localStorage.getItem('roberto-os-v1') ?? '').length } catch { used = 0 }
@@ -87,11 +88,19 @@ export function SettingsScreen({ data, mode, error, token, photos, imported, pus
             <b>Unde stau acum</b>
             <span className="os-muted">
               {mode === 'cloud'
-                ? 'În baza ta de date, prin state-api. Sertar propriu — nu atinge datele celeilalte aplicații.'
-                : `${error ? `Cloud-ul n-a răspuns (${error}). ` : ''}Doar în acest browser, pe acest aparat.`}
+                ? 'În baza ta de date, pe rânduri: fiecare tură, plată și scrisoare are rândul ei. Se scrie doar ce atingi.'
+                : `${error ? `Baza n-a răspuns (${error}). ` : ''}Doar în acest browser, pe acest aparat.`}
             </span>
           </div>
-          <span className={`os-pill ${mode === 'cloud' ? 'good' : 'warn'}`}>{mode === 'cloud' ? 'cloud propriu' : 'local'}</span>
+          <span className={`os-pill ${mode === 'cloud' ? 'good' : 'warn'}`}>{mode === 'cloud' ? 'baza ta' : 'local'}</span>
+        </div>
+
+        <div className="os-split">
+          <div>
+            <b>Contul</b>
+            <span className="os-muted">Datele vin după cont, pe orice telefon sau laptop te loghezi.</span>
+          </div>
+          <button className="os-btn ghost sm" onClick={onSignOut}>Ieși din cont</button>
         </div>
 
         <div className="os-split">
@@ -124,7 +133,7 @@ export function SettingsScreen({ data, mode, error, token, photos, imported, pus
 
         <div>
           <b>Cod de sincronizare</b>
-          <span className="os-muted">Pune același cod pe telefon și pe laptop ca să vezi aceleași date.</span>
+          <span className="os-muted">Rămas pentru datele sălii, care încă merg pe cod, nu pe cont. Pune-l la fel pe telefon și pe laptop.</span>
           <input className="os-in" type="text" spellCheck={false} defaultValue={token}
             onBlur={e => onToken(e.target.value)} />
         </div>
