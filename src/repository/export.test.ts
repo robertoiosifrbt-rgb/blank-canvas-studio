@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { exportFile } from './export'
 import type { Item } from './item'
@@ -50,5 +50,24 @@ describe('exportFile', () => {
 
     expect(read.items).toEqual([])
     expect(file.name).toBe('life-control-centre-2026-09-04.json')
+  })
+})
+
+describe('the file name, away from UTC', () => {
+  // Node re-reads TZ when it changes. In UTC the local day and the UTC day are
+  // the same, so a test there would pass over the bug it is here to catch.
+  beforeAll(() => {
+    vi.stubEnv('TZ', 'Europe/Bucharest')
+  })
+  afterAll(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('is named after your day, not after UTC\'s', () => {
+    // 21:30 UTC is half past midnight the next morning in Bucharest.
+    const late = new Date('2026-09-04T21:30:00+00:00')
+    expect(exportFile('a', [], null, late).name).toBe(
+      'life-control-centre-2026-09-05.json',
+    )
   })
 })

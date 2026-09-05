@@ -1,5 +1,7 @@
 // Dates, written out. One place, so "20 August" looks the same everywhere.
 
+import { localToday } from '../repository/item'
+
 const MONTHS = [
   'January',
   'February',
@@ -70,9 +72,18 @@ export function minusDays(day: string, days: number): string {
   return `${y}-${m}-${d}`
 }
 
-/** The day out of a timestamp, as 'YYYY-MM-DD'. */
+/**
+ * The day a timestamp fell on, where you are, as 'YYYY-MM-DD'.
+ *
+ * Not the first ten characters. Timestamps come out of the database in UTC, so
+ * anything you write after 21:00 in the summer here carries the day before,
+ * and the label saying when the oldest thing was written would name a day you
+ * never wrote on.
+ */
 export function dayOf(timestamp: string): string {
-  return timestamp.slice(0, 10)
+  const at = new Date(timestamp)
+  if (Number.isNaN(at.getTime())) throw new Error(`Not a timestamp: ${timestamp}`)
+  return localToday(at)
 }
 
 function monthParts(month: string): { year: number; month: number } {
