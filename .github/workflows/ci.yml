@@ -38,6 +38,20 @@ jobs:
       - name: structure
         run: npm run check:structure
 
+      # Two gates that see what the five above cannot. A screen can typecheck,
+      # test and build and still have no way in; a migration can be clean and
+      # still kill the app that is running, because the database and the code
+      # do not ship together. Both were written the day they cost something.
+      - name: every screen has a door
+        run: npm run check:reachable
+
+      # Needs the branch the app is built from, to compare against.
+      - name: fetch the deployed branch
+        run: git fetch --depth=1 origin main
+
+      - name: no migration breaks the deployed app
+        run: npm run check:drops
+
   local-database:
     name: RLS and layout on a local Supabase
     runs-on: ubuntu-latest

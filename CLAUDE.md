@@ -135,15 +135,21 @@ interfața și comentariile în română. Nu se întoarce înapoi.
 
 ## Înainte de fiecare împingere
 
-    npm run lint
-    npm run typecheck
-    npm test
-    npm run build
-    npm run check:structure
+    npm run check
 
-Verificările care au nevoie de o bază (`check:rls`, `check:layout`) cer
-Supabase local — vezi [README.md](README.md). **Nu ating niciodată producția.**
+**O comandă, nu șase.** Șase comenzi copiate de mână au șase ocazii de a fi
+uitate; una are zero. Regula asta a înlocuit lista de mai jos după o zi în care
+o sesiune a rulat cinci din șase de două ori la rând — și de fiecare dată cea
+sărită a fost cea care vedea greșeala.
 
-Verificarea nu se termină la teste: `typecheck` verifică tipurile, testele
-verifică logica, și niciunul nu prinde un text sub bara de status. De-aia
-există `check:layout`.
+Poarta rulează doar pașii pe care felia îi atinge. `npm run check -- --all` îi
+rulează pe toți.
+
+**Ce nu poate rula de aici, poarta îți spune la final.** `check:rls` cere o
+bază, `check:layout` cere un browser și un cont — vezi [README.md](README.md).
+Nu le sări în tăcere: un checker care sare peste jumătate din aplicație e o
+bifă verde care nu verifică nimic. **Nu ating niciodată producția.**
+
+**Fiecare pas al porții își poartă costul**, scris în `scripts/check.mjs`: ce
+greșeală l-a născut și cât a costat. Un pas fără povestea lui e un pas pe care
+următoarea sesiune îl șterge fiindcă „încetinește".
