@@ -39,6 +39,22 @@ lucrurile deschise trăiesc doar în conversația unei sesiuni și mor cu ea.
 Nu se pune în issue ce explică de ce codul e așa cum e. Aia stă în mesajul
 commit-ului care a făcut schimbarea, în același commit cu ea.
 
+## Auditurile
+
+`docs/audits/` ține câte un fișier pe audit, numit după ziua în care s-a făcut.
+
+Un audit e o **fotografie datată**: cine s-a uitat, când, pe ce commit, ce a
+găsit stricat și ce a găsit bun. Odată scris, **nu se mai modifică niciodată**.
+Ce s-a schimbat de atunci se vede în issue-uri și în istoricul commit-urilor.
+
+Nu e un al doilea registru, și de-aia n-are soarta lui `docs/REGISTRU.md`: nu
+pretinde că descrie prezentul, deci nu poate rămâne în urmă.
+
+Constatările merg în issue-uri, ca orice problemă deschisă. Fișierul ține ce nu
+încape într-un issue: verdictul, ordinea recomandată, și **ce s-a verificat și
+era în regulă** — partea care altfel nu se consemnează nicăieri, pentru că nu e
+o problemă.
+
 ## Planul
 
 [`docs/PLAN.md`](docs/PLAN.md) e planul complet, în ordine, și e sursa de
