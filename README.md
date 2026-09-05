@@ -64,6 +64,17 @@ scrii „call X", apare în Inbox, îl procesezi ca task pe mâine, apare în
 Calendar pe mâine, îl bifezi, apare ca făcut în ziua în care l-ai bifat, îl
 descarci și îl vezi în fișier, îl găsești pe alt dispozitiv și după refresh.
 
+Amândouă rulează pe Chromium, implicit. Telefonul pentru care e scrisă
+aplicația rulează WebKit, iar acolo diferă exact ce folosim — IndexedDB,
+descărcarea de Blob, `input type=date`, marginile de siguranță. Deci în CI
+rulează pe amândouă, și local se schimbă cu:
+
+    CHECK_BROWSER=webkit npm run check:cycle
+    CHECK_BROWSER=webkit npm run check:layout
+
+WebKit pe Linux nu e Safari de pe iPhone, e motorul lui. Prinde diferențele de
+motor, nu tot ce ține de iOS. Testele manuale de mai jos rămân.
+
 Dacă ai deja un Chromium, i-l dai direct în loc să-l descarci:
 
     CHROMIUM_EXECUTABLE=/cale/către/chromium npm run check:layout

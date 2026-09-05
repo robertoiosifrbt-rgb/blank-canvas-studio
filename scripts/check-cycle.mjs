@@ -13,8 +13,7 @@
 
 import { readFileSync } from 'node:fs'
 import { spawn } from 'node:child_process'
-import { chromium } from 'playwright'
-
+import { engine } from './lib/browser.mjs'
 import { dayCell, pickDay, sameMonth } from './lib/calendar.mjs'
 
 const PORT = Number(process.env.CHECK_PORT ?? 4320)
@@ -52,6 +51,9 @@ function tomorrow() {
 
 const TODAY = today()
 const TOMORROW = tomorrow()
+
+/** Which engine to drive. Named in the output, so a green run says on what. */
+const driver = engine()
 
 async function waitForServer(attempts = 60) {
   for (let i = 0; i < attempts; i += 1) {
@@ -134,11 +136,7 @@ let browser
 
 try {
   await waitForServer()
-  browser = await chromium.launch({
-    ...(process.env.CHROMIUM_EXECUTABLE
-      ? { executablePath: process.env.CHROMIUM_EXECUTABLE }
-      : {}),
-  })
+  browser = await driver.launch()
 
   const phone = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -275,7 +273,9 @@ try {
 const EXPECTED_STEPS = 7
 
 if (failures.length === 0 && steps.length === EXPECTED_STEPS) {
-  console.log(`\nThe full cycle holds: ${steps.length} steps, three out of three.`)
+  console.log(
+    `\nThe full cycle holds on ${driver.name}: ${steps.length} steps, three out of three.`,
+  )
   process.exit(0)
 }
 

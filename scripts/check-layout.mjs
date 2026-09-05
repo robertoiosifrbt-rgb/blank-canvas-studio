@@ -12,7 +12,7 @@
 // At the end it checks itself, with four deliberately broken elements.
 
 import { spawn } from 'node:child_process'
-import { chromium } from 'playwright'
+import { engine } from './lib/browser.mjs'
 
 import { inspect, MIN_TAP, SAFE, safeAreaCss, SIZES, TAPPABLE } from './lib/layout.mjs'
 
@@ -36,6 +36,9 @@ const PUBLIC_PATHS = ['/sign-in']
 const PRIVATE_PATHS = ['/today', '/calendar', '/', '/a-path-that-does-not-exist']
 
 const ARGUMENTS = { minTap: MIN_TAP, safe: SAFE, tappable: TAPPABLE }
+
+/** Which engine to drive. Named in the output, so a green run says on what. */
+const driver = engine()
 
 async function waitForServer(attempts = 60) {
   for (let i = 0; i < attempts; i += 1) {
@@ -102,11 +105,7 @@ let browser
 
 try {
   await waitForServer()
-  browser = await chromium.launch({
-    ...(process.env.CHROMIUM_EXECUTABLE
-      ? { executablePath: process.env.CHROMIUM_EXECUTABLE }
-      : {}),
-  })
+  browser = await driver.launch()
 
   for (const size of SIZES) {
     // A fresh context per width: each round starts with no stored session.
@@ -197,7 +196,7 @@ async function checkItself(page) {
 }
 
 if (problems.length === 0) {
-  console.log('\nLayout is fine at phone width.')
+  console.log(`\nLayout is fine at phone width, on ${driver.name}.`)
   process.exit(0)
 }
 
