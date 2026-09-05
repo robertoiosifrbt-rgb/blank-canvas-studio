@@ -62,6 +62,24 @@ lucrurile deschise trăiesc doar în conversația unei sesiuni și mor cu ea.
 Nu se pune în issue ce explică de ce codul e așa cum e. Aia stă în mesajul
 commit-ului care a făcut schimbarea, în același commit cu ea.
 
+## Ce e construit, ce e pe bază, ce se face când cade
+
+Trei documente, fiindcă azi lipseau toate trei și fiecare a costat.
+
+[`docs/STAREA.md`](docs/STAREA.md) — ce merge azi, ce așteaptă o hotărâre a
+proprietarului, ce e stricat și se știe. **Nu ține povestea** (aia e în jurnal)
+și **nu ține cifre** (`git log` și issues le au, mai exact).
+
+[`docs/MIGRATII.md`](docs/MIGRATII.md) — **singurul loc unde scrie ce a fost
+rulat pe baza live.** Repo-ul ține ce *trebuie* rulat; un fișier de migrație
+arată la fel indiferent dacă baza l-a văzut sau nu. Tot acolo stă regula de
+ordine, care se greșește în amândouă felurile: **o migrație care adaugă cere
+SQL-ul întâi; una care șterge cere codul întâi.**
+
+[`docs/DEZASTRU.md`](docs/DEZASTRU.md) — ce se verifică, în ce ordine, când
+aplicația nu mai merge. Și ce nu se face: niciun `drop` pe panică, nicio
+migrație care s-o dea înapoi pe cea dinainte.
+
 ## Jurnalul
 
 [`docs/JURNAL.md`](docs/JURNAL.md) ține ce a făcut fiecare zi de lucru, în
