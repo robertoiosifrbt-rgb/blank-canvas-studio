@@ -1,12 +1,16 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
-import { AreaSheet } from '../../areas/AreaSheet'
 import { useScreen } from '../../items/context'
-import { countUnder, treeOf } from '../../repository/items'
+import { treeOf } from '../../repository/items'
 import './AreasScreen.css'
 
 /**
- * The tree, and the two things you do to it: add under, or open.
+ * The tree, and the two things you do to it: add under, or go in.
+ *
+ * Tapping a name enters the area rather than opening a settings sheet. The
+ * tree is how you get somewhere; what an area holds, and what you do to the
+ * area itself, are both in the place the name points at.
  *
  * There is no drag and drop and no reordering. Siblings come out in name
  * order, decided in one place, so the list cannot drift into an order nobody
@@ -16,10 +20,8 @@ export function AreasScreen() {
   const { data } = useScreen()
   const [addingUnder, setAddingUnder] = useState<string | null | undefined>(undefined)
   const [name, setName] = useState('')
-  const [openId, setOpenId] = useState<string | null>(null)
 
   const rows = treeOf(data.areas)
-  const open = data.areas.find((area) => area.id === openId) ?? null
   const adding = addingUnder !== undefined
   const trimmed = name.trim()
 
@@ -55,14 +57,9 @@ export function AreasScreen() {
             className="areas-row"
             style={{ paddingLeft: `calc(${depth} * var(--space-4))` }}
           >
-            <button
-              type="button"
-              name="open"
-              className="areas-name"
-              onClick={() => setOpenId(area.id)}
-            >
+            <Link className="areas-name" to={`/areas/${area.id}`}>
               {area.name}
-            </button>
+            </Link>
             <button
               type="button"
               name="add-under"
@@ -127,15 +124,6 @@ export function AreasScreen() {
         </button>
       )}
 
-      {open !== null && (
-        <AreaSheet
-          area={open}
-          under={countUnder(data.areas, open.id)}
-          onRename={(next) => data.renameArea(open, next)}
-          onDrop={() => data.dropArea(open)}
-          onClose={() => setOpenId(null)}
-        />
-      )}
     </section>
   )
 }

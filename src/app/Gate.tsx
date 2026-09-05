@@ -3,7 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { useSession } from '../auth/useSession'
 import { SignInScreen } from '../screens/signin/SignInScreen'
 import { AppShell } from './AppShell'
-import { HOME, SCREENS } from './screens'
+import { HOME, INSIDE, SCREENS } from './screens'
 import './Gate.css'
 
 const SIGN_IN = '/sign-in'
@@ -38,7 +38,7 @@ export function Gate() {
   return (
     <Routes>
       <Route element={<AppShell session={state.session} />}>
-        {SCREENS.map((screen) => (
+        {[...SCREENS, ...INSIDE].map((screen) => (
           <Route key={screen.path} path={screen.path} element={screen.element} />
         ))}
       </Route>
