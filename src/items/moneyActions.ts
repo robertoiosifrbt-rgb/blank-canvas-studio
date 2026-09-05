@@ -65,20 +65,11 @@ export function moneyActions(owner: string, write: Write): MoneyActions {
   // A shift is made already processed: it is not something you found in
   // your pocket, it is a day you worked. So it goes in with its kind, its
   // day and its area, and never passes through the inbox.
-  //
-  // And the clock starts with it. The button says "Start a shift", and a
-  // driver taps it when they pull away — not to file paperwork for a day
-  // they have not driven yet. It used to create the day and no hours, so
-  // tapping it at six in the morning and looking at the takings at eleven
-  // at night showed a shift that had been worked for zero minutes. Clocking
-  // off, and dropping a session that should not be there, are both already
-  // in the sheet, so the tap that was wrong is the one that costs nothing
-  // to undo.
   startShift: (day, area_id) =>
     write(() =>
-      createShift(owner, day, area_id)
-        .then((anchor) => saveShift(owner, anchor.id, {}).then(() => anchor))
-        .then((anchor) => startSession(owner, anchor.id, new Date())),
+      createShift(owner, day, area_id).then((anchor) =>
+        saveShift(owner, anchor.id, {}),
+      ),
     ),
 
   saveShiftParts: (item_id, patch) => write(() => saveShift(owner, item_id, patch)),
