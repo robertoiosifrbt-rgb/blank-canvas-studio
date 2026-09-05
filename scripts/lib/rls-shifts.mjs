@@ -81,16 +81,30 @@ export const CASES = [
   },
   {
     group: 'negative',
+    // 📜 This wrote `item_id = item_id` and leaned on there being no privilege
+    // at all — a no-op write, refused because the column was ungrantable. The
+    // column had to become grantable so `.upsert()` could name it in its SET
+    // list, and the guarantee moved into a trigger. A no-op write now goes
+    // through and proves nothing, so the case has to attempt a real move.
     name: 'A cannot move a shift row to B, nor re-anchor it',
     run: async (t) => {
       const mine = await shiftOwnedBy(t, A)
+      const elsewhere = await shiftOwnedBy(t, A)
+      const theirs = await shiftOwnedBy(t, B)
       await t.q('insert into public.shifts (owner, item_id) values ($1, $2)', [A, mine])
       await t.asA(async () => {
-        for (const column of ['owner', 'item_id']) {
+        // The owner is not grantable at all: refused for want of a privilege.
+        await t.denied(DENIED, 'update public.shifts set owner = $1 where item_id = $2', [
+          B,
+          mine,
+        ])
+        // The anchor is grantable, so here the trigger is the only thing
+        // standing in the way — onto another of A's own days, and onto B's.
+        for (const anchor of [elsewhere, theirs]) {
           await t.denied(
             DENIED,
-            `update public.shifts set ${column} = ${column} where item_id = $1`,
-            [mine],
+            'update public.shifts set item_id = $1 where item_id = $2',
+            [anchor, mine],
           )
         }
       })
