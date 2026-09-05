@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 import { syncLabel } from './syncLabel'
 import type { SyncState } from '../items/useItems'
 import './ShellHeader.css'
@@ -48,6 +50,14 @@ export function ShellHeader({
         <button className="head-button" type="button" name="download" onClick={onDownload}>
           Download everything
         </button>
+        {/* The way into the year. It used to be reachable only from a link
+            under the month in the Calendar, and that block is not drawn at all
+            for a month with no work in it — so a new year, or a quiet one, had
+            no door to the screen that decides what every other number on the
+            app means. */}
+        <Link className="head-button" to="/hmrc">
+          HMRC
+        </Link>
       </div>
 
       {error !== null && (

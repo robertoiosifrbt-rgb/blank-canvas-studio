@@ -31,7 +31,13 @@
   gap: var(--space-2);
 }
 
+/* Wrapping, because the row now holds three tools and the narrowest phone is
+   320px wide. Squeezed instead of wrapped, the sync button came out 43px
+   across — under the minimum a thumb can hit — and four lines tall. A second
+   line costs nothing; a target nobody can press costs the tool. */
 .head-row-tools {
+  flex-wrap: wrap;
+  justify-content: flex-start;
   gap: var(--space-2);
 }
 
@@ -54,6 +60,14 @@
   font-size: var(--text-s);
 }
 
+/* A link wearing the same clothes as the buttons beside it: it sits in the
+   same row and does the same job, so it must not look like a stray word. */
+a.head-button {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
 .head-button:active {
   transform: translateY(1px);
 }
@@ -64,8 +78,12 @@
   overflow-wrap: anywhere;
 }
 
+/* It fills the line it is on, but it does not shrink below what a thumb can
+   press. `flex: 1` with `min-width: 0` let it squeeze to 43px across and four
+   lines tall once a third tool joined the row; the basis holds it wide enough
+   to wrap the row instead of crushing the button. */
 .head-sync {
-  flex: 1;
+  flex: 1 1 12rem;
   min-width: 0;
   min-height: var(--tap);
   padding: 0 var(--space-3);
