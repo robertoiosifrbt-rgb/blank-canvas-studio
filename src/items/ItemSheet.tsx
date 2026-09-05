@@ -10,6 +10,8 @@ type Props = {
   unsaved?: string | undefined
   onUpdate: (item: Item, patch: Patch) => Promise<void>
   onDiscard: (item: Item) => Promise<void>
+  /** Writes the stuck patch again, over whatever version the row is on now. */
+  onRetry: (item: Item) => Promise<void>
   onClose: () => void
 }
 
@@ -26,6 +28,7 @@ export function ItemSheet({
   unsaved,
   onUpdate,
   onDiscard,
+  onRetry,
   onClose,
 }: Props) {
   const [title, setTitle] = useState(item.title)
@@ -58,10 +61,22 @@ export function ItemSheet({
 
   return (
     <Sheet title={heading} onClose={onClose}>
+      {/* A patch that could not be written stays here, with the way to write
+          it again. Without the button there is no "until you retry it", and a
+          thing that cannot be reached is a thing that has been lost. */}
       {unsaved !== undefined && (
-        <p className="item-unsaved" role="alert">
-          Not saved — {unsaved}
-        </p>
+        <div className="item-unsaved" role="alert">
+          <p className="item-unsaved-text">Not saved — {unsaved}</p>
+          <button
+            className="item-button"
+            type="button"
+            name="retry"
+            disabled={busy}
+            onClick={() => void run(() => onRetry(item), false)}
+          >
+            Try again
+          </button>
+        </div>
       )}
 
       <label className="item-field">

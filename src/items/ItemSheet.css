@@ -75,6 +75,10 @@
 }
 
 .item-error,
+.item-unsaved-text {
+  margin-bottom: var(--space-2);
+}
+
 .item-unsaved {
   padding: var(--space-3);
   border-radius: var(--radius-s);
