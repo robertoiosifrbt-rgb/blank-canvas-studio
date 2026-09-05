@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { fromRow, localToday, withDoneAt } from './item'
+import { fromRow, isDay, localToday, withDoneAt } from './item'
 import type { Item } from './item'
 
 const GOOD_ROW = {
@@ -106,5 +106,68 @@ describe('withDoneAt', () => {
   it('does not re-stamp an item that was already done', () => {
     const done = item({ state: 'done', done_at: '2026-09-02' })
     expect(withDoneAt(done, { state: 'done' }, TODAY)).toEqual({ state: 'done' })
+  })
+})
+
+describe('fromRow asks what the database asks', () => {
+  it('refuses a date that is only shaped like one', () => {
+    expect(() => fromRow({ ...GOOD_ROW, due: '2026-02-31' })).toThrow('not a day')
+    expect(() => fromRow({ ...GOOD_ROW, due: 'tomorrow' })).toThrow('not a day')
+    expect(() => fromRow({ ...GOOD_ROW, done_at: '2026-13-01' })).toThrow('not a day')
+  })
+
+  it('refuses a state and a kind that contradict each other, both ways round', () => {
+    expect(() => fromRow({ ...GOOD_ROW, state: 'inbox', kind: 'task' })).toThrow(
+      'does not go with',
+    )
+    expect(() => fromRow({ ...GOOD_ROW, state: 'active', kind: null })).toThrow(
+      'does not go with',
+    )
+  })
+
+  it('refuses a title of nothing but spaces', () => {
+    expect(() => fromRow({ ...GOOD_ROW, title: '   ' })).toThrow('nothing but spaces')
+  })
+
+  it('refuses a version below one', () => {
+    expect(() => fromRow({ ...GOOD_ROW, version: 0 })).toThrow('below one')
+    expect(() => fromRow({ ...GOOD_ROW, version: -3 })).toThrow('below one')
+  })
+
+  it('refuses a timestamp that is not one', () => {
+    expect(() => fromRow({ ...GOOD_ROW, created_at: 'yesterday' })).toThrow(
+      'not a moment in time',
+    )
+  })
+
+  it('still takes the rows the database really produces', () => {
+    expect(() => fromRow({ ...GOOD_ROW, due: '2028-02-29' })).not.toThrow()
+    expect(() =>
+      fromRow({ ...GOOD_ROW, state: 'done', kind: 'letter', done_at: '2026-09-05' }),
+    ).not.toThrow()
+    expect(() =>
+      fromRow({ ...GOOD_ROW, state: 'inbox', kind: null, due: null }),
+    ).not.toThrow()
+  })
+})
+
+describe('isDay', () => {
+  it('takes a real day', () => {
+    expect(isDay('2026-09-05')).toBe(true)
+    expect(isDay('2028-02-29')).toBe(true)
+  })
+
+  it('refuses a day that does not exist, however well shaped', () => {
+    expect(isDay('2026-02-31')).toBe(false)
+    expect(isDay('2027-02-29')).toBe(false)
+    expect(isDay('2026-13-01')).toBe(false)
+    expect(isDay('2026-00-10')).toBe(false)
+  })
+
+  it('refuses anything of the wrong shape', () => {
+    expect(isDay('2026-9-5')).toBe(false)
+    expect(isDay('05/09/2026')).toBe(false)
+    expect(isDay('2026-09-05T10:00:00Z')).toBe(false)
+    expect(isDay('')).toBe(false)
   })
 })
