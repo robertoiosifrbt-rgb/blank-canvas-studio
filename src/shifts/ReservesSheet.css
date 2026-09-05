@@ -1,0 +1,67 @@
+/* Imported by exactly one .tsx in this directory: ReservesSheet.tsx */
+
+.reserve-note,
+.reserve-warning {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--text-s);
+}
+
+.reserve-warning {
+  padding: var(--space-3);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-s);
+}
+
+.reserve-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap);
+}
+
+.reserve-label {
+  flex: 1;
+  font-size: var(--text-m);
+}
+
+.reserve-input {
+  width: 35%;
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: var(--text-m);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--text);
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+}
+
+.reserve-input:focus-visible,
+.reserve-save:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.reserve-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--text-s);
+}
+
+.reserve-save {
+  min-height: var(--tap);
+  font: inherit;
+  font-size: var(--text-m);
+  font-weight: 650;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-s);
+}
+
+.reserve-save:disabled {
+  opacity: 0.5;
+}

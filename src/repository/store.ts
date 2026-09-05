@@ -32,22 +32,26 @@ const DB_NAME = 'life-control-centre'
 // says which table it belongs to. The old cursors are dropped rather than
 // converted — a missing cursor costs one full snapshot, and a converted one
 // that is wrong costs rows that never arrive.
-const DB_VERSION = 3
+const DB_VERSION = 4
 const ITEMS = 'items'
 const AREAS = 'areas'
 // The parts of a shift, one record per anchor. Not a synced table of its own:
 // it has no cursor, because the anchor carries the news that it changed.
 const SHIFTS = 'shifts'
+// The settings: one row per person, one row per area. No cursor either, and
+// few enough to be fetched whole every time.
+const RESERVES = 'reserves'
+const COSTS = 'running_costs'
 const CURSORS = 'cursors'
 
-function request<T>(req: IDBRequest<T>): Promise<T> {
+export function request<T>(req: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error ?? new Error('IndexedDB refused'))
   })
 }
 
-function completed(tx: IDBTransaction): Promise<void> {
+export function completed(tx: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve()
     tx.onabort = () => reject(tx.error ?? new Error('Transaction aborted'))
@@ -55,9 +59,11 @@ function completed(tx: IDBTransaction): Promise<void> {
   })
 }
 
+export const STORES = { RESERVES, COSTS }
+
 let db: Promise<IDBDatabase> | null = null
 
-function open(): Promise<IDBDatabase> {
+export function open(): Promise<IDBDatabase> {
   db ??= new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION)
     req.onupgradeneeded = () => {
@@ -71,6 +77,13 @@ function open(): Promise<IDBDatabase> {
       if (!opened.objectStoreNames.contains(SHIFTS)) {
         const shifts = opened.createObjectStore(SHIFTS, { keyPath: 'item_id' })
         shifts.createIndex('owner', 'owner', { unique: false })
+      }
+      if (!opened.objectStoreNames.contains(RESERVES)) {
+        opened.createObjectStore(RESERVES, { keyPath: 'owner' })
+      }
+      if (!opened.objectStoreNames.contains(COSTS)) {
+        const costs = opened.createObjectStore(COSTS, { keyPath: 'area_id' })
+        costs.createIndex('owner', 'owner', { unique: false })
       }
       if (opened.objectStoreNames.contains(CURSORS)) {
         opened.deleteObjectStore(CURSORS)

@@ -67,6 +67,25 @@ export function optionalDay(
   return value
 }
 
+/**
+ * A number, or nothing.
+ *
+ * PostgREST hands numeric back as a string, to keep the precision the column
+ * type was chosen for. One function knows that, rather than every caller.
+ */
+export function optionalNumber(
+  row: Record<string, unknown>,
+  key: string,
+): number | null {
+  const value = row[key]
+  if (value === null || value === undefined) return null
+  const parsed = typeof value === 'string' ? Number(value) : value
+  if (typeof parsed !== 'number' || Number.isNaN(parsed)) {
+    throw new Error(`${key} is not a number`)
+  }
+  return parsed
+}
+
 export function requiredMoment(row: Record<string, unknown>, key: string): string {
   const value = requiredText(row, key)
   if (Number.isNaN(Date.parse(value))) {

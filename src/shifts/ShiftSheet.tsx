@@ -1,12 +1,12 @@
 import { useState } from 'react'
 
 import {
-  earnedPence,
   isOut,
   kilometres,
   minutesWorked,
   PLATFORM_NAMES,
   PLATFORMS,
+  takeHome,
 } from '../repository/items'
 import { treeOf } from '../repository/items'
 import type { Area, Item, Platform, Shift } from '../repository/items'
@@ -34,6 +34,10 @@ const NOTHING: Shift = {
   odo_start: null,
   odo_end: null,
   tips: null,
+  rate_tax_pct: null,
+  rate_ni_pct: null,
+  rate_fuel_per_km: null,
+  rate_vehicle_per_km: null,
   sessions: [],
   earnings: [],
 }
@@ -82,6 +86,7 @@ export function ShiftSheet(props: Props) {
 
   const worked = minutesWorked(shift)
   const km = kilometres(shift)
+  const sum = takeHome(shift)
   const out = isOut(shift)
   const open = shift.sessions.find((session) => session.ended_at === null)
 
@@ -90,18 +95,59 @@ export function ShiftSheet(props: Props) {
       <dl className="shift-totals">
         <div className="shift-total">
           <dt>Made</dt>
-          <dd>{pounds(earnedPence(shift))}</dd>
+          <dd>{pounds(sum.grossPence)}</dd>
+        </div>
+        <div className="shift-total shift-total-net">
+          <dt>Yours</dt>
+          {/* The number the day is actually worth. Only shown as an answer
+              when there is nothing missing behind it. */}
+          <dd>{sum.missing.length === 0 ? pounds(sum.netPence) : '—'}</dd>
         </div>
         <div className="shift-total">
           <dt>Worked</dt>
           <dd>{hoursAndMinutes(worked)}</dd>
         </div>
-        <div className="shift-total">
+      </dl>
+
+      <dl className="shift-breakdown">
+        <div className="shift-line">
           <dt>Driven</dt>
           {/* Unknown, not zero: one reading tells you nothing about the other. */}
           <dd>{km === null ? '—' : `${km.toFixed(1)} km`}</dd>
         </div>
+        <div className="shift-line">
+          <dt>Fuel and vehicle</dt>
+          <dd>{sum.missing.includes('costs') || sum.missing.includes('kilometres')
+            ? '—'
+            : `−${pounds(sum.costsPence)}`}</dd>
+        </div>
+        <div className="shift-line">
+          <dt>Tax and NI put aside</dt>
+          <dd>
+            {sum.missing.includes('rates')
+              ? '—'
+              : `−${pounds(sum.taxPence + sum.niPence)}`}
+          </dd>
+        </div>
       </dl>
+
+      {/* Never a silent zero: a missing rate is an unknown reserve, not a
+          reserve of nothing, and £0 tax is the lie that costs money. */}
+      {sum.missing.includes('rates') && (
+        <p className="shift-missing">
+          No percentages set yet — open <strong>Put aside</strong> in the header.
+        </p>
+      )}
+      {sum.missing.includes('costs') && (
+        <p className="shift-missing">
+          This area has no cost per kilometre yet — open it in Areas.
+        </p>
+      )}
+      {sum.missing.includes('kilometres') && (
+        <p className="shift-missing">
+          Both odometer readings are needed before fuel can be worked out.
+        </p>
+      )}
 
       {error !== null && <p className="shift-error">{error}</p>}
 
