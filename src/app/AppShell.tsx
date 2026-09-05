@@ -119,6 +119,9 @@ export function AppShell({ session }: Props) {
             data.saveShiftParts(openItem.id, { odo_start, odo_end })
           }
           onSaveTips={(tips) => data.saveShiftParts(openItem.id, { tips })}
+          onSavePersonalKm={(personal_km) =>
+            data.saveShiftParts(openItem.id, { personal_km })
+          }
           onSetArea={(area_id) => data.update(openItem, { area_id })}
           costs={costsFor(data.costs, openItem.area_id)}
           onSaveCosts={(fuel, vehicle) =>

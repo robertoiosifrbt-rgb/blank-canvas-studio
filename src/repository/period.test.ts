@@ -41,6 +41,7 @@ function shift(item_id: string, pounds: number, over: Partial<Shift> = {}): Shif
     odo_start: null,
     odo_end: null,
     tips: null,
+    personal_km: null,
     rate_tax_pct: null,
     rate_ni_pct: null,
     rate_fuel_per_km: null,
@@ -59,6 +60,7 @@ function expense(item_id: string, pounds: number): Expense {
     category: 'fuel',
     odo: null,
     full_tank: null,
+    business_pct: 100,
   }
 }
 

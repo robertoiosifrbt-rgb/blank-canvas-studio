@@ -19,6 +19,7 @@ type Props = {
     amount: number
     odo: number | null
     full_tank: boolean | null
+    business_pct: number
   }) => Promise<void>
   onClose: () => void
 }
@@ -31,12 +32,27 @@ type Props = {
  * kilometre can be worked out from. Everything else asks nothing extra: an
  * insurance premium has no odometer, and the database refuses one.
  */
+/** A share of a bill that was for work, 0 to 100. */
+function businessShare(typed: string): number {
+  const trimmed = typed.trim().replace('%', '').replace(',', '.')
+  if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) {
+    throw new Error(`That is not a share of the bill: ${typed}`)
+  }
+  const share = Number(trimmed)
+  if (share < 0 || share > 100) throw new Error(`A share outside 0-100: ${typed}`)
+  return share
+}
+
 export function SpendSheet({ day, areas, suggestedArea, onSpend, onClose }: Props) {
   const [category, setCategory] = useState<Category>('fuel')
   const [amount, setAmount] = useState('')
   const [odo, setOdo] = useState('')
   const [full, setFull] = useState(true)
   const [area, setArea] = useState(suggestedArea ?? '')
+  // The whole of it, until you say otherwise. What is written against a line
+  // of work was meant as a cost of it; the box is there for the year of car
+  // insurance that also covers the shopping.
+  const [share, setShare] = useState('100')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -56,6 +72,7 @@ export function SpendSheet({ day, areas, suggestedArea, onSpend, onClose }: Prop
         amount: pence / 100,
         odo: fuel ? readingOf(odo) : null,
         full_tank: fuel ? full : null,
+        business_pct: businessShare(share),
       })
       onClose()
     } catch (reason) {
@@ -146,6 +163,21 @@ export function SpendSheet({ day, areas, suggestedArea, onSpend, onClose }: Prop
             </option>
           ))}
         </select>
+      </label>
+
+      {/* Only the working part of a bill is a cost of earning. Counting the
+          whole of a year's insurance makes the profit look smaller than it is,
+          and the difference turns up in January. */}
+      <label className="spend-field">
+        <span className="spend-label">For work %</span>
+        <input
+          className="spend-amount"
+          name="business"
+          inputMode="decimal"
+          value={share}
+          disabled={busy}
+          onChange={(event) => setShare(event.target.value)}
+        />
       </label>
 
       {error !== null && <p className="spend-error">{error}</p>}

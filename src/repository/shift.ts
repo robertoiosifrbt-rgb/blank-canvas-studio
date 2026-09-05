@@ -38,6 +38,13 @@ export type Shift = {
   odo_end: number | null
   tips: number | null
   /**
+   * The part of the day's driving that was not work.
+   *
+   * The detour to the shops is on the same odometer and is not a cost of
+   * earning. Null means none was set aside, not that none happened.
+   */
+  personal_km: number | null
+  /**
    * The rates this shift was worked under, written by the database and never
    * by a client. Null means they were not set yet when it was written down.
    */
@@ -49,7 +56,9 @@ export type Shift = {
   earnings: ShiftEarning[]
 }
 
-export type ShiftPatch = Partial<Pick<Shift, 'odo_start' | 'odo_end' | 'tips'>>
+export type ShiftPatch = Partial<
+  Pick<Shift, 'odo_start' | 'odo_end' | 'tips' | 'personal_km'>
+>
 
 function requiredMomentText(raw: Record<string, unknown>, key: string): string {
   const value = requiredText(raw, key)
@@ -102,6 +111,7 @@ export function shiftFromRow(
     odo_start,
     odo_end,
     tips: optionalNumber(raw, 'tips'),
+    personal_km: optionalNumber(raw, 'personal_km'),
     rate_tax_pct: optionalNumber(raw, 'rate_tax_pct'),
     rate_ni_pct: optionalNumber(raw, 'rate_ni_pct'),
     rate_fuel_per_km: optionalNumber(raw, 'rate_fuel_per_km'),
@@ -112,13 +122,23 @@ export function shiftFromRow(
 }
 
 /**
- * Kilometres driven: the difference, not a stored number.
+ * The kilometres of work: the day's distance, less the personal part of it.
  *
- * Null until both readings are there. A shift with only a start has not
- * driven zero kilometres — it has driven an unknown number, and showing zero
- * would be the screen making something up.
+ * Null until both readings are there. A shift with only a start has not driven
+ * zero kilometres — it has driven an unknown number, and showing zero would be
+ * the screen making something up.
+ *
+ * The detour to the shops is not a cost of earning, and every cost per
+ * kilometre in the app is worked out from this. The database refuses a
+ * personal figure larger than the day, so the answer cannot go below zero.
  */
 export function kilometres(shift: Shift): number | null {
+  if (shift.odo_start === null || shift.odo_end === null) return null
+  return Math.max(0, shift.odo_end - shift.odo_start - (shift.personal_km ?? 0))
+}
+
+/** Everything on the odometer, work and otherwise. What the day cost the car. */
+export function drivenKilometres(shift: Shift): number | null {
   if (shift.odo_start === null || shift.odo_end === null) return null
   return shift.odo_end - shift.odo_start
 }

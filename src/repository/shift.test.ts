@@ -18,6 +18,7 @@ function shift(over: Partial<Shift> = {}): Shift {
     odo_start: null,
     odo_end: null,
     tips: null,
+    personal_km: null,
     rate_tax_pct: null,
     rate_ni_pct: null,
     rate_fuel_per_km: null,
@@ -124,6 +125,7 @@ describe('earnedPence', () => {
   it('adds the platforms and the tips, in pence', () => {
     const day = shift({
       tips: 12.5,
+      personal_km: null,
       earnings: [
         { platform: 'uber_eats', amount: 64.2 },
         { platform: 'deliveroo', amount: 31.0 },

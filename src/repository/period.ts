@@ -14,7 +14,10 @@ import type { Shift } from './shift'
 export type Period = {
   /** Everything the platforms and the tips brought in. */
   grossPence: number
-  /** Everything that actually went out: fuel, repairs, insurance, the rest. */
+  /**
+   * What went out for work: fuel, repairs, insurance, the rest, each counted
+   * only for the share of it that was earning.
+   */
   spentPence: number
   /** What the tax is worked out on. Can be negative; a bad month is a fact. */
   profitPence: number
@@ -86,10 +89,13 @@ export function periodMoney(input: {
     }
   }
 
+  // Only the working share of each bill. A car insured for a year is insured
+  // for the shopping too, and the tax is worked out on what it cost to earn,
+  // not on what left the account.
   let spentPence = 0
   for (const expense of expenses) {
     if (!inside.has(expense.item_id)) continue
-    spentPence += Math.round(expense.amount * 100)
+    spentPence += Math.round((expense.amount * expense.business_pct) / 100 * 100)
   }
 
   const profitPence = grossPence - spentPence

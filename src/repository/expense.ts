@@ -25,6 +25,14 @@ export type Expense = {
   odo: number | null
   /** Whether the tank was filled. Only a fuel purchase has one. */
   full_tank: boolean | null
+  /**
+   * What share of this bill was for work, 0 to 100.
+   *
+   * A car insured for a year is insured for the shopping too, and only the
+   * working part of it is a cost of earning. Counting the whole makes the
+   * profit look smaller than it is and the tax bill land short in January.
+   */
+  business_pct: number
 }
 
 export function expenseFromRow(row: unknown): Expense {
@@ -56,6 +64,14 @@ export function expenseFromRow(row: unknown): Expense {
     throw new Error(`A ${category} expense carrying pump details`)
   }
 
+  // Absent means the whole of it: the column arrived after the rows did, and
+  // an expense written against a line of work was meant as a cost of it.
+  const share = optionalNumber(raw, 'business_pct')
+  const business_pct = share ?? 100
+  if (business_pct < 0 || business_pct > 100) {
+    throw new Error(`A business share outside 0-100: ${business_pct}`)
+  }
+
   return {
     item_id: requiredText(raw, 'item_id'),
     owner: requiredText(raw, 'owner'),
@@ -63,6 +79,7 @@ export function expenseFromRow(row: unknown): Expense {
     category: category as Category,
     odo,
     full_tank,
+    business_pct,
   }
 }
 

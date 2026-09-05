@@ -42,6 +42,7 @@ export type MoneyActions = {
     amount: number
     odo: number | null
     full_tank: boolean | null
+    business_pct: number
   }) => Promise<void>
   unspend: (item: Item) => Promise<void>
   saveReserves: (tax_pct: number, ni_pct: number) => Promise<void>

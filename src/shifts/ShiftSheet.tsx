@@ -12,13 +12,13 @@ import { treeOf } from '../repository/items'
 import type { Area, Item, Platform, RunningCosts, Shift } from '../repository/items'
 import { Sheet } from '../ui/Sheet'
 import { ShiftCosts } from './ShiftCosts'
+import { ShiftOdometer } from './ShiftOdometer'
 import {
   EMPTY_SHIFT,
   clock,
   hoursAndMinutes,
   penceOf,
   pounds,
-  readingOf,
 } from './money'
 import './ShiftSheet.css'
 
@@ -32,6 +32,7 @@ type Props = {
   onSetPaid: (platform: Platform, amount: number) => Promise<void>
   onSaveReadings: (odo_start: number | null, odo_end: number | null) => Promise<void>
   onSaveTips: (tips: number | null) => Promise<void>
+  onSavePersonalKm: (personal_km: number | null) => Promise<void>
   onSetArea: (area_id: string | null) => Promise<void>
   /** What a kilometre costs in this shift's area, or null if nobody said. */
   costs: RunningCosts | null
@@ -261,35 +262,14 @@ export function ShiftSheet(props: Props) {
         <ShiftCosts costs={props.costs} onSave={props.onSaveCosts} />
       )}
 
-      <section className="shift-block">
-        <h3 className="shift-heading">Odometer</h3>
-        <div className="shift-odo">
-          {(['odo_start', 'odo_end'] as const).map((which) => (
-            <label key={which} className="shift-paid">
-              <span className="shift-platform">
-                {which === 'odo_start' ? 'Out' : 'Back'}
-              </span>
-              <input
-                className="shift-amount"
-                name={which}
-                inputMode="decimal"
-                defaultValue={shift[which] === null ? '' : String(shift[which])}
-                disabled={busy}
-                onBlur={(event) => {
-                  try {
-                    const value = readingOf(event.target.value)
-                    const start = which === 'odo_start' ? value : shift.odo_start
-                    const end = which === 'odo_end' ? value : shift.odo_end
-                    run(() => props.onSaveReadings(start, end))
-                  } catch (reason) {
-                    setError(reason instanceof Error ? reason.message : String(reason))
-                  }
-                }}
-              />
-            </label>
-          ))}
-        </div>
-      </section>
+      <ShiftOdometer
+        shift={shift}
+        busy={busy}
+        onSaveReadings={props.onSaveReadings}
+        onSavePersonalKm={props.onSavePersonalKm}
+        onRun={run}
+        onError={setError}
+      />
     </Sheet>
   )
 }

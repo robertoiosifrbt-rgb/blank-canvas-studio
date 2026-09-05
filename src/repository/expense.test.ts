@@ -20,6 +20,7 @@ describe('expenseFromRow', () => {
       category: 'fuel',
       odo: 120000,
       full_tank: true,
+      business_pct: 100,
     })
   })
 

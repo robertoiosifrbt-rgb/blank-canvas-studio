@@ -54,6 +54,7 @@ export async function recordExpense(
     amount: number
     odo: number | null
     full_tank: boolean | null
+    business_pct: number
   },
 ): Promise<Item> {
   await requireAccount(owner)
@@ -69,6 +70,7 @@ export async function recordExpense(
     category: what.category,
     odo: what.odo,
     full_tank: what.full_tank,
+    business_pct: what.business_pct,
   })
   // The cache first, and then the rate. Working the rate out before this line
   // reads a cache that does not hold the fill just written, so the rate would

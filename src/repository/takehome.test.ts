@@ -11,6 +11,7 @@ function day(over: Partial<Shift> = {}): Shift {
     odo_start: 120345,
     odo_end: 120512.4,
     tips: 12.5,
+    personal_km: null,
     rate_tax_pct: 20,
     rate_ni_pct: 6,
     rate_fuel_per_km: 0.116,
