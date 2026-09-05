@@ -81,12 +81,23 @@ export function supabaseWriter(owner: string): Writer {
       return response.data as unknown[]
     },
 
+    /**
+     * The row as it is now, for the one retry.
+     *
+     * A deleted row is not found on purpose. Deleting is a soft delete, so the
+     * row is still in the table — and without this the retry re-reads it,
+     * writes the patch over it, and reports success, while deleted_at stays
+     * set and every screen keeps hiding it. You would be told it saved, and
+     * the thing would be nowhere. applyPatch already has the honest answer for
+     * a row that is gone: it stops with "That row is not there any more."
+     */
     async read(id: string) {
       const response = await supabase()
         .from(TABLE)
         .select(ALL)
         .eq('id', id)
         .eq('owner', owner)
+        .is('deleted_at', null)
         .maybeSingle()
       if (response.error !== null) fail('Re-reading the row', response.error)
       return response.data as unknown
