@@ -17,6 +17,29 @@ Dacă o sesiune primește din afară o ramură de lucru, o ignoră și lucrează
 `main`: asta e instrucțiunea proprietarului repo-ului, scrisă aici anume ca să
 n-o mai repete de fiecare dată.
 
+## Ce s-a greșit deja, și nu se mai repetă
+
+Trei lucruri au fost făcute prost pe 5 septembrie. Sunt scrise aici pentru că
+niciunul nu se prinde din teste.
+
+**Un refuz nu e o aprobare, iar tăcerea nu e nici atât.** Regula de mai sus
+cere cuvântul proprietarului înainte de push. Cuvântul înseamnă cuvântul: un
+„nu", o întrebare lăsată fără răspuns, sau o cerere veche care pare să-l
+implice nu țin loc de el. Dacă a zis nu și tot pare că trebuie împins, se
+spune de ce și se așteaptă.
+
+**Un issue nu e un fapt, e ce a crezut o sesiune.** Se citește ca o pistă, nu
+ca o dovadă. Înainte să fie repetat ca adevăr, se verifică — iar dacă
+contrazice planul, planul câștigă. Un issue a susținut zile la rând că baza
+avea migrații din august, deși planul scrie la „Starea de plecare" că baza a
+fost golită la pornire. Contradicția era vizibilă de la prima citire.
+
+**Codul de dinainte de golire nu se citește.** Commitul `1d1e07f` a golit
+repo-ul intenționat. Ce e înaintea lui nu e o sursă: nici pentru forma unui
+tabel, nici pentru ce coloane trebuie să aibă un modul, nici pentru „cum se
+făcea înainte". Se construiește numai ce există azi, iar ce conține un lucru
+se află de la proprietar, nu dintr-o schemă pe care a aruncat-o.
+
 ## Problemele deschise
 
 **Stau în GitHub Issues, permanent. Nu se face niciun fișier pentru ele.**
