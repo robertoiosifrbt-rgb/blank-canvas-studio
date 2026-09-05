@@ -7,7 +7,7 @@
  * join the fuel legs and move the rate.
  */
 
-import { A, B, CONSTRAINT, DENIED } from './rls-context.mjs'
+import { B, CONSTRAINT, DENIED } from './rls-context.mjs'
 
 const FOREIGN_KEY = '23503'
 
