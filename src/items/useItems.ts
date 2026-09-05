@@ -6,6 +6,7 @@ import {
   Conflict,
   discard as discardItem,
   exportAll,
+  NotCached,
   syncAccount,
   update as updateItem,
 } from '../repository/items'
@@ -118,6 +119,14 @@ export function useItems(owner: string): ItemsHandle {
       try {
         await body()
       } catch (error) {
+        // The server took it; only this device could not keep a copy. Saying
+        // "it did not work" here is how Capture ends up inserting a second row
+        // for a first one that is already there.
+        if (error instanceof NotCached) {
+          setUnsaved((left) => left.filter((u) => u.item.id !== error.item.id))
+          setRound((n) => n + 1)
+          return
+        }
         if (error instanceof Conflict) {
           setUnsaved((left) => [
             ...left.filter((u) => u.item.id !== error.item.id),
@@ -126,7 +135,14 @@ export function useItems(owner: string): ItemsHandle {
         }
         throw error
       } finally {
-        await reload()
+        // A cache that cannot be read must not turn a write that worked into
+        // an error on its way out. The sync rebuilds it; the screen keeps what
+        // it already has until then.
+        try {
+          await reload()
+        } catch (reason) {
+          console.warn('The cache could not be read after a write:', reason)
+        }
       }
     },
     [reload],
