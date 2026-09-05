@@ -6,8 +6,12 @@
 
 import pg from 'pg'
 
-import { CASES } from './lib/rls.mjs'
+import { CASES as AREA_CASES } from './lib/rls-areas.mjs'
+import { CASES as ITEM_CASES } from './lib/rls.mjs'
 import { A, B, contextFor } from './lib/rls-context.mjs'
+
+// One list, so a group is complete across both tables rather than per file.
+const CASES = [...ITEM_CASES, ...AREA_CASES]
 
 const DATABASE_URL = process.env.DATABASE_URL
 if (!DATABASE_URL) {
