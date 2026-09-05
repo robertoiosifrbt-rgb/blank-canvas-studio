@@ -81,17 +81,6 @@ Dacă ai deja un Chromium, i-l dai direct în loc să-l descarci:
 
 ## Testele manuale
 
-Astea nu se pot automatiza aici și nu se sar.
-
-1. **SPA fallback pe Vercel.** Intri direct pe `/azi` și pe `/calendar` la
-   URL-ul deployment-ului, dai refresh, rămâi pe acel ecran. Fără
-   `vercel.json`, o rută accesată direct dă 404 chiar dacă navigarea în
-   aplicație merge perfect.
-2. **Contul, pe două dispozitive.** Faci contul pe telefon, intri cu el pe
-   laptop. „Datele vin după cont, pe orice telefon" e o promisiune care se
-   verifică doar așa.
-3. **Marginile de siguranță pe telefon adevărat.** Verificatorul de așezare
-   simulează crestătura; un telefon real o are.
-4. **Timpul de scriere la Captură.** Criteriul din plan e al omului, nu al unui
-   test: câmpul e focalizat la deschidere, salvarea e un singur gest, și nu
-   există formular intermediar. Se verifică cu degetul, pe telefon.
+Ce nu poate face nicio verificare automată stă în
+[`docs/TESTE.md`](docs/TESTE.md), cu un ID pe fiecare. Documentul ține testele;
+dacă au fost trecute, când și pe ce commit — aia stă în issues.
