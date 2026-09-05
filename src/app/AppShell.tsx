@@ -6,8 +6,8 @@ import { ItemSheet } from '../items/ItemSheet'
 import type { ScreenContext } from '../items/context'
 import { useItems } from '../items/useItems'
 import { signOut } from '../repository/auth'
-import { localToday } from '../repository/items'
 import type { Session } from '../repository/auth'
+import { useToday } from './today'
 import { ShellHeader } from './ShellHeader'
 import { SCREENS } from './screens'
 import './AppShell.css'
@@ -26,7 +26,7 @@ export function AppShell({ session }: Props) {
   // Looked up fresh every render, so the sheet never shows a stale version. If
   // the item is gone, the sheet closes itself with it.
   const openItem = data.items.find((item) => item.id === openId) ?? null
-  const today = localToday(new Date())
+  const today = useToday()
 
   function report(body: () => Promise<unknown>) {
     setError(null)
