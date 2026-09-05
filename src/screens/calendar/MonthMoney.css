@@ -1,0 +1,51 @@
+/* Imported by exactly one .tsx in this directory: MonthMoney.tsx */
+
+.money {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.money-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.money-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-m);
+  color: var(--text-dim);
+}
+
+.money-row dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.money-row-strong {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.money-row-left {
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+.money-worked,
+.money-note {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--text-s);
+}

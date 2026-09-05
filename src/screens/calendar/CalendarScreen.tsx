@@ -5,6 +5,7 @@ import type { CalendarDay, Item } from '../../repository/items'
 import { useScreen } from '../../items/context'
 import { formatMonth, formatWeekday, monthOf, shiftMonth } from '../../ui/dates'
 import { ItemRow } from '../../ui/ItemRow'
+import { MonthMoney } from './MonthMoney'
 import { awayFromToday, monthGrid, openingDay } from './month'
 import './CalendarScreen.css'
 
@@ -122,6 +123,16 @@ export function CalendarScreen() {
           </button>
         ))}
       </div>
+
+      {/* Under the grid, not over it: the grid answers "where am I", and the
+          money answers "how did it go" — the second question comes second. */}
+      <MonthMoney
+        month={month}
+        items={data.items}
+        shifts={data.shifts}
+        expenses={data.expenses}
+        reserves={data.reserves}
+      />
 
       <section className={`day${selected === today ? ' day-today' : ''}`}>
         <h2 className="day-heading">{formatWeekday(selected, today)}</h2>
