@@ -92,6 +92,28 @@ export const CASES = [
     },
   },
 
+  {
+    group: 'negative',
+    name: 'A cannot choose the id, the owner or the version at INSERT',
+    run: (t) =>
+      t.asA(async () => {
+        // The trigger pins id only on UPDATE, so at INSERT nothing but the
+        // column grant stands between a client and an id of its own choosing.
+        for (const [column, value] of [
+          ['id', "'44444444-4444-4444-4444-444444444444'"],
+          ['owner', `'${B}'`],
+          ['version', '99'],
+          ['created_at', 'now()'],
+          ['updated_at', 'now()'],
+        ]) {
+          await t.denied(
+            DENIED,
+            `insert into public.items (title, ${column}) values ('call X', ${value})`,
+          )
+        }
+      }),
+  },
+
   // ── Positive: without these, the ones above can be green for nothing ────
   {
     group: 'positive',
