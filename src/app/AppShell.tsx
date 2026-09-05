@@ -5,6 +5,7 @@ import { CaptureSheet } from '../items/CaptureSheet'
 import { ItemSheet } from '../items/ItemSheet'
 import type { ScreenContext } from '../items/context'
 import { useItems } from '../items/useItems'
+import { ShiftSheet } from '../shifts/ShiftSheet'
 import { signOut } from '../repository/auth'
 import type { Session } from '../repository/auth'
 import { useToday } from './today'
@@ -91,7 +92,25 @@ export function AppShell({ session }: Props) {
         />
       )}
 
-      {openItem !== null && (
+      {openItem !== null && openItem.kind === 'shift' && (
+        <ShiftSheet
+          item={openItem}
+          shift={data.shifts.find((s) => s.item_id === openItem.id) ?? null}
+          areas={data.areas}
+          onClockOn={() => data.clockOn(openItem.id)}
+          onClockOff={(sessionId) => data.clockOff(sessionId)}
+          onDropSession={(sessionId) => data.dropSession(sessionId)}
+          onSetPaid={(platform, amount) => data.setPaid(openItem.id, platform, amount)}
+          onSaveReadings={(odo_start, odo_end) =>
+            data.saveShiftParts(openItem.id, { odo_start, odo_end })
+          }
+          onSaveTips={(tips) => data.saveShiftParts(openItem.id, { tips })}
+          onSetArea={(area_id) => data.update(openItem, { area_id })}
+          onClose={closeItem}
+        />
+      )}
+
+      {openItem !== null && openItem.kind !== 'shift' && (
         <ItemSheet
           item={openItem}
           today={today}

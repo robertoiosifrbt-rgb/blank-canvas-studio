@@ -16,7 +16,23 @@ import {
   discardArea,
   updateArea,
 } from '../repository/items'
-import type { Area, Item, Patch } from '../repository/items'
+import {
+  createShift,
+  endSession as endShiftSession,
+  removeSession as removeShiftSession,
+  saveShift,
+  setEarning,
+  shiftsOf,
+  startSession,
+} from '../repository/items'
+import type {
+  Area,
+  Item,
+  Patch,
+  Platform,
+  Shift,
+  ShiftPatch,
+} from '../repository/items'
 import { downloadText } from '../ui/download'
 
 /**
@@ -38,6 +54,7 @@ export type Unsaved = { item: Item; patch: Patch; reason: string }
 export type ItemsHandle = {
   items: Item[]
   areas: Area[]
+  shifts: Shift[]
   loading: boolean
   sync: SyncState
   unsaved: Unsaved[]
@@ -47,6 +64,12 @@ export type ItemsHandle = {
   discard: (item: Item) => Promise<void>
   retry: (itemId: string) => Promise<void>
   download: () => Promise<void>
+  startShift: (day: string, area_id: string | null) => Promise<void>
+  saveShiftParts: (item_id: string, patch: ShiftPatch) => Promise<void>
+  clockOn: (item_id: string) => Promise<void>
+  clockOff: (sessionId: string) => Promise<void>
+  dropSession: (sessionId: string) => Promise<void>
+  setPaid: (item_id: string, platform: Platform, amount: number) => Promise<void>
   addArea: (name: string, parent_id: string | null) => Promise<void>
   renameArea: (area: Area, name: string) => Promise<void>
   dropArea: (area: Area) => Promise<void>
@@ -66,6 +89,7 @@ function reasonOf(error: unknown): string {
 export function useItems(owner: string): ItemsHandle {
   const [items, setItems] = useState<Item[]>([])
   const [areas, setAreas] = useState<Area[]>([])
+  const [shifts, setShifts] = useState<Shift[]>([])
   const [loading, setLoading] = useState(true)
   const [sync, setSync] = useState<SyncState>({ kind: 'never' })
   const [unsaved, setUnsaved] = useState<Unsaved[]>([])
@@ -74,9 +98,14 @@ export function useItems(owner: string): ItemsHandle {
   const reload = useCallback(async () => {
     // Both, together: an item names an area, so a screen holding a fresh item
     // and a stale area list would show a row pointing nowhere.
-    const [freshItems, freshAreas] = await Promise.all([all(owner), areasOf(owner)])
+    const [freshItems, freshAreas, freshShifts] = await Promise.all([
+      all(owner),
+      areasOf(owner),
+      shiftsOf(owner),
+    ])
     setItems(freshItems)
     setAreas(freshAreas)
+    setShifts(freshShifts)
   }, [owner])
 
   useEffect(() => {
@@ -84,13 +113,15 @@ export function useItems(owner: string): ItemsHandle {
 
     const run = async () => {
       try {
-        const [cachedItems, cachedAreas] = await Promise.all([
+        const [cachedItems, cachedAreas, cachedShifts] = await Promise.all([
           all(owner),
           areasOf(owner),
+          shiftsOf(owner),
         ])
         if (active) {
           setItems(cachedItems)
           setAreas(cachedAreas)
+          setShifts(cachedShifts)
           setLoading(false)
         }
       } catch (error) {
@@ -105,13 +136,15 @@ export function useItems(owner: string): ItemsHandle {
       if (active) setSync({ kind: 'syncing' })
       try {
         const result = await syncAccount(owner)
-        const [freshItems, freshAreas] = await Promise.all([
+        const [freshItems, freshAreas, freshShifts] = await Promise.all([
           all(owner),
           areasOf(owner),
+          shiftsOf(owner),
         ])
         if (active) {
           setItems(freshItems)
           setAreas(freshAreas)
+          setShifts(freshShifts)
           setSync({ kind: 'synced', at: new Date(), fetched: result.fetched })
         }
       } catch (error) {
@@ -174,6 +207,7 @@ export function useItems(owner: string): ItemsHandle {
   return {
     items,
     areas,
+    shifts,
     loading,
     sync,
     unsaved,
@@ -214,6 +248,23 @@ export function useItems(owner: string): ItemsHandle {
 
     // The area writes go through the same `write`: a conflict on an area is
     // still a write that did not happen, and the caller still has to hear it.
+    // A shift is made already processed: it is not something you found in
+    // your pocket, it is a day you worked. So it goes in with its kind, its
+    // day and its area, and never passes through the inbox.
+    startShift: (day, area_id) =>
+      write(() =>
+        createShift(owner, day, area_id).then((anchor) =>
+          saveShift(owner, anchor.id, {}),
+        ),
+      ),
+
+    saveShiftParts: (item_id, patch) => write(() => saveShift(owner, item_id, patch)),
+    clockOn: (item_id) => write(() => startSession(owner, item_id, new Date())),
+    clockOff: (sessionId) => write(() => endShiftSession(owner, sessionId, new Date())),
+    dropSession: (sessionId) => write(() => removeShiftSession(owner, sessionId)),
+    setPaid: (item_id, platform, amount) =>
+      write(() => setEarning(owner, item_id, platform, amount)),
+
     addArea: (name, parent_id) => write(() => createArea(owner, name, parent_id)),
 
     renameArea: (area, name) => write(() => updateArea(owner, area, { name })),

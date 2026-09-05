@@ -1,0 +1,163 @@
+/* Imported by exactly one .tsx in this directory: ShiftSheet.tsx */
+
+/* The platforms in their own colours, so the row is found by colour before it
+   is read. The names and marks stay theirs — this borrows neither. */
+.shift-uber_eats {
+  --platform: #06c167;
+}
+
+.shift-deliveroo {
+  --platform: #00ccbc;
+}
+
+.shift-just_eat {
+  --platform: #ff8000;
+}
+
+.shift-tips {
+  --platform: var(--line-strong);
+}
+
+.shift-totals {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.shift-total {
+  flex: 1;
+  padding: var(--space-2);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-s);
+}
+
+.shift-total dt {
+  color: var(--text-dim);
+  font-size: var(--text-s);
+}
+
+.shift-total dd {
+  margin: 0;
+  font-size: var(--text-l);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.shift-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--text-s);
+}
+
+.shift-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.shift-heading {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--text-s);
+  font-weight: 550;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.shift-sessions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shift-session {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+  padding-left: var(--space-3);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-s);
+}
+
+.shift-when {
+  flex: 1;
+  font-size: var(--text-m);
+  font-variant-numeric: tabular-nums;
+}
+
+.shift-drop {
+  width: var(--tap);
+  min-height: var(--tap);
+  font: inherit;
+  font-size: var(--text-l);
+  line-height: 1;
+  color: var(--text-dim);
+  background: transparent;
+  border: 0;
+}
+
+.shift-clock {
+  min-height: var(--tap);
+  font: inherit;
+  font-size: var(--text-m);
+  font-weight: 650;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-s);
+}
+
+.shift-clock-off {
+  color: var(--danger);
+  background: var(--danger-wash);
+  border-color: var(--danger-wash);
+}
+
+.shift-paid {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap);
+  padding-left: var(--space-3);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-s);
+  /* The colour is a stripe down the left, not a filled row: a filled row
+     fights the text for contrast in both themes, and loses in one of them. */
+  border-left: 4px solid var(--platform, transparent);
+}
+
+.shift-platform {
+  flex: 1;
+  font-size: var(--text-m);
+}
+
+.shift-amount {
+  width: 40%;
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: var(--text-m);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--text);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+}
+
+.shift-amount:focus-visible,
+.shift-clock:focus-visible,
+.shift-drop:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.shift-odo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
