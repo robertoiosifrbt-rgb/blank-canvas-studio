@@ -50,6 +50,7 @@ export function AppShell({ session }: Props) {
     data,
     openItem: (item) => setOpenId(item.id),
     today,
+    openReserves: () => setReserving(true),
   }
 
   return (
@@ -60,7 +61,6 @@ export function AppShell({ session }: Props) {
         sync={data.sync}
         onResync={data.resync}
         onDownload={() => report(() => data.download())}
-        onReserves={() => setReserving(true)}
         onSignOut={() => report(signOut)}
         error={error}
       />

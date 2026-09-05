@@ -137,7 +137,8 @@ export function ShiftSheet(props: Props) {
           reserve of nothing, and £0 tax is the lie that costs money. */}
       {sum.missing.includes('rates') && (
         <p className="shift-missing">
-          No percentages set yet — open <strong>Put aside</strong> in the header.
+          No percentages set yet — tap <strong>Put aside</strong> in the
+          Calendar, under the month.
         </p>
       )}
       {sum.missing.includes('costs') && (

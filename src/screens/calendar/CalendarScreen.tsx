@@ -25,7 +25,7 @@ const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
  * either: every past day stays one tap back through the month.
  */
 export function CalendarScreen() {
-  const { data, openItem, today } = useScreen()
+  const { data, openItem, today, openReserves } = useScreen()
   const days = forCalendar(data.items)
 
   const [month, setMonth] = useState(() => monthOf(today))
@@ -132,6 +132,7 @@ export function CalendarScreen() {
         shifts={data.shifts}
         expenses={data.expenses}
         reserves={data.reserves}
+        onOpenReserves={openReserves}
       />
 
       <section className={`day${selected === today ? ' day-today' : ''}`}>
