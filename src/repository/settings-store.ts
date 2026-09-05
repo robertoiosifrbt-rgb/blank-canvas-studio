@@ -5,10 +5,11 @@
 // the person and one per area, replaced whole, with no cursor between them.
 
 import type { Expense } from './expense'
+import type { TaxYearRow } from './hmrc-year'
 import type { Reserves, RunningCosts } from './settings'
 import { completed, open, request, STORES } from './store'
 
-const { RESERVES, COSTS, EXPENSES } = STORES
+const { RESERVES, COSTS, EXPENSES, TAX_YEARS } = STORES
 
 /**
  * The settings, kept the same way the shift parts are: whole, no cursor.
@@ -33,6 +34,31 @@ export const settingsStore = {
     const tx = opened.transaction(RESERVES, 'readwrite')
     if (reserves === null) tx.objectStore(RESERVES).delete(owner)
     else tx.objectStore(RESERVES).put(reserves)
+    await completed(tx)
+  },
+
+  async taxYears(owner: string): Promise<TaxYearRow[]> {
+    const opened = await open()
+    const tx = opened.transaction(TAX_YEARS, 'readonly')
+    const rows: unknown = await request(
+      tx.objectStore(TAX_YEARS).index('owner').getAll(owner),
+    )
+    if (!Array.isArray(rows)) throw new Error('The cache did not return a list')
+    return rows as TaxYearRow[]
+  },
+
+  async replaceTaxYears(owner: string, years: readonly TaxYearRow[]): Promise<void> {
+    for (const row of years) {
+      if (row.owner !== owner) {
+        throw new Error(`The year ${row.tax_year} belongs to ${row.owner}`)
+      }
+    }
+    const opened = await open()
+    const tx = opened.transaction(TAX_YEARS, 'readwrite')
+    const store = tx.objectStore(TAX_YEARS)
+    const keys = await request(store.index('owner').getAllKeys(owner))
+    for (const key of keys) store.delete(key)
+    for (const row of years) store.put(row)
     await completed(tx)
   },
 

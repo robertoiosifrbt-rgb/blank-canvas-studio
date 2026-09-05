@@ -25,6 +25,7 @@ import type {
   Expense,
   Reserves,
   RunningCosts,
+  TaxYearRow,
   Shift,
 } from '../repository/items'
 import { downloadText } from '../ui/download'
@@ -54,6 +55,7 @@ export type ItemsHandle = MoneyActions & {
   expenses: Expense[]
   reserves: Reserves | null
   costs: RunningCosts[]
+  taxYears: TaxYearRow[]
   loading: boolean
   sync: SyncState
   unsaved: Unsaved[]
@@ -86,6 +88,7 @@ export function useItems(owner: string): ItemsHandle {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [reserves, setReserves] = useState<Reserves | null>(null)
   const [costs, setCosts] = useState<RunningCosts[]>([])
+  const [taxYears, setTaxYears] = useState<TaxYearRow[]>([])
   const [loading, setLoading] = useState(true)
   const [sync, setSync] = useState<SyncState>({ kind: 'never' })
   const [unsaved, setUnsaved] = useState<Unsaved[]>([])
@@ -98,6 +101,7 @@ export function useItems(owner: string): ItemsHandle {
     setExpenses(snapshot.expenses)
     setReserves(snapshot.reserves)
     setCosts(snapshot.costs)
+    setTaxYears(snapshot.taxYears)
   }, [])
 
   const reload = useCallback(async () => {
@@ -197,6 +201,7 @@ export function useItems(owner: string): ItemsHandle {
     expenses,
     reserves,
     costs,
+    taxYears,
     loading,
     sync,
     unsaved,
@@ -237,7 +242,7 @@ export function useItems(owner: string): ItemsHandle {
 
     // The area writes go through the same `write`: a conflict on an area is
     // still a write that did not happen, and the caller still has to hear it.
-    ...moneyActions(owner, write, () => reserves),
+    ...moneyActions(owner, write),
 
     addArea: (name, parent_id) => write(() => createArea(owner, name, parent_id)),
 

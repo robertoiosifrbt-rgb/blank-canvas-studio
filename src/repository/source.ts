@@ -178,14 +178,21 @@ export function supabaseShiftWriter(owner: string) {
 export async function supabaseSettings(): Promise<{
   reserves: unknown[]
   costs: unknown[]
+  years: unknown[]
 }> {
-  const [reserves, costs] = await Promise.all([
+  const [reserves, costs, years] = await Promise.all([
     supabase().from('reserves').select(ALL),
     supabase().from('running_costs').select(ALL),
+    supabase().from('tax_years').select(ALL),
   ])
   if (reserves.error !== null) fail('Fetching the reserves', reserves.error)
   if (costs.error !== null) fail('Fetching the running costs', costs.error)
-  return { reserves: reserves.data as unknown[], costs: costs.data as unknown[] }
+  if (years.error !== null) fail('Fetching the tax years', years.error)
+  return {
+    reserves: reserves.data as unknown[],
+    costs: costs.data as unknown[],
+    years: years.data as unknown[],
+  }
 }
 
 /**
@@ -209,8 +216,8 @@ export function supabaseSettingsWriter() {
     },
     async saveTaxYear(values: Record<string, number | string>) {
       const response = await supabase()
-        .from('reserves')
-        .upsert(values, { onConflict: 'owner' })
+        .from('tax_years')
+        .upsert(values, { onConflict: 'owner,tax_year' })
         .select(ALL)
         .single()
       if (response.error !== null) fail("Writing the year's figures", response.error)

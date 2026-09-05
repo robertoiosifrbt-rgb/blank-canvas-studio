@@ -1,13 +1,13 @@
 import { useState } from 'react'
 
 import { AMOUNTS, RATES } from '../repository/items'
-import type { TaxYearSettings } from '../repository/items'
+import type { Figure, TaxYearPatch, TaxYearRow } from '../repository/items'
 
 type Props = {
-  year: TaxYearSettings | null
+  year: TaxYearRow | null
   /** The tax year we are in, so an empty form is not also an undated one. */
   label: string
-  onSave: (year: TaxYearSettings) => Promise<void>
+  onSave: (year: TaxYearPatch) => Promise<void>
 }
 
 /**
@@ -21,13 +21,10 @@ type Props = {
  * Yours first, because they are the only ones that change during a year. The
  * rest are HMRC's, the same for everybody, and touched once each April.
  */
-/** The name of any figure the year holds, apart from the year's own label. */
-type Field = (typeof AMOUNTS)[number] | (typeof RATES)[number]
-
 const GROUPS: readonly {
   title: string
   note?: string
-  fields: readonly Field[]
+  fields: readonly Figure[]
 }[] = [
   {
     title: 'Your income this year',
@@ -136,7 +133,7 @@ export function TaxYearForm({ year, label, onSave }: Props) {
     }
     setBusy(true)
     setError(null)
-    void onSave({ tax_year: year?.tax_year ?? label, ...values } as TaxYearSettings)
+    void onSave({ tax_year: year?.tax_year ?? label, ...values } as TaxYearPatch)
       .catch((reason: unknown) => {
         setError(reason instanceof Error ? reason.message : String(reason))
       })

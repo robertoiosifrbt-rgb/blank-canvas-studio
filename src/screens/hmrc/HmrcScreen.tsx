@@ -6,6 +6,7 @@ import {
   periodMoney,
   taxBill,
   taxYearOf,
+  yearIn,
 } from '../../repository/items'
 import { pounds } from '../../shifts/money'
 import './HmrcScreen.css'
@@ -36,7 +37,10 @@ export function HmrcScreen() {
     to: year.to,
   })
 
-  const settings = data.reserves?.year ?? null
+  // The year's own row, or none if this April has not been set up yet. Last
+  // year's row is untouched either way, which is the whole reason each year
+  // has one.
+  const settings = yearIn(data.taxYears, year.label)
   const bill =
     settings === null
       ? null

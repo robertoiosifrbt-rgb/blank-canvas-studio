@@ -1,7 +1,8 @@
 // The settings, as the screens ask for them.
 
 import { currentSession } from './auth'
-import type { TaxYearSettings } from './hmrc-year'
+import { taxYearFromRow } from './hmrc-year'
+import type { TaxYearPatch, TaxYearRow } from './hmrc-year'
 import { reservesFromRow, runningCostsFromRow } from './settings'
 import type { Reserves, RunningCosts } from './settings'
 import { settingsStore } from './settings-store'
@@ -29,11 +30,18 @@ export async function syncSettings(owner: string): Promise<void> {
     fetched.reserves.length === 1 ? reservesFromRow(fetched.reserves[0]) : null
   await settingsStore.replaceReserves(owner, reserves)
   await settingsStore.replaceCosts(owner, fetched.costs.map(runningCostsFromRow))
+  await settingsStore.replaceTaxYears(owner, fetched.years.map(taxYearFromRow))
 }
 
 export async function reservesOf(owner: string): Promise<Reserves | null> {
   await requireAccount(owner)
   return settingsStore.reserves(owner)
+}
+
+/** Every tax year the person has set up. A handful, fetched whole. */
+export async function taxYearsOf(owner: string): Promise<TaxYearRow[]> {
+  await requireAccount(owner)
+  return settingsStore.taxYears(owner)
 }
 
 export async function runningCostsOf(owner: string): Promise<RunningCosts[]> {
@@ -53,29 +61,17 @@ export async function saveReserves(
 }
 
 /**
- * The year's figures and the income typed by hand, saved together.
+ * One tax year, saved whole.
  *
- * All of them at once, because a bill worked out from half of them is a number
- * that looks like an answer with the expensive half missing.
+ * All of its figures at once, because a bill worked out from half of them is a
+ * number that looks like an answer with the expensive half missing.
  *
- * The two rough percentages come along for the ride. They are what a shift
- * pins as it is written, they cannot be null in the database, and a person
- * setting the year's figures for the first time has no row yet. Rather than
- * invent a reserve, the basic rate and the main Class 4 rate stand in — the
- * two figures that were just typed, and the right starting guess for a year
- * spent inside the basic band.
+ * A year is its own row. Setting up 2027/28 next April leaves 2026/27 exactly
+ * as it was, which is the difference between a record and a setting.
  */
-export async function saveTaxYear(
-  owner: string,
-  year: TaxYearSettings,
-  held: Reserves | null,
-): Promise<void> {
+export async function saveTaxYear(owner: string, year: TaxYearPatch): Promise<void> {
   await requireAccount(owner)
-  await supabaseSettingsWriter().saveTaxYear({
-    ...year,
-    tax_pct: held?.tax_pct ?? year.basic_pct,
-    ni_pct: held?.ni_pct ?? year.class4_main_pct,
-  })
+  await supabaseSettingsWriter().saveTaxYear({ ...year })
   await syncSettings(owner)
 }
 

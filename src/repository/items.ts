@@ -45,11 +45,12 @@ export {
   saveReserves,
   saveRunningCosts,
   saveTaxYear,
+  taxYearsOf,
 } from './settings-api'
 export { taxBill } from './hmrc'
 export type { Income, TaxBill, TaxFigures } from './hmrc'
-export { AMOUNTS, RATES, figuresOf, incomeOf } from './hmrc-year'
-export type { TaxYearSettings } from './hmrc-year'
+export { AMOUNTS, RATES, figuresOf, incomeOf, yearIn } from './hmrc-year'
+export type { Figure, TaxYearPatch, TaxYearRow } from './hmrc-year'
 export { taxYearOf } from './taxyear'
 export type { TaxYear } from './taxyear'
 export type { TakeHome } from './takehome'

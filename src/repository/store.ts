@@ -32,7 +32,7 @@ const DB_NAME = 'life-control-centre'
 // says which table it belongs to. The old cursors are dropped rather than
 // converted — a missing cursor costs one full snapshot, and a converted one
 // that is wrong costs rows that never arrive.
-const DB_VERSION = 5
+const DB_VERSION = 6
 const ITEMS = 'items'
 const AREAS = 'areas'
 // The parts of a shift, one record per anchor. Not a synced table of its own:
@@ -43,6 +43,9 @@ const EXPENSES = 'expenses'
 // few enough to be fetched whole every time.
 const RESERVES = 'reserves'
 const COSTS = 'running_costs'
+// One row per tax year, because the figures change every April and last
+// year's bill must not move when this year's are set.
+const TAX_YEARS = 'tax_years'
 const CURSORS = 'cursors'
 
 export function request<T>(req: IDBRequest<T>): Promise<T> {
@@ -60,7 +63,7 @@ export function completed(tx: IDBTransaction): Promise<void> {
   })
 }
 
-export const STORES = { RESERVES, COSTS, EXPENSES }
+export const STORES = { RESERVES, COSTS, EXPENSES, TAX_YEARS }
 
 let db: Promise<IDBDatabase> | null = null
 
@@ -85,6 +88,12 @@ export function open(): Promise<IDBDatabase> {
       }
       if (!opened.objectStoreNames.contains(RESERVES)) {
         opened.createObjectStore(RESERVES, { keyPath: 'owner' })
+      }
+      if (!opened.objectStoreNames.contains(TAX_YEARS)) {
+        const years = opened.createObjectStore(TAX_YEARS, {
+          keyPath: ['owner', 'tax_year'],
+        })
+        years.createIndex('owner', 'owner', { unique: false })
       }
       if (!opened.objectStoreNames.contains(COSTS)) {
         const costs = opened.createObjectStore(COSTS, { keyPath: 'area_id' })

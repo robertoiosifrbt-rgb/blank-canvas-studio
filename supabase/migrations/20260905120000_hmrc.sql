@@ -1,115 +1,136 @@
--- The year's bill, rather than a guess at it.
+-- The year's bill, and a row for every year of it.
 --
--- `reserves` already held two percentages, and the comment above them said
--- what they could not do: a flat rate does not know that the first slice of
--- profit is untaxed, or that Class 4 stops climbing above a threshold. It
--- reserves too much in April and too little in March, and it has nothing at
--- all to say about a wage or a dividend.
+-- `reserves` holds two percentages and says, in the comment above them, what
+-- they cannot do: a flat rate does not know that the first slice of profit is
+-- untaxed, that Class 4 stops climbing above a threshold, or that a dividend
+-- is taxed at its own rates and pays no National Insurance at all. It reserves
+-- too much in April and too little in March, and it has never had anything to
+-- say about a wage.
 --
--- The row stays where it is, and grows. It was already the right shape — one
--- per person, because there is one HMRC, one allowance and one bill — and the
--- reason the percentages sat here rather than on a line of work is the same
--- reason the rest of the year's figures do.
+-- A table rather than more columns on `reserves`, and the reason is the whole
+-- point of the thing: **the figures change every April**. One row per person
+-- would mean that setting this year's allowance overwrites last year's, and a
+-- bill from 2026/27 would quietly recalculate itself using 2027/28's numbers
+-- the moment you updated them. A filed return does not change. The key is the
+-- person and the year, so a new April is a new row and the old one stands.
 --
--- Everything is nullable. A person who has not sat down with the HMRC page yet
--- has an unknown bill, not a bill of nothing, and the screen says so rather
--- than showing £0 owed.
+-- This is not the "history" the plan refuses to build. It is not versions of
+-- one thing: 2026/27 and 2027/28 are two different years, each with its own
+-- answer, both of them current for as long as HMRC can ask about them.
 --
--- The two percentages are not removed. They are what a shift pins at the
--- moment it is written, so that a report from October does not change when a
--- rate changes in January, and nothing here replaces that yet.
---
--- Law 5, the sync strategy: unchanged. One row per person, no cursor, fetched
--- whole, carrying the version it already had.
+-- Law 5, the sync strategy: no cursor. A handful of rows — one per tax year a
+-- person has worked — fetched whole on every sync, the same as the reserves
+-- and the running costs. They carry a version because two devices editing one
+-- year is as real here as anywhere else.
 
-alter table public.reserves
-  -- The year these figures are for, as HMRC writes it: '2026/27'.
-  add column tax_year               text,
+create table public.tax_years (
+  owner uuid not null default auth.uid() references auth.users(id) on delete cascade,
 
-  -- What the person is allowed before any tax, and where it starts shrinking.
-  add column personal_allowance     numeric(12, 2),
-  add column taper_from             numeric(12, 2),
+  -- The year as HMRC writes it: '2026/27'.
+  tax_year text not null,
+
+  -- What is allowed before any tax, and where it starts shrinking.
+  personal_allowance numeric(12, 2) not null,
+  taper_from         numeric(12, 2) not null,
 
   -- The bands, on taxable income — what is left after the allowance.
-  add column basic_band             numeric(12, 2),
-  add column higher_band_to         numeric(12, 2),
-  add column basic_pct              numeric(5, 2),
-  add column higher_pct             numeric(5, 2),
-  add column additional_pct         numeric(5, 2),
+  basic_band     numeric(12, 2) not null,
+  higher_band_to numeric(12, 2) not null,
+  basic_pct      numeric(5, 2)  not null,
+  higher_pct     numeric(5, 2)  not null,
+  additional_pct numeric(5, 2)  not null,
 
-  -- Dividends: their own allowance, on top of the personal one, and their own
-  -- rates. They pay no National Insurance, which is why they are apart.
-  add column dividend_allowance     numeric(12, 2),
-  add column dividend_basic_pct     numeric(5, 2),
-  add column dividend_higher_pct    numeric(5, 2),
-  add column dividend_additional_pct numeric(5, 2),
+  -- Dividends: their own allowance on top of the personal one, their own
+  -- rates, and no National Insurance. That is why they are apart.
+  dividend_allowance      numeric(12, 2) not null,
+  dividend_basic_pct      numeric(5, 2)  not null,
+  dividend_higher_pct     numeric(5, 2)  not null,
+  dividend_additional_pct numeric(5, 2)  not null,
 
-  -- Class 4, paid on trading profit and on nothing else.
-  add column class4_from            numeric(12, 2),
-  add column class4_to              numeric(12, 2),
-  add column class4_main_pct        numeric(5, 2),
-  add column class4_upper_pct       numeric(5, 2),
+  -- Class 4, paid on trading profit and on nothing else. Class 1 belongs to an
+  -- employer and is taken before the money is seen, so it never appears here.
+  class4_from      numeric(12, 2) not null,
+  class4_to        numeric(12, 2) not null,
+  class4_main_pct  numeric(5, 2)  not null,
+  class4_upper_pct numeric(5, 2)  not null,
 
-  -- Income the app does not hold a module for yet. Written by hand until it
-  -- does, and read by the same calculation either way.
-  add column employment             numeric(12, 2),
-  add column employment_tax_paid    numeric(12, 2),
-  add column dividends              numeric(12, 2);
+  -- Income the app holds no module for yet. Typed by hand until it does, and
+  -- read by the same calculation either way.
+  employment          numeric(12, 2) not null default 0,
+  employment_tax_paid numeric(12, 2) not null default 0,
+  dividends           numeric(12, 2) not null default 0,
 
--- Money is never below nothing, and a rate is a percentage.
-alter table public.reserves
-  add constraint reserves_year_shape check (
-    tax_year is null or tax_year ~ '^\d{4}/\d{2}$'
+  version    integer     not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz,
+
+  primary key (owner, tax_year),
+
+  constraint tax_years_year_shape check (tax_year ~ '^\d{4}/\d{2}$'),
+
+  constraint tax_years_amounts_positive check (
+    personal_allowance >= 0 and taper_from >= 0
+    and basic_band >= 0 and higher_band_to >= 0
+    and dividend_allowance >= 0
+    and class4_from >= 0 and class4_to >= 0
+    and employment >= 0 and employment_tax_paid >= 0 and dividends >= 0
   ),
-  add constraint reserves_amounts_positive check (
-    coalesce(personal_allowance, 0) >= 0
-    and coalesce(taper_from, 0) >= 0
-    and coalesce(basic_band, 0) >= 0
-    and coalesce(higher_band_to, 0) >= 0
-    and coalesce(dividend_allowance, 0) >= 0
-    and coalesce(class4_from, 0) >= 0
-    and coalesce(class4_to, 0) >= 0
-    and coalesce(employment, 0) >= 0
-    and coalesce(employment_tax_paid, 0) >= 0
-    and coalesce(dividends, 0) >= 0
+  constraint tax_years_rates_are_percentages check (
+    basic_pct between 0 and 100
+    and higher_pct between 0 and 100
+    and additional_pct between 0 and 100
+    and dividend_basic_pct between 0 and 100
+    and dividend_higher_pct between 0 and 100
+    and dividend_additional_pct between 0 and 100
+    and class4_main_pct between 0 and 100
+    and class4_upper_pct between 0 and 100
   ),
-  add constraint reserves_rates_are_percentages check (
-    coalesce(basic_pct, 0) between 0 and 100
-    and coalesce(higher_pct, 0) between 0 and 100
-    and coalesce(additional_pct, 0) between 0 and 100
-    and coalesce(dividend_basic_pct, 0) between 0 and 100
-    and coalesce(dividend_higher_pct, 0) between 0 and 100
-    and coalesce(dividend_additional_pct, 0) between 0 and 100
-    and coalesce(class4_main_pct, 0) between 0 and 100
-    and coalesce(class4_upper_pct, 0) between 0 and 100
-  ),
-  -- A band that ends before it starts would tax a slice of income twice, or
-  -- not at all, depending on which way round it was read.
-  add constraint reserves_bands_climb check (
-    basic_band is null or higher_band_to is null or higher_band_to >= basic_band
-  ),
-  add constraint reserves_class4_climbs check (
-    class4_from is null or class4_to is null or class4_to >= class4_from
-  );
+  -- A band ending before it starts would tax a slice twice, or not at all,
+  -- depending on which way round it happened to be read.
+  constraint tax_years_bands_climb check (higher_band_to >= basic_band),
+  constraint tax_years_class4_climbs check (class4_to >= class4_from)
+);
 
--- Per column, both ways round, as everywhere else. The client writes figures
--- and income; it never writes id, owner, version or the stamps.
+-- The same stamp the other settings use: the phone's clock and the client's
+-- version reach neither. It pins `owner` on update, and this table's key is
+-- (owner, tax_year), so there is no `id` for public.stamp() to pin.
+create trigger tax_years_stamp
+  before insert or update on public.tax_years
+  for each row execute function public.stamp_setting();
+
+revoke all on table public.tax_years from anon, authenticated;
+
+grant select on table public.tax_years to authenticated;
+
+-- Per column, both ways round. The year itself can be written once and never
+-- edited: a row that changed which year it described would take a filed bill
+-- with it.
 grant insert (
-  tax_pct, ni_pct,
-  tax_year, personal_allowance, taper_from,
+  tax_year,
+  personal_allowance, taper_from,
   basic_band, higher_band_to, basic_pct, higher_pct, additional_pct,
   dividend_allowance, dividend_basic_pct, dividend_higher_pct,
   dividend_additional_pct,
   class4_from, class4_to, class4_main_pct, class4_upper_pct,
   employment, employment_tax_paid, dividends
-) on table public.reserves to authenticated;
+) on table public.tax_years to authenticated;
 
 grant update (
-  tax_pct, ni_pct, deleted_at,
-  tax_year, personal_allowance, taper_from,
+  personal_allowance, taper_from,
   basic_band, higher_band_to, basic_pct, higher_pct, additional_pct,
   dividend_allowance, dividend_basic_pct, dividend_higher_pct,
   dividend_additional_pct,
   class4_from, class4_to, class4_main_pct, class4_upper_pct,
-  employment, employment_tax_paid, dividends
-) on table public.reserves to authenticated;
+  employment, employment_tax_paid, dividends,
+  deleted_at
+) on table public.tax_years to authenticated;
+
+alter table public.tax_years enable row level security;
+
+create policy tax_years_select on public.tax_years for select to authenticated
+  using (owner = auth.uid());
+create policy tax_years_insert on public.tax_years for insert to authenticated
+  with check (owner = auth.uid());
+create policy tax_years_update on public.tax_years for update to authenticated
+  using (owner = auth.uid()) with check (owner = auth.uid());

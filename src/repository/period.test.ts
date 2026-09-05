@@ -10,7 +10,6 @@ const RESERVES: Reserves = {
   owner: 'me',
   tax_pct: 20,
   ni_pct: 6,
-  year: null,
   version: 1,
   created_at: '2026-09-01T00:00:00+00:00',
   updated_at: '2026-09-01T00:00:00+00:00',
