@@ -14,28 +14,18 @@ import {
   discardArea,
   updateArea,
 } from '../repository/items'
-import {
-  createShift,
-  endSession as endShiftSession,
-  removeSession as removeShiftSession,
-  saveShift,
-  setEarning,
-  startSession,
-} from '../repository/items'
-import { recordExpense, saveReserves, saveRunningCosts } from '../repository/items'
+import { moneyActions } from './moneyActions'
+import type { MoneyActions } from './moneyActions'
 import { readSnapshot } from './snapshot'
 import type { Snapshot } from './snapshot'
 import type {
   Area,
   Item,
   Patch,
-  Category,
   Expense,
-  Platform,
   Reserves,
   RunningCosts,
   Shift,
-  ShiftPatch,
 } from '../repository/items'
 import { downloadText } from '../ui/download'
 
@@ -55,7 +45,9 @@ export type SyncState =
 /** A patch that could not be written, kept visible until you retry it. */
 export type Unsaved = { item: Item; patch: Patch; reason: string }
 
-export type ItemsHandle = {
+// The money writes are declared once, where they are written. Repeating them
+// here is how a handle ends up promising something the hook does not return.
+export type ItemsHandle = MoneyActions & {
   items: Item[]
   areas: Area[]
   shifts: Shift[]
@@ -71,27 +63,6 @@ export type ItemsHandle = {
   discard: (item: Item) => Promise<void>
   retry: (itemId: string) => Promise<void>
   download: () => Promise<void>
-  spend: (what: {
-    day: string
-    area_id: string | null
-    title: string
-    category: Category
-    amount: number
-    odo: number | null
-    full_tank: boolean | null
-  }) => Promise<void>
-  saveReserves: (tax_pct: number, ni_pct: number) => Promise<void>
-  saveCosts: (
-    area_id: string,
-    fuel_per_km: number,
-    vehicle_per_km: number,
-  ) => Promise<void>
-  startShift: (day: string, area_id: string | null) => Promise<void>
-  saveShiftParts: (item_id: string, patch: ShiftPatch) => Promise<void>
-  clockOn: (item_id: string) => Promise<void>
-  clockOff: (sessionId: string) => Promise<void>
-  dropSession: (sessionId: string) => Promise<void>
-  setPaid: (item_id: string, platform: Platform, amount: number) => Promise<void>
   addArea: (name: string, parent_id: string | null) => Promise<void>
   renameArea: (area: Area, name: string) => Promise<void>
   dropArea: (area: Area) => Promise<void>
@@ -266,29 +237,7 @@ export function useItems(owner: string): ItemsHandle {
 
     // The area writes go through the same `write`: a conflict on an area is
     // still a write that did not happen, and the caller still has to hear it.
-    spend: (what) => write(() => recordExpense(owner, what)),
-
-    saveReserves: (tax_pct, ni_pct) => write(() => saveReserves(owner, tax_pct, ni_pct)),
-
-    saveCosts: (area_id, fuel_per_km, vehicle_per_km) =>
-      write(() => saveRunningCosts(owner, area_id, fuel_per_km, vehicle_per_km)),
-
-    // A shift is made already processed: it is not something you found in
-    // your pocket, it is a day you worked. So it goes in with its kind, its
-    // day and its area, and never passes through the inbox.
-    startShift: (day, area_id) =>
-      write(() =>
-        createShift(owner, day, area_id).then((anchor) =>
-          saveShift(owner, anchor.id, {}),
-        ),
-      ),
-
-    saveShiftParts: (item_id, patch) => write(() => saveShift(owner, item_id, patch)),
-    clockOn: (item_id) => write(() => startSession(owner, item_id, new Date())),
-    clockOff: (sessionId) => write(() => endShiftSession(owner, sessionId, new Date())),
-    dropSession: (sessionId) => write(() => removeShiftSession(owner, sessionId)),
-    setPaid: (item_id, platform, amount) =>
-      write(() => setEarning(owner, item_id, platform, amount)),
+    ...moneyActions(owner, write),
 
     addArea: (name, parent_id) => write(() => createArea(owner, name, parent_id)),
 

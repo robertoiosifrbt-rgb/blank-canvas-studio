@@ -5,6 +5,7 @@ import { CaptureSheet } from '../items/CaptureSheet'
 import { ItemSheet } from '../items/ItemSheet'
 import type { ScreenContext } from '../items/context'
 import { useItems } from '../items/useItems'
+import { ExpenseSheet } from '../spend/ExpenseSheet'
 import { ReservesSheet } from '../shifts/ReservesSheet'
 import { ShiftSheet } from '../shifts/ShiftSheet'
 import { signOut } from '../repository/auth'
@@ -122,7 +123,19 @@ export function AppShell({ session }: Props) {
         />
       )}
 
-      {openItem !== null && openItem.kind !== 'shift' && (
+      {openItem !== null && openItem.kind === 'expense' && (
+        <ExpenseSheet
+          item={openItem}
+          expense={data.expenses.find((e) => e.item_id === openItem.id) ?? null}
+          areas={data.areas}
+          onRemove={() => data.unspend(openItem)}
+          onClose={closeItem}
+        />
+      )}
+
+      {openItem !== null &&
+        openItem.kind !== 'shift' &&
+        openItem.kind !== 'expense' && (
         <ItemSheet
           item={openItem}
           today={today}
