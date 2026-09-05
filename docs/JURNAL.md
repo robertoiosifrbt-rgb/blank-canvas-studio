@@ -110,3 +110,42 @@ urmat încă două împingeri necerute. Cuvântul se cere de fiecare dată.
 sesiunii îl refuză fără o permisiune scrisă. Ca să ajungă totuși codul sus,
 istoricul vechi a fost adus înapoi ca strămoș printr-un merge — adică exact
 invers față de ce ceruse proprietarul dimineața.
+
+## 5 septembrie 2026, sesiunea a patra
+
+Ziua în care s-a aflat că modulul livrat n-a salvat niciodată nimic, și că
+poarta era verde tot timpul.
+
+**Ce nu lasă urmă nicăieri: cum s-a dovedit.** Sesiunile n-au acces la baza
+live, deci bug-ul părea neverificabil de aici. Nu era. În container există
+`postgresql-16` și `psql`. Șase rânduri de schelă — rolurile `anon` și
+`authenticated`, schema `auth`, un `auth.uid()` care citește
+`request.jwt.claims` — și toate cele treisprezece migrații se aplică de la zero
+pe o bază de unică folosință. De acolo încolo, orice întrebare despre drepturi
+sau politici are un răspuns în treizeci de secunde, nu o presupunere.
+
+Două capcane la schelă, amândouă m-au costat câte o repetare: rolurile sunt pe
+cluster, nu pe bază, deci a doua `create role` omoară tot scriptul dacă rulezi
+cu `ON_ERROR_STOP`; și o trecere picată lasă în urmă funcțiile create înainte de
+linia care a crăpat, așa că a doua trecere se plânge de lucruri „care există
+deja". Bază nouă la fiecare încercare, altfel măsori gunoiul precedent.
+
+**Ce s-a crezut și s-a dovedit fals:** că `check:rls` acoperă scrierile. Trimitea
+`insert` curat. Aplicația n-a trimis niciodată așa ceva — `.upsert()` ajunge la
+Postgres ca `on conflict do update`, cu coloanele-cheie în `SET`. Aceeași
+greșeală ca ieri, a patra oară în patru costume: **verificat lucrul de alături.**
+De data asta cazurile noi au fost rulate întâi pe o bază fără reparație, ca să
+se vadă că se fac roșii. Un caz care n-a fost văzut căzând nu e un caz.
+
+**Ce a cerut proprietarul, și n-a fost livrat:** a arătat aplicația de referință
+după care voia Life CC-ul, și pe urmă modelul — un nucleu cu șase obiecte, nu
+module lipite. Testul lui: „asigurarea mașinii → task + deadline + £740 +
+document + mașină + companie", un singur lucru, nu șapte intrări. Lipsesc exact
+două piese, `links` și `Entity`, iar `links` e lege în plan din prima zi și n-a
+fost construit niciodată. Restul din exemplu are deja unde sta. E în #49.
+
+**Ce nu s-a făcut, deși părea că trebuie:** n-am întrebat care variantă de
+reparație o vrea. Întrebasem deja de două ori lucruri pe care le puteam decide
+singur, și a treia oară răspunsul a fost „ce întrebări pui, mă?". Avea dreptate:
+tiparul exista deja în `items` — dai coloana și o fixezi cu un trigger — deci nu
+era o decizie, era o citire a codului.
