@@ -105,3 +105,71 @@ export function supabaseWriter<P extends object>(
     },
   }
 }
+
+/**
+ * Every shift part this account has, in three requests.
+ *
+ * Not filtered to what changed. The parts carry no version and no updated_at
+ * of their own — the anchor holds the news — so there is nothing to ask them
+ * "since when", and asking per anchor would be one request per shift. Three
+ * requests for the lot is the honest reading of a table with no cursor.
+ */
+export async function supabaseShiftParts(): Promise<{
+  shifts: unknown[]
+  sessions: unknown[]
+  earnings: unknown[]
+}> {
+  const [shifts, sessions, earnings] = await Promise.all([
+    supabase().from('shifts').select(ALL),
+    supabase().from('shift_sessions').select(ALL).order('started_at', { ascending: true }),
+    supabase().from('shift_earnings').select(ALL),
+  ])
+  for (const [what, response] of [
+    ['Fetching the shifts', shifts],
+    ['Fetching the sessions', sessions],
+    ['Fetching the earnings', earnings],
+  ] as const) {
+    if (response.error !== null) fail(what, response.error)
+  }
+  return {
+    shifts: shifts.data as unknown[],
+    sessions: sessions.data as unknown[],
+    earnings: earnings.data as unknown[],
+  }
+}
+
+/** The writes for a shift's parts. Three tables, one owner condition each. */
+export function supabaseShiftWriter(owner: string) {
+  const on = (table: string) => supabase().from(table)
+  return {
+    async upsertShift(values: Record<string, unknown>) {
+      const response = await on('shifts').upsert(values).select(ALL).single()
+      if (response.error !== null) fail('Writing the shift', response.error)
+      return response.data as unknown
+    },
+    async addSession(values: Record<string, unknown>) {
+      const response = await on('shift_sessions').insert(values).select(ALL).single()
+      if (response.error !== null) fail('Writing the session', response.error)
+      return response.data as unknown
+    },
+    async endSession(id: string, ended_at: string) {
+      const response = await on('shift_sessions')
+        .update({ ended_at })
+        .eq('id', id)
+        .eq('owner', owner)
+        .select(ALL)
+        .single()
+      if (response.error !== null) fail('Closing the session', response.error)
+      return response.data as unknown
+    },
+    async removeSession(id: string) {
+      const response = await on('shift_sessions').delete().eq('id', id).eq('owner', owner)
+      if (response.error !== null) fail('Removing the session', response.error)
+    },
+    async setEarning(values: Record<string, unknown>) {
+      const response = await on('shift_earnings').upsert(values).select(ALL).single()
+      if (response.error !== null) fail('Writing what a platform paid', response.error)
+      return response.data as unknown
+    },
+  }
+}

@@ -10,6 +10,7 @@ import { fromRow as fromAreaRow } from './area'
 import { fromRow as fromItemRow, localToday } from './item'
 import type { Item, Patch } from './item'
 import { supabaseSource, supabaseWriter } from './source'
+import { syncShifts } from './shifts'
 import { areaStore, store } from './store'
 import { sync } from './sync'
 import type { SyncResult } from './sync'
@@ -25,6 +26,23 @@ export type { SyncResult } from './sync'
 export type { ExportFile } from './export'
 export { Conflict, isItemConflict } from './write'
 export type { Area, AreaPatch } from './area'
+export type { Platform, Shift, ShiftPatch, ShiftSession } from './shift'
+export {
+  earnedPence,
+  isOut,
+  kilometres,
+  minutesWorked,
+  PLATFORM_NAMES,
+  PLATFORMS,
+} from './shift'
+export {
+  endSession,
+  removeSession,
+  saveShift,
+  setEarning,
+  shiftsOf,
+  startSession,
+} from './shifts'
 export { countUnder, pathOf, treeOf } from './area'
 export {
   areasOf,
@@ -72,11 +90,14 @@ export async function syncAccount(owner: string): Promise<SyncResult> {
   await requireAccount(owner)
   const areas = await sync(owner, supabaseSource(AREAS), areaStore, fromAreaRow)
   const items = await sync(owner, supabaseSource(ITEMS), store, fromItemRow)
+  // The shift parts last, and whole: they carry no cursor, so there is
+  // nothing to ask them "since when". Their anchors have already arrived.
+  const shifts = await syncShifts(owner)
   return {
     // A full snapshot of either table is a full sync: something was rebuilt
     // from nothing, and that is what the word has to keep meaning.
     kind: areas.kind === 'full' || items.kind === 'full' ? 'full' : 'delta',
-    fetched: areas.fetched + items.fetched,
+    fetched: areas.fetched + items.fetched + shifts.length,
     cursor: items.cursor,
   }
 }
