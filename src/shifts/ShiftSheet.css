@@ -38,8 +38,14 @@
 
 .shift-total dd {
   margin: 0;
-  font-size: var(--text-l);
-  font-weight: 650;
+  /* Never wrapped. Three tiles side by side on a 320px screen leave about
+     95px each, and "167.4 km" at the larger size needs more than that — it
+     broke across two lines, which made the row of totals a different height
+     depending on how far you had driven. */
+  white-space: nowrap;
+  font-size: var(--text-m);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
 
@@ -154,6 +160,12 @@
 .shift-drop:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+.shift-area {
+  /* An area is a path, not a word: "MultiApp Delivery" needs the room that
+     an amount does not. */
+  width: 62%;
 }
 
 .shift-odo {

@@ -191,7 +191,7 @@ export function ShiftSheet(props: Props) {
         <label className="shift-paid">
           <span className="shift-platform">Area</span>
           <select
-            className="shift-amount"
+            className="shift-amount shift-area"
             name="area"
             value={item.area_id ?? ''}
             disabled={busy}
