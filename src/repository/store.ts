@@ -10,6 +10,7 @@ import type { Area } from './area'
 import { fromRow as fromItemRow } from './item'
 import type { Item } from './item'
 import type { Row } from './row'
+import type { Shift } from './shift'
 
 export type Store<T extends Row> = {
   readAll(owner: string): Promise<T[]>
@@ -31,9 +32,12 @@ const DB_NAME = 'life-control-centre'
 // says which table it belongs to. The old cursors are dropped rather than
 // converted — a missing cursor costs one full snapshot, and a converted one
 // that is wrong costs rows that never arrive.
-const DB_VERSION = 2
+const DB_VERSION = 3
 const ITEMS = 'items'
 const AREAS = 'areas'
+// The parts of a shift, one record per anchor. Not a synced table of its own:
+// it has no cursor, because the anchor carries the news that it changed.
+const SHIFTS = 'shifts'
 const CURSORS = 'cursors'
 
 function request<T>(req: IDBRequest<T>): Promise<T> {
@@ -63,6 +67,10 @@ function open(): Promise<IDBDatabase> {
           const rows = opened.createObjectStore(name, { keyPath: 'id' })
           rows.createIndex('owner', 'owner', { unique: false })
         }
+      }
+      if (!opened.objectStoreNames.contains(SHIFTS)) {
+        const shifts = opened.createObjectStore(SHIFTS, { keyPath: 'item_id' })
+        shifts.createIndex('owner', 'owner', { unique: false })
       }
       if (opened.objectStoreNames.contains(CURSORS)) {
         opened.deleteObjectStore(CURSORS)
@@ -184,3 +192,39 @@ function storeFor<T extends Row>(
 
 export const store: Store<Item> = storeFor(ITEMS, fromItemRow)
 export const areaStore: Store<Area> = storeFor(AREAS, fromAreaRow)
+
+/**
+ * The parts of every shift this account has, kept whole.
+ *
+ * There is no upsert and no cursor here on purpose. The parts of a shift are
+ * never asked for on their own — only ever as "the parts of this anchor" — so
+ * they are replaced wholesale, which is exactly the strategy the migration
+ * declares. What tells you a shift changed is its anchor's version, and that
+ * travels in the items delta.
+ */
+export const shiftStore = {
+  async readAll(owner: string): Promise<Shift[]> {
+    const opened = await open()
+    const tx = opened.transaction(SHIFTS, 'readonly')
+    const rows: unknown = await request(
+      tx.objectStore(SHIFTS).index('owner').getAll(owner),
+    )
+    if (!Array.isArray(rows)) throw new Error('The cache did not return a list')
+    return rows as Shift[]
+  },
+
+  async replaceAll(owner: string, shifts: readonly Shift[]): Promise<void> {
+    for (const shift of shifts) {
+      if (shift.owner !== owner) {
+        throw new Error(`Shift ${shift.item_id} belongs to ${shift.owner}`)
+      }
+    }
+    const opened = await open()
+    const tx = opened.transaction(SHIFTS, 'readwrite')
+    const store = tx.objectStore(SHIFTS)
+    const keys = await request(store.index('owner').getAllKeys(owner))
+    for (const key of keys) store.delete(key)
+    for (const shift of shifts) store.put(shift)
+    await completed(tx)
+  },
+}
