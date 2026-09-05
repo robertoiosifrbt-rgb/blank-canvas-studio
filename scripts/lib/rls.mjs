@@ -226,36 +226,50 @@ export const CASES = [
         }
       }),
   },
+  // These two go through UPDATE, not INSERT. INSERT is granted on title
+  // alone, so an insert naming state or kind is refused for want of a
+  // privilege — 42501, before any constraint is consulted. The constraint is
+  // what is under test here, and UPDATE is the door the client actually has
+  // to it: state and kind are both grantable there.
   {
     group: 'constraint',
     name: 'a contradictory state and kind are refused both ways round',
-    run: (t) =>
-      t.asA(async () => {
+    run: async (t) => {
+      const id = await rowOwnedBy(t, A)
+      await t.asA(async () => {
         // In the inbox there is no kind.
         await t.denied(
           CONSTRAINT,
-          "insert into public.items (title, state, kind) values ('x', 'inbox', 'task')",
+          "update public.items set state = 'inbox', kind = 'task' where id = $1",
+          [id],
         )
-        // You do not leave the inbox without a kind.
+        // You do not leave the inbox without a kind. The row starts in the
+        // inbox with no kind, so moving the state alone is exactly that.
         await t.denied(
           CONSTRAINT,
-          "insert into public.items (title, state) values ('x', 'active')",
+          "update public.items set state = 'active' where id = $1",
+          [id],
         )
-      }),
+      })
+    },
   },
   {
     group: 'constraint',
     name: 'a state or a kind that does not exist is refused',
-    run: (t) =>
-      t.asA(async () => {
+    run: async (t) => {
+      const id = await rowOwnedBy(t, A)
+      await t.asA(async () => {
         await t.denied(
           CONSTRAINT,
-          "insert into public.items (title, state, kind) values ('x', 'dropped', 'task')",
+          "update public.items set state = 'dropped', kind = 'task' where id = $1",
+          [id],
         )
         await t.denied(
           CONSTRAINT,
-          "insert into public.items (title, state, kind) values ('x', 'active', 'note')",
+          "update public.items set state = 'active', kind = 'note' where id = $1",
+          [id],
         )
-      }),
+      })
+    },
   },
 ]
