@@ -96,6 +96,32 @@ export async function exportAll(owner: string, now: Date): Promise<ExportFile> {
 }
 
 /**
+ * The write reached the server, and the cache would not take the row.
+ *
+ * It is not a failed write, and must never be shown as one. The row is on the
+ * server; only the local copy is behind. Told "it did not work", you press
+ * Save again — and Capture inserts a second row for a first one that was
+ * already there.
+ *
+ * It carries the item so the screen can stop calling it unsaved, and ask for a
+ * sync instead: the next delta brings the same row back, and the upsert is
+ * idempotent.
+ */
+export class NotCached extends Error {
+  readonly item: Item
+
+  constructor(item: Item, reason: unknown) {
+    super(
+      `Saved, but this device could not keep a copy: ${
+        reason instanceof Error ? reason.message : String(reason)
+      }`,
+    )
+    this.name = 'NotCached'
+    this.item = item
+  }
+}
+
+/**
  * The row the server returned goes into the cache straight away.
  *
  * The cursor does not move: this row will come back on the next delta anyway,
@@ -103,6 +129,10 @@ export async function exportAll(owner: string, now: Date): Promise<ExportFile> {
  * wrote in the meantime.
  */
 async function cache(owner: string, item: Item): Promise<Item> {
-  await store.upsert(owner, [item], null)
+  try {
+    await store.upsert(owner, [item], null)
+  } catch (reason) {
+    throw new NotCached(item, reason)
+  }
   return item
 }
