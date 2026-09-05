@@ -1,5 +1,7 @@
 import { useState } from 'react'
 
+import { SpendSheet } from '../../spend/SpendSheet'
+
 import { forToday } from '../../repository/items'
 import type { Item } from '../../repository/items'
 import { useScreen } from '../../items/context'
@@ -74,6 +76,7 @@ function Collapsed({ heading, label, ...rest }: CollapsedProps) {
  */
 export function TodayScreen() {
   const { data, openItem, today } = useScreen()
+  const [spending, setSpending] = useState(false)
   const groups = forToday(data.items, today)
   const overdue = splitOverdue(groups.overdue, today)
 
@@ -105,17 +108,37 @@ export function TodayScreen() {
 
       {/* One button, whichever state the day is in. A driver opening this
           at six in the morning and at eleven at night wants the same tap. */}
-      <button
-        type="button"
-        name="shift"
-        className="today-shift"
-        onClick={() => {
-          if (todaysShift === undefined) void data.startShift(today, null)
-          else openItem(todaysShift)
-        }}
-      >
-        {todaysShift === undefined ? "Start today's shift" : "Today's shift"}
-      </button>
+      <div className="today-buttons">
+        <button
+          type="button"
+          name="shift"
+          className="today-shift"
+          onClick={() => {
+            if (todaysShift === undefined) void data.startShift(today, null)
+            else openItem(todaysShift)
+          }}
+        >
+          {todaysShift === undefined ? 'Start a shift' : "Today's shift"}
+        </button>
+        <button
+          type="button"
+          name="spend"
+          className="today-shift"
+          onClick={() => setSpending(true)}
+        >
+          Money out
+        </button>
+      </div>
+
+      {spending && (
+        <SpendSheet
+          day={today}
+          areas={data.areas}
+          suggestedArea={todaysShift?.area_id ?? null}
+          onSpend={(what) => data.spend(what)}
+          onClose={() => setSpending(false)}
+        />
+      )}
 
       <Group heading="Inbox" items={groups.inbox} {...shared} />
       <Group heading="Today" items={groups.today} {...shared} />

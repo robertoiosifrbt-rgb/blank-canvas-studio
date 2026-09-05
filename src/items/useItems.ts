@@ -22,13 +22,15 @@ import {
   setEarning,
   startSession,
 } from '../repository/items'
-import { saveReserves, saveRunningCosts } from '../repository/items'
+import { recordExpense, saveReserves, saveRunningCosts } from '../repository/items'
 import { readSnapshot } from './snapshot'
 import type { Snapshot } from './snapshot'
 import type {
   Area,
   Item,
   Patch,
+  Category,
+  Expense,
   Platform,
   Reserves,
   RunningCosts,
@@ -57,6 +59,7 @@ export type ItemsHandle = {
   items: Item[]
   areas: Area[]
   shifts: Shift[]
+  expenses: Expense[]
   reserves: Reserves | null
   costs: RunningCosts[]
   loading: boolean
@@ -68,6 +71,15 @@ export type ItemsHandle = {
   discard: (item: Item) => Promise<void>
   retry: (itemId: string) => Promise<void>
   download: () => Promise<void>
+  spend: (what: {
+    day: string
+    area_id: string | null
+    title: string
+    category: Category
+    amount: number
+    odo: number | null
+    full_tank: boolean | null
+  }) => Promise<void>
   saveReserves: (tax_pct: number, ni_pct: number) => Promise<void>
   saveCosts: (
     area_id: string,
@@ -100,6 +112,7 @@ export function useItems(owner: string): ItemsHandle {
   const [items, setItems] = useState<Item[]>([])
   const [areas, setAreas] = useState<Area[]>([])
   const [shifts, setShifts] = useState<Shift[]>([])
+  const [expenses, setExpenses] = useState<Expense[]>([])
   const [reserves, setReserves] = useState<Reserves | null>(null)
   const [costs, setCosts] = useState<RunningCosts[]>([])
   const [loading, setLoading] = useState(true)
@@ -111,6 +124,7 @@ export function useItems(owner: string): ItemsHandle {
     setItems(snapshot.items)
     setAreas(snapshot.areas)
     setShifts(snapshot.shifts)
+    setExpenses(snapshot.expenses)
     setReserves(snapshot.reserves)
     setCosts(snapshot.costs)
   }, [])
@@ -209,6 +223,7 @@ export function useItems(owner: string): ItemsHandle {
     items,
     areas,
     shifts,
+    expenses,
     reserves,
     costs,
     loading,
@@ -251,6 +266,8 @@ export function useItems(owner: string): ItemsHandle {
 
     // The area writes go through the same `write`: a conflict on an area is
     // still a write that did not happen, and the caller still has to hear it.
+    spend: (what) => write(() => recordExpense(owner, what)),
+
     saveReserves: (tax_pct, ni_pct) => write(() => saveReserves(owner, tax_pct, ni_pct)),
 
     saveCosts: (area_id, fuel_per_km, vehicle_per_km) =>

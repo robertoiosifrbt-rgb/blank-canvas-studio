@@ -32,12 +32,13 @@ const DB_NAME = 'life-control-centre'
 // says which table it belongs to. The old cursors are dropped rather than
 // converted — a missing cursor costs one full snapshot, and a converted one
 // that is wrong costs rows that never arrive.
-const DB_VERSION = 4
+const DB_VERSION = 5
 const ITEMS = 'items'
 const AREAS = 'areas'
 // The parts of a shift, one record per anchor. Not a synced table of its own:
 // it has no cursor, because the anchor carries the news that it changed.
 const SHIFTS = 'shifts'
+const EXPENSES = 'expenses'
 // The settings: one row per person, one row per area. No cursor either, and
 // few enough to be fetched whole every time.
 const RESERVES = 'reserves'
@@ -59,7 +60,7 @@ export function completed(tx: IDBTransaction): Promise<void> {
   })
 }
 
-export const STORES = { RESERVES, COSTS }
+export const STORES = { RESERVES, COSTS, EXPENSES }
 
 let db: Promise<IDBDatabase> | null = null
 
@@ -77,6 +78,10 @@ export function open(): Promise<IDBDatabase> {
       if (!opened.objectStoreNames.contains(SHIFTS)) {
         const shifts = opened.createObjectStore(SHIFTS, { keyPath: 'item_id' })
         shifts.createIndex('owner', 'owner', { unique: false })
+      }
+      if (!opened.objectStoreNames.contains(EXPENSES)) {
+        const spent = opened.createObjectStore(EXPENSES, { keyPath: 'item_id' })
+        spent.createIndex('owner', 'owner', { unique: false })
       }
       if (!opened.objectStoreNames.contains(RESERVES)) {
         opened.createObjectStore(RESERVES, { keyPath: 'owner' })

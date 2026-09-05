@@ -5,7 +5,7 @@
 // time.
 
 import { fromRow, withDoneAt } from './item'
-import type { Item, Patch } from './item'
+import type { Item, Kind, Patch } from './item'
 import type { Row } from './row'
 
 export type Writer<P extends object> = {
@@ -54,24 +54,24 @@ export async function create(writer: Writer<Patch>, title: string): Promise<Item
 }
 
 /**
- * A shift's anchor: made already processed, on the day it was worked.
+ * An anchor made already processed, on the day it belongs to.
  *
  * Not a capture. What you write on the phone is something you do not yet know
- * the shape of; a day you drove is not that — you know exactly what it is,
- * and the inbox would be a step that asks a question already answered.
+ * the shape of; a day you drove, or seventy pounds at the pump, is not that —
+ * you know exactly what it is, and the inbox would ask a question already
+ * answered.
  */
-export async function createShift(
+export async function createDated(
   writer: Writer<Patch>,
-  day: string,
-  area_id: string | null,
+  what: { kind: Kind; title: string; day: string; area_id: string | null },
 ): Promise<Item> {
   return fromRow(
     await writer.insert({
-      title: 'Shift',
-      kind: 'shift',
+      title: what.title,
+      kind: what.kind,
       state: 'active',
-      due: day,
-      area_id,
+      due: what.day,
+      area_id: what.area_id,
     }),
   )
 }

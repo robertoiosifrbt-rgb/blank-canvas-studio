@@ -17,5 +17,7 @@ export function headingFor(item: Item): string {
   // A shift is not done or undone the way a task is — it is a day that
   // happened. What it needs saying about it is on its own sheet.
   if (item.kind === 'shift') return 'Shift'
+  // An expense is a fact with a date. It is not done or undone either.
+  if (item.kind === 'expense') return 'Money out'
   return done ? 'Task, done' : 'Task'
 }

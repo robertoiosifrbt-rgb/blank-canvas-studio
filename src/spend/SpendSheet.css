@@ -1,0 +1,106 @@
+/* Imported by exactly one .tsx in this directory: SpendSheet.tsx */
+
+.spend-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.spend-kind {
+  flex: 1 1 auto;
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: var(--text-s);
+  color: var(--text-dim);
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+}
+
+.spend-kind-on {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+  font-weight: 650;
+}
+
+.spend-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap);
+}
+
+.spend-label {
+  flex: 1;
+  font-size: var(--text-m);
+}
+
+.spend-input {
+  width: 45%;
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: var(--text-m);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--text);
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+}
+
+.spend-area {
+  width: 62%;
+  text-align: left;
+}
+
+.spend-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap);
+  font-size: var(--text-m);
+}
+
+.spend-check input {
+  width: 24px;
+  height: 24px;
+}
+
+.spend-note,
+.spend-error {
+  margin: 0;
+  font-size: var(--text-s);
+}
+
+.spend-note {
+  color: var(--text-dim);
+}
+
+.spend-error {
+  color: var(--danger);
+}
+
+.spend-input:focus-visible,
+.spend-kind:focus-visible,
+.spend-save:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.spend-save {
+  min-height: var(--tap);
+  font: inherit;
+  font-size: var(--text-m);
+  font-weight: 650;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-s);
+}
+
+.spend-save:disabled {
+  opacity: 0.5;
+}

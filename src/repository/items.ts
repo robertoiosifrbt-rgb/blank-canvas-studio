@@ -11,11 +11,12 @@ import { fromRow as fromItemRow, localToday } from './item'
 import type { Item, Patch } from './item'
 import { supabaseSource, supabaseWriter } from './source'
 import { syncSettings } from './settings-api'
+import { syncExpenses } from './expenses'
 import { syncShifts } from './shifts'
 import { areaStore, store } from './store'
 import { sync } from './sync'
 import type { SyncResult } from './sync'
-import { applyPatch, create, createShift as createShiftRow, softDelete } from './write'
+import { applyPatch, create, createDated, softDelete } from './write'
 
 export type { Item, Patch } from './item'
 // The filters live here, in one place; the screens call them over the snapshot
@@ -29,6 +30,11 @@ export { Conflict, isItemConflict } from './write'
 export type { Area, AreaPatch } from './area'
 export type { Platform, Shift, ShiftPatch, ShiftSession } from './shift'
 export { takeHome, takeHomeOfAll } from './takehome'
+export type { Category, Expense } from './expense'
+export { CATEGORIES, CATEGORY_NAMES, fillsOf } from './expense'
+export { fuelRate } from './fuel'
+export type { Fill, FuelRate } from './fuel'
+export { expensesOf, recordExpense, removeExpense } from './expenses'
 export type { Reserves, RunningCosts } from './settings'
 export { costsFor, hasCosts } from './settings'
 export {
@@ -107,11 +113,12 @@ export async function syncAccount(owner: string): Promise<SyncResult> {
   // it, but a screen that has one and not the other shows a cost of nothing.
   await syncSettings(owner)
   const shifts = await syncShifts(owner)
+  const spent = await syncExpenses(owner)
   return {
     // A full snapshot of either table is a full sync: something was rebuilt
     // from nothing, and that is what the word has to keep meaning.
     kind: areas.kind === 'full' || items.kind === 'full' ? 'full' : 'delta',
-    fetched: areas.fetched + items.fetched + shifts.length,
+    fetched: areas.fetched + items.fetched + shifts.length + spent.length,
     cursor: items.cursor,
   }
 }
@@ -135,7 +142,15 @@ export async function createShift(
   area_id: string | null,
 ): Promise<Item> {
   await requireAccount(owner)
-  return cache(owner, await createShiftRow(supabaseWriter(ITEMS, owner), day, area_id))
+  return cache(
+    owner,
+    await createDated(supabaseWriter(ITEMS, owner), {
+      kind: 'shift',
+      title: 'Shift',
+      day,
+      area_id,
+    }),
+  )
 }
 
 /** Changes an item, with a version check. Throws Conflict if it will not hold. */
