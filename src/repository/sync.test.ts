@@ -222,3 +222,39 @@ describe('newest', () => {
     )
   })
 })
+
+describe('a cache that cannot be read', () => {
+  it('is rebuilt from scratch, even though the cursor is still good', async () => {
+    // One row written by an older version: the cursor is fine, the rows are
+    // not. Taking the delta path here would leave the bad row untouched for
+    // ever.
+    const cache = memoryStore([item('old')], '2026-09-01T10:00:00+00:00')
+    cache.store.readAll = () => Promise.reject(new Error('Not an item'))
+
+    const source = sourceWith([item('fresh')])
+    const result = await sync(A, source, cache.store)
+
+    expect(result.kind).toBe('full')
+    expect(cache.items.map((i) => i.id)).toEqual(['fresh'])
+  })
+
+  it('asks the server for everything, not for a delta', async () => {
+    const cache = memoryStore([item('old')], '2026-09-01T10:00:00+00:00')
+    cache.store.readAll = () => Promise.reject(new Error('Not an item'))
+
+    const source = sourceWith([item('fresh')])
+    await sync(A, source, cache.store)
+
+    expect(source.calls).toEqual([
+      { from: 0, to: PAGE - 1, sinceCursor: null },
+    ])
+  })
+
+  it('still takes the delta when the cache reads fine', async () => {
+    const cache = memoryStore([item('kept')], '2026-09-01T10:00:00+00:00')
+    const result = await sync(A, sourceWith([]), cache.store)
+
+    expect(result.kind).toBe('delta')
+    expect(cache.items.map((i) => i.id)).toEqual(['kept'])
+  })
+})
