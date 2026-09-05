@@ -62,6 +62,27 @@ lucrurile deschise trăiesc doar în conversația unei sesiuni și mor cu ea.
 Nu se pune în issue ce explică de ce codul e așa cum e. Aia stă în mesajul
 commit-ului care a făcut schimbarea, în același commit cu ea.
 
+## Jurnalul
+
+[`docs/JURNAL.md`](docs/JURNAL.md) ține ce a făcut fiecare zi de lucru, în
+ordine, cu commit-urile ei.
+
+**La începutul sesiunii se citește ultima intrare. Una singură, nu fișierul.**
+Fișierul crește la nesfârșit; o intrare are zece rânduri și atâta rămâne, și
+peste doi ani. Restul se citește doar dacă lucrul de azi îl cere.
+
+**O intrare ține numai ce nu se poate afla altfel.** Ce s-a construit e în
+`git log`, care e mai exact și nu costă nimic până îl ceri. În jurnal intră ce
+nu lasă urmă nicăieri: ce s-a încercat și s-a abandonat, ce s-a crezut și s-a
+dovedit fals, de ce s-a ales un drum și nu altul. Dacă o propoziție se putea
+citi din `git log`, nu se scrie.
+
+**La finalul unei bucăți de lucru se adaugă o intrare**, la coada fișierului. O
+intrare scrisă nu se mai modifică — ce s-a schimbat se scrie în următoarea.
+
+Nu ține starea problemelor deschise, și nu ține explicații de cod. Alea stau în
+issues, respectiv în mesajul commit-ului.
+
 ## Testele de mână
 
 [`docs/TESTE.md`](docs/TESTE.md) ține ce nu poate face nicio verificare
