@@ -60,6 +60,31 @@ jumătate.
 | `20260905150000_when` | pragul ratelor în avans, și ce s-a plătit deja | 5 sep |
 | `20260905160000_one_answer` | șterge `reserves` și procentele înghețate | 5 sep |
 
+## Rulat de mână, în afara migrațiilor
+
+Nu tot ce e pe baza live vine dintr-un fișier din `supabase/migrations/`. Ce s-a
+scos sau pus direct din SQL Editor se trece aici, fiindcă altfel nu lasă urmă
+nicăieri.
+
+**5 septembrie 2026 — scos cronul de push și tabelul lui.** Rămășițe de dinainte
+de golirea repo-ului, găsite de auditul din 5 septembrie uitându-se în baza
+live, deschise ca [#38](https://github.com/robertoiosifrbt-rgb/lifeCc/issues/38):
+un job `send-push-alarms-every-minute`, `* * * * *`, activ, care făcea
+`net.http_post` către Edge Function-ul `send-push-alarms` — care nu mai există.
+Plus tabelul `private.push_config`. Nimic din repo nu le descria și niciun rând
+de cod nu le cerea, deci regula de ordine era deja satisfăcută.
+
+```sql
+select cron.unschedule('send-push-alarms-every-minute');
+drop table private.push_config;
+```
+
+Verificat după: `select count(*) from cron.job` → `0`,
+`to_regclass('private.push_config')` → `null`.
+
+Extensiile `pg_cron` și `pg_net` au rămas instalate, și schema `private` a rămas.
+Niciuna nu costă nimic nefolosită.
+
 ## 🔴 Baza live NU se potrivește cu migrațiile
 
 **`reserves` există pe baza live, deși ultima migrație îl șterge.**
