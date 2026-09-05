@@ -68,6 +68,37 @@ function open(): Promise<IDBDatabase> {
   return db
 }
 
+/** The version of a row already in the cache, or null if there is none. */
+function versionOf(row: unknown): number | null {
+  if (typeof row !== 'object' || row === null) return null
+  const version = (row as Record<string, unknown>)['version']
+  return typeof version === 'number' ? version : null
+}
+
+/**
+ * Writes a row unless the cache already holds a newer one.
+ *
+ * A sync and a write can be in flight at once, and nothing serialises them: a
+ * delta fetched at version 4 can land after a write has already cached version
+ * 5. Without this, the screen falls back to the older row until the next sync
+ * — which reads exactly like the app eating what you just typed, on an app
+ * that has in fact lost nothing.
+ *
+ * The version is written by the database trigger, never by a client, so it is
+ * the one number here worth trusting.
+ *
+ * The read is issued inside the same transaction and the put is issued from
+ * its success handler, not after an await: a transaction stays alive while
+ * requests keep chaining off one another, and dies if the turn ends first.
+ */
+function putIfNotOlder(store: IDBObjectStore, item: Item): void {
+  const existing = store.get(item.id)
+  existing.onsuccess = () => {
+    const held = versionOf(existing.result)
+    if (held === null || held <= item.version) store.put(item)
+  }
+}
+
 /** Another user's row has no business in this namespace. */
 function assertOwner(owner: string, items: Item[]) {
   for (const item of items) {
@@ -91,8 +122,10 @@ async function write(
   if (clear) {
     const keys = await request(store.index('owner').getAllKeys(owner))
     for (const key of keys) store.delete(key)
+    for (const item of items) store.put(item)
+  } else {
+    for (const item of items) putIfNotOlder(store, item)
   }
-  for (const item of items) store.put(item)
 
   if (nextCursor !== null || clear) {
     tx.objectStore(CURSORS).put({ owner, cursor: nextCursor })

@@ -116,3 +116,55 @@ describe('store', () => {
     await expect(store.readAll(a)).rejects.toThrow(/Row without/)
   })
 })
+
+describe('a delta that arrives late', () => {
+  it('does not put an older version over a newer one', async () => {
+    const owner = 'race-1'
+    await store.replaceSnapshot(owner, [item('x', owner, { version: 5 })], 'c')
+
+    // A sync that fetched version 4 before the write of version 5 landed.
+    await store.upsert(owner, [item('x', owner, { version: 4 })], null)
+
+    const [held] = await store.readAll(owner)
+    expect(held?.version).toBe(5)
+  })
+
+  it('still takes the same version again, because a delta is inclusive', async () => {
+    const owner = 'race-2'
+    await store.replaceSnapshot(owner, [item('x', owner, { version: 5 })], 'c')
+    await store.upsert(
+      owner,
+      [item('x', owner, { version: 5, title: 'from the server' })],
+      null,
+    )
+
+    const [held] = await store.readAll(owner)
+    expect(held?.title).toBe('from the server')
+  })
+
+  it('takes a newer version, which is the whole point of a delta', async () => {
+    const owner = 'race-3'
+    await store.replaceSnapshot(owner, [item('x', owner, { version: 5 })], 'c')
+    await store.upsert(owner, [item('x', owner, { version: 6 })], null)
+
+    const [held] = await store.readAll(owner)
+    expect(held?.version).toBe(6)
+  })
+
+  it('takes a row it has never seen', async () => {
+    const owner = 'race-4'
+    await store.replaceSnapshot(owner, [], 'c')
+    await store.upsert(owner, [item('new', owner, { version: 1 })], null)
+
+    expect((await store.readAll(owner)).map((i) => i.id)).toEqual(['new'])
+  })
+
+  it('a full snapshot still replaces everything, whatever the versions', async () => {
+    const owner = 'race-5'
+    await store.replaceSnapshot(owner, [item('x', owner, { version: 9 })], 'c')
+    await store.replaceSnapshot(owner, [item('x', owner, { version: 1 })], 'c2')
+
+    const [held] = await store.readAll(owner)
+    expect(held?.version).toBe(1)
+  })
+})
