@@ -1,0 +1,58 @@
+/* Imported by exactly one .tsx in this directory: ExpenseSheet.tsx */
+
+.spent-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.spent-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-m);
+  color: var(--text-dim);
+}
+
+.spent-row dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.spent-row-strong {
+  color: var(--text);
+  font-size: var(--text-l);
+  font-weight: 650;
+}
+
+.spent-note {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--text-s);
+}
+
+.spent-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--text-s);
+}
+
+.spent-remove {
+  min-height: var(--tap);
+  font: inherit;
+  font-size: var(--text-m);
+  color: var(--danger);
+  background: var(--danger-wash);
+  border: 1px solid var(--danger-wash);
+  border-radius: var(--radius-s);
+}
+
+.spent-remove:disabled {
+  opacity: 0.5;
+}
+
+.spent-remove:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}

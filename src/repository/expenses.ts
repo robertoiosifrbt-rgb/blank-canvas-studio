@@ -5,10 +5,12 @@ import { currentSession } from './auth'
 import { expenseFromRow, fillsOf } from './expense'
 import type { Category, Expense } from './expense'
 import { fuelRate } from './fuel'
-import { createDated } from './write'
+import { createDated, softDelete } from './write'
 import { supabaseExpenses, supabaseExpenseWriter, supabaseWriter } from './source'
-import { runningCostsOf, saveRunningCosts, syncSettings } from './settings-api'
+import { runningCostsOf, saveRunningCosts } from './settings-api'
 import { expenseStore } from './settings-store'
+import { store } from './store'
+import { localToday } from './item'
 import type { Item, Patch } from './item'
 
 const ITEMS = 'items'
@@ -68,7 +70,16 @@ export async function recordExpense(
     odo: what.odo,
     full_tank: what.full_tank,
   })
-  await refreshFuelRate(owner, what.area_id)
+  // The cache first, and then the rate. Working the rate out before this line
+  // reads a cache that does not hold the fill just written, so the rate would
+  // always be one fill-up behind — right until the moment somebody checked it
+  // against the pump and could not see why.
+  // The anchor into the cache before the rate is worked out: the fills of an
+  // area are found through their anchors, and one that is only on the server
+  // is one the sum cannot see.
+  await store.upsert(owner, [anchor], null)
+  await syncExpenses(owner)
+  await refreshFuelRate(owner, await store.readAll(owner), what.area_id)
   return anchor
 }
 
@@ -83,22 +94,50 @@ export async function recordExpense(
  */
 export async function refreshFuelRate(
   owner: string,
+  items: readonly Item[],
   area_id: string | null,
 ): Promise<void> {
   if (area_id === null) return
-  const mine = (await expensesOf(owner)).filter((expense) => expense.category === 'fuel')
+
+  // Only this area's fill-ups. A second line of work is a second vehicle
+  // burning fuel at its own price, and one rate worked out from both bonnets
+  // is a number that describes neither.
+  const here = new Set(
+    items.filter((item) => item.area_id === area_id).map((item) => item.id),
+  )
+  const mine = (await expensesOf(owner)).filter(
+    (expense) => expense.category === 'fuel' && here.has(expense.item_id),
+  )
   const rate = fuelRate(fillsOf(mine))
   if (rate.perKm === null) return
 
-  const costs = await runningCostsOf(owner)
-  const held = costs.find((row) => row.area_id === area_id)
-  // The vehicle side is the owner's to set and is never touched here.
-  await saveRunningCosts(owner, area_id, rate.perKm, held?.vehicle_per_km ?? 0)
-  await syncSettings(owner)
+  const held = (await runningCostsOf(owner)).find((row) => row.area_id === area_id)
+  // The wear is the owner's to set, and there is no honest guess at it. Until
+  // he has said, the fuel rate waits: writing zero here would put a cost per
+  // kilometre on screen with half of it silently missing, which is the same
+  // lie as £0 of tax.
+  if (held === undefined) return
+
+  await saveRunningCosts(owner, area_id, rate.perKm, held.vehicle_per_km)
 }
 
-/** An expense written down by mistake. The anchor goes with it. */
-export async function removeExpense(owner: string, item_id: string): Promise<void> {
+/**
+ * An expense written down by mistake.
+ *
+ * The numbers go outright — they are only ever read as this anchor's — and
+ * the anchor is soft-deleted like everything else, so the other device learns
+ * it is gone instead of keeping it for good.
+ *
+ * Then the rate again: removing a fill-up moves the cost per kilometre, and
+ * leaving it stale would mean the number on screen came from a receipt that
+ * no longer exists.
+ */
+export async function removeExpense(owner: string, item: Item, now: Date): Promise<void> {
   await requireAccount(owner)
-  await supabaseExpenseWriter(owner).remove(item_id)
+  await supabaseExpenseWriter(owner).remove(item.id)
+  const writer = supabaseWriter<Patch>(ITEMS, owner)
+  const gone = await softDelete(writer, item, now, localToday(now))
+  await store.upsert(owner, [gone], null)
+  await syncExpenses(owner)
+  await refreshFuelRate(owner, await store.readAll(owner), item.area_id)
 }
