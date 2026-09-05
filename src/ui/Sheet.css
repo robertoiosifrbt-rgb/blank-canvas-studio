@@ -39,6 +39,12 @@
   background: var(--line-strong);
 }
 
+/* It only takes the focus so the dialog has somewhere to put it on opening.
+   The visible ring belongs on the controls inside, not on the panel. */
+.sheet:focus {
+  outline: none;
+}
+
 .sheet-head {
   display: flex;
   align-items: center;
