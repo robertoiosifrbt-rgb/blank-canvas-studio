@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import type { Area } from '../repository/items'
+import type { Area, RunningCosts } from '../repository/items'
 import { Sheet } from '../ui/Sheet'
 import './AreaSheet.css'
 
@@ -8,6 +8,9 @@ type Props = {
   area: Area
   /** How many areas hang under this one, at any depth. */
   under: number
+  /** What a kilometre costs in this line of work, or null if nobody said. */
+  costs: RunningCosts | null
+  onSaveCosts: (fuel_per_km: number, vehicle_per_km: number) => Promise<void>
   onRename: (name: string) => Promise<void>
   onDrop: () => Promise<void>
   onClose: () => void
@@ -20,8 +23,21 @@ type Props = {
  * tapped a row and it opened. A second pattern for the same movement is a
  * second thing to learn.
  */
-export function AreaSheet({ area, under, onRename, onDrop, onClose }: Props) {
+function perKm(typed: string): number {
+  const trimmed = typed.trim().replace(/^£/, '').replace(',', '.')
+  if (!/^\d+(\.\d{1,4})?$/.test(trimmed)) {
+    throw new Error(`That is not an amount per kilometre: ${typed}`)
+  }
+  return Number(trimmed)
+}
+
+export function AreaSheet(props: Props) {
+  const { area, under, costs, onRename, onDrop, onClose } = props
   const [name, setName] = useState(area.name)
+  const [fuel, setFuel] = useState(costs === null ? '' : String(costs.fuel_per_km))
+  const [vehicle, setVehicle] = useState(
+    costs === null ? '' : String(costs.vehicle_per_km),
+  )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -55,6 +71,46 @@ export function AreaSheet({ area, under, onRename, onDrop, onClose }: Props) {
           onChange={(event) => setName(event.target.value)}
         />
       </label>
+
+      {/* The costs of working in this area, and only these: tax and National
+          Insurance are yours, not the area's, and live in Put aside. */}
+      <h3 className="area-heading">What a kilometre costs here</h3>
+
+      <label className="area-field area-row">
+        <span className="area-label">Fuel £/km</span>
+        <input
+          className="area-number"
+          name="fuel"
+          inputMode="decimal"
+          value={fuel}
+          disabled={busy}
+          onChange={(event) => setFuel(event.target.value)}
+        />
+      </label>
+
+      <label className="area-field area-row">
+        <span className="area-label">Vehicle £/km</span>
+        <input
+          className="area-number"
+          name="vehicle"
+          inputMode="decimal"
+          value={vehicle}
+          disabled={busy}
+          onChange={(event) => setVehicle(event.target.value)}
+        />
+      </label>
+
+      <button
+        type="button"
+        name="save-costs"
+        className="area-save"
+        disabled={busy || fuel.trim() === '' || vehicle.trim() === ''}
+        onClick={() =>
+          void run(() => props.onSaveCosts(perKm(fuel), perKm(vehicle)), false)
+        }
+      >
+        Save the costs
+      </button>
 
       {error !== null && <p className="area-error">{error}</p>}
 

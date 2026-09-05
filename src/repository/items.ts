@@ -10,6 +10,7 @@ import { fromRow as fromAreaRow } from './area'
 import { fromRow as fromItemRow, localToday } from './item'
 import type { Item, Patch } from './item'
 import { supabaseSource, supabaseWriter } from './source'
+import { syncSettings } from './settings-api'
 import { syncShifts } from './shifts'
 import { areaStore, store } from './store'
 import { sync } from './sync'
@@ -27,6 +28,16 @@ export type { ExportFile } from './export'
 export { Conflict, isItemConflict } from './write'
 export type { Area, AreaPatch } from './area'
 export type { Platform, Shift, ShiftPatch, ShiftSession } from './shift'
+export { takeHome, takeHomeOfAll } from './takehome'
+export type { Reserves, RunningCosts } from './settings'
+export { costsFor, hasCosts } from './settings'
+export {
+  reservesOf,
+  runningCostsOf,
+  saveReserves,
+  saveRunningCosts,
+} from './settings-api'
+export type { TakeHome } from './takehome'
 export {
   earnedPence,
   isOut,
@@ -92,6 +103,9 @@ export async function syncAccount(owner: string): Promise<SyncResult> {
   const items = await sync(owner, supabaseSource(ITEMS), store, fromItemRow)
   // The shift parts last, and whole: they carry no cursor, so there is
   // nothing to ask them "since when". Their anchors have already arrived.
+  // The settings before the shifts: a shift is read with the rates pinned on
+  // it, but a screen that has one and not the other shows a cost of nothing.
+  await syncSettings(owner)
   const shifts = await syncShifts(owner)
   return {
     // A full snapshot of either table is a full sync: something was rebuilt

@@ -7,7 +7,7 @@
 // a shift's parts wholesale, which is the sync strategy the migration
 // declares.
 
-import { asRecord, optionalText, requiredText } from './row'
+import { asRecord, optionalNumber, optionalText, requiredText } from './row'
 
 /** The three the owner drives for. The same three the check constraint names. */
 export const PLATFORMS = ['uber_eats', 'deliveroo', 'just_eat'] as const
@@ -37,23 +37,19 @@ export type Shift = {
   odo_start: number | null
   odo_end: number | null
   tips: number | null
+  /**
+   * The rates this shift was worked under, written by the database and never
+   * by a client. Null means they were not set yet when it was written down.
+   */
+  rate_tax_pct: number | null
+  rate_ni_pct: number | null
+  rate_fuel_per_km: number | null
+  rate_vehicle_per_km: number | null
   sessions: ShiftSession[]
   earnings: ShiftEarning[]
 }
 
 export type ShiftPatch = Partial<Pick<Shift, 'odo_start' | 'odo_end' | 'tips'>>
-
-function optionalNumber(raw: Record<string, unknown>, key: string): number | null {
-  const value = raw[key]
-  if (value === null || value === undefined) return null
-  // PostgREST hands numeric back as a string, to keep the precision the type
-  // was chosen for. Parsing it here is the only place that has to know.
-  const parsed = typeof value === 'string' ? Number(value) : value
-  if (typeof parsed !== 'number' || Number.isNaN(parsed)) {
-    throw new Error(`${key} is not a number`)
-  }
-  return parsed
-}
 
 function requiredMomentText(raw: Record<string, unknown>, key: string): string {
   const value = requiredText(raw, key)
@@ -106,6 +102,10 @@ export function shiftFromRow(
     odo_start,
     odo_end,
     tips: optionalNumber(raw, 'tips'),
+    rate_tax_pct: optionalNumber(raw, 'rate_tax_pct'),
+    rate_ni_pct: optionalNumber(raw, 'rate_ni_pct'),
+    rate_fuel_per_km: optionalNumber(raw, 'rate_fuel_per_km'),
+    rate_vehicle_per_km: optionalNumber(raw, 'rate_vehicle_per_km'),
     sessions,
     earnings,
   }

@@ -26,6 +26,11 @@
 
 .head-row-tools {
   gap: var(--space-2);
+  /* The tools take a second line rather than squeezing the state into three.
+     A third button arrived and the narrowest phone no longer had room for
+     "Synced at 21:04" on one line — and a status broken across three lines is
+     harder to read at a glance than one that has moved down. */
+  flex-wrap: wrap;
 }
 
 .head-title {
@@ -58,7 +63,8 @@
 }
 
 .head-sync {
-  flex: 1;
+  /* Wide enough for the longest ordinary state before it gives up its line. */
+  flex: 1 1 150px;
   min-width: 0;
   min-height: var(--tap);
   padding: 0 var(--space-3);

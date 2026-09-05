@@ -173,3 +173,52 @@ export function supabaseShiftWriter(owner: string) {
     },
   }
 }
+
+/** The settings, whole: one row for the person, one per area. */
+export async function supabaseSettings(): Promise<{
+  reserves: unknown[]
+  costs: unknown[]
+}> {
+  const [reserves, costs] = await Promise.all([
+    supabase().from('reserves').select(ALL),
+    supabase().from('running_costs').select(ALL),
+  ])
+  if (reserves.error !== null) fail('Fetching the reserves', reserves.error)
+  if (costs.error !== null) fail('Fetching the running costs', costs.error)
+  return { reserves: reserves.data as unknown[], costs: costs.data as unknown[] }
+}
+
+/**
+ * The settings writes.
+ *
+ * Both are upserts on their key, because a setting either exists or does not
+ * and there is exactly one of it. Nothing here needs a version check yet: the
+ * shape says one row, so a second write replaces rather than duplicates. When
+ * step 7 gives conflicts an interface, this is where the check goes.
+ */
+export function supabaseSettingsWriter() {
+  return {
+    async saveReserves(values: { tax_pct: number; ni_pct: number }) {
+      const response = await supabase()
+        .from('reserves')
+        .upsert(values, { onConflict: 'owner' })
+        .select(ALL)
+        .single()
+      if (response.error !== null) fail('Writing the reserves', response.error)
+      return response.data as unknown
+    },
+    async saveCosts(values: {
+      area_id: string
+      fuel_per_km: number
+      vehicle_per_km: number
+    }) {
+      const response = await supabase()
+        .from('running_costs')
+        .upsert(values, { onConflict: 'area_id' })
+        .select(ALL)
+        .single()
+      if (response.error !== null) fail('Writing the running costs', response.error)
+      return response.data as unknown
+    },
+  }
+}

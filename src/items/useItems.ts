@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import {
-  all,
   capture as captureItem,
   isItemConflict,
   discard as discardItem,
@@ -11,7 +10,6 @@ import {
   update as updateItem,
 } from '../repository/items'
 import {
-  areasOf,
   createArea,
   discardArea,
   updateArea,
@@ -22,14 +20,18 @@ import {
   removeSession as removeShiftSession,
   saveShift,
   setEarning,
-  shiftsOf,
   startSession,
 } from '../repository/items'
+import { saveReserves, saveRunningCosts } from '../repository/items'
+import { readSnapshot } from './snapshot'
+import type { Snapshot } from './snapshot'
 import type {
   Area,
   Item,
   Patch,
   Platform,
+  Reserves,
+  RunningCosts,
   Shift,
   ShiftPatch,
 } from '../repository/items'
@@ -55,6 +57,8 @@ export type ItemsHandle = {
   items: Item[]
   areas: Area[]
   shifts: Shift[]
+  reserves: Reserves | null
+  costs: RunningCosts[]
   loading: boolean
   sync: SyncState
   unsaved: Unsaved[]
@@ -64,6 +68,12 @@ export type ItemsHandle = {
   discard: (item: Item) => Promise<void>
   retry: (itemId: string) => Promise<void>
   download: () => Promise<void>
+  saveReserves: (tax_pct: number, ni_pct: number) => Promise<void>
+  saveCosts: (
+    area_id: string,
+    fuel_per_km: number,
+    vehicle_per_km: number,
+  ) => Promise<void>
   startShift: (day: string, area_id: string | null) => Promise<void>
   saveShiftParts: (item_id: string, patch: ShiftPatch) => Promise<void>
   clockOn: (item_id: string) => Promise<void>
@@ -90,38 +100,35 @@ export function useItems(owner: string): ItemsHandle {
   const [items, setItems] = useState<Item[]>([])
   const [areas, setAreas] = useState<Area[]>([])
   const [shifts, setShifts] = useState<Shift[]>([])
+  const [reserves, setReserves] = useState<Reserves | null>(null)
+  const [costs, setCosts] = useState<RunningCosts[]>([])
   const [loading, setLoading] = useState(true)
   const [sync, setSync] = useState<SyncState>({ kind: 'never' })
   const [unsaved, setUnsaved] = useState<Unsaved[]>([])
   const [round, setRound] = useState(0)
 
+  const apply = useCallback((snapshot: Snapshot) => {
+    setItems(snapshot.items)
+    setAreas(snapshot.areas)
+    setShifts(snapshot.shifts)
+    setReserves(snapshot.reserves)
+    setCosts(snapshot.costs)
+  }, [])
+
   const reload = useCallback(async () => {
     // Both, together: an item names an area, so a screen holding a fresh item
     // and a stale area list would show a row pointing nowhere.
-    const [freshItems, freshAreas, freshShifts] = await Promise.all([
-      all(owner),
-      areasOf(owner),
-      shiftsOf(owner),
-    ])
-    setItems(freshItems)
-    setAreas(freshAreas)
-    setShifts(freshShifts)
-  }, [owner])
+    apply(await readSnapshot(owner))
+  }, [owner, apply])
 
   useEffect(() => {
     let active = true
 
     const run = async () => {
       try {
-        const [cachedItems, cachedAreas, cachedShifts] = await Promise.all([
-          all(owner),
-          areasOf(owner),
-          shiftsOf(owner),
-        ])
+        const cached = await readSnapshot(owner)
         if (active) {
-          setItems(cachedItems)
-          setAreas(cachedAreas)
-          setShifts(cachedShifts)
+          apply(cached)
           setLoading(false)
         }
       } catch (error) {
@@ -136,15 +143,9 @@ export function useItems(owner: string): ItemsHandle {
       if (active) setSync({ kind: 'syncing' })
       try {
         const result = await syncAccount(owner)
-        const [freshItems, freshAreas, freshShifts] = await Promise.all([
-          all(owner),
-          areasOf(owner),
-          shiftsOf(owner),
-        ])
+        const fresh = await readSnapshot(owner)
         if (active) {
-          setItems(freshItems)
-          setAreas(freshAreas)
-          setShifts(freshShifts)
+          apply(fresh)
           setSync({ kind: 'synced', at: new Date(), fetched: result.fetched })
         }
       } catch (error) {
@@ -156,7 +157,7 @@ export function useItems(owner: string): ItemsHandle {
     return () => {
       active = false
     }
-  }, [owner, round])
+  }, [owner, round, apply])
 
   /**
    * Runs a write, keeping an unresolved conflict visible instead of losing it.
@@ -208,6 +209,8 @@ export function useItems(owner: string): ItemsHandle {
     items,
     areas,
     shifts,
+    reserves,
+    costs,
     loading,
     sync,
     unsaved,
@@ -248,6 +251,11 @@ export function useItems(owner: string): ItemsHandle {
 
     // The area writes go through the same `write`: a conflict on an area is
     // still a write that did not happen, and the caller still has to hear it.
+    saveReserves: (tax_pct, ni_pct) => write(() => saveReserves(owner, tax_pct, ni_pct)),
+
+    saveCosts: (area_id, fuel_per_km, vehicle_per_km) =>
+      write(() => saveRunningCosts(owner, area_id, fuel_per_km, vehicle_per_km)),
+
     // A shift is made already processed: it is not something you found in
     // your pocket, it is a day you worked. So it goes in with its kind, its
     // day and its area, and never passes through the inbox.
