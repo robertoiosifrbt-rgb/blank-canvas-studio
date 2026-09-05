@@ -8,7 +8,7 @@ import pg from 'pg'
 
 import { CASES as AREA_CASES } from './lib/rls-areas.mjs'
 import { CASES as EXPENSE_CASES } from './lib/rls-expenses.mjs'
-import { CASES as RESERVE_CASES } from './lib/rls-reserves.mjs'
+import { CASES as SETTINGS_CASES } from './lib/rls-settings.mjs'
 import { CASES as ITEM_CASES } from './lib/rls.mjs'
 import { CASES as SHIFT_CASES } from './lib/rls-shifts.mjs'
 import { A, B, contextFor } from './lib/rls-context.mjs'
@@ -18,7 +18,7 @@ const CASES = [
   ...ITEM_CASES,
   ...AREA_CASES,
   ...SHIFT_CASES,
-  ...RESERVE_CASES,
+  ...SETTINGS_CASES,
   ...EXPENSE_CASES,
 ]
 
