@@ -1,15 +1,16 @@
-import { monthRange, periodMoney } from '../../repository/items'
-import type { Expense, Item, Reserves, Shift } from '../../repository/items'
+import { Link } from 'react-router-dom'
+
+import { monthRange, periodMoney, sliceOfYear } from '../../repository/items'
+import type { Expense, Item, Shift, TaxYearRow } from '../../repository/items'
 import { hoursAndMinutes, pounds } from '../../shifts/money'
 import './MonthMoney.css'
 
 type Props = {
   month: string
-  onOpenReserves: () => void
   items: Item[]
   shifts: Shift[]
   expenses: Expense[]
-  reserves: Reserves | null
+  taxYears: TaxYearRow[]
 }
 
 /**
@@ -28,10 +29,17 @@ export function MonthMoney({
   items,
   shifts,
   expenses,
-  reserves,
-  onOpenReserves,
+  taxYears,
 }: Props) {
-  const sum = periodMoney({ items, shifts, expenses, reserves, ...monthRange(month) })
+  const range = monthRange(month)
+  const sum = periodMoney({
+    items,
+    shifts,
+    expenses,
+    ...range,
+    // What this month adds to the year's bill, not a slice of a flat rate.
+    ...sliceOfYear({ items, shifts, expenses, taxYears, from: range.from }),
+  })
   if (sum.shifts === 0 && sum.spentPence === 0) return null
 
   const reserve = sum.taxPence + sum.niPence
@@ -51,19 +59,14 @@ export function MonthMoney({
           <dt>Profit</dt>
           <dd>{pounds(sum.profitPence)}</dd>
         </div>
-        {/* The one row you would want to change while looking at it, so it
-            is the way in. A button rather than a link somewhere else: the bar
-            has room for three screens and the header for two tools. */}
+        {/* What this month adds to the year's bill. The way in is the year
+            itself: the figures behind this number live there, and there is
+            nowhere else they could be edited without saying two things. */}
         <div className="money-row">
           <dt>
-            <button
-              type="button"
-              name="reserves"
-              className="money-open"
-              onClick={onOpenReserves}
-            >
-              Put aside
-            </button>
+            <Link className="money-open" to="/hmrc">
+              Tax and NI
+            </Link>
           </dt>
           <dd>{sum.missingRates ? '—' : `−${pounds(reserve)}`}</dd>
         </div>
@@ -80,7 +83,8 @@ export function MonthMoney({
 
       {sum.missingRates && (
         <p className="money-note">
-          No percentages set yet — tap <strong>Put aside</strong> above.
+          This year&rsquo;s figures are not set, so what is owed on the month is
+          unknown — not nothing. Put them in on <Link to="/hmrc">HMRC</Link>.
         </p>
       )}
 

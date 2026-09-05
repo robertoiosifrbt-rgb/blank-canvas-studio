@@ -6,9 +6,8 @@ import { ItemSheet } from '../items/ItemSheet'
 import type { ScreenContext } from '../items/context'
 import { useItems } from '../items/useItems'
 import { ExpenseSheet } from '../spend/ExpenseSheet'
-import { ReservesSheet } from '../shifts/ReservesSheet'
 import { ShiftSheet } from '../shifts/ShiftSheet'
-import { costsFor } from '../repository/items'
+import { costsFor, sliceOfYear } from '../repository/items'
 import { signOut } from '../repository/auth'
 import type { Session } from '../repository/auth'
 import { useToday } from './today'
@@ -26,7 +25,6 @@ export function AppShell({ session }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [capturing, setCapturing] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
-  const [reserving, setReserving] = useState(false)
 
   // Looked up fresh every render, so the sheet never shows a stale version. If
   // the item is gone, the sheet closes itself with it.
@@ -38,7 +36,6 @@ export function AppShell({ session }: Props) {
   // that re-renders on every keystroke would move it while you type.
   const closeItem = useCallback(() => setOpenId(null), [])
   const closeCapture = useCallback(() => setCapturing(false), [])
-  const closeReserves = useCallback(() => setReserving(false), [])
 
   function report(body: () => Promise<unknown>) {
     setError(null)
@@ -51,7 +48,6 @@ export function AppShell({ session }: Props) {
     data,
     openItem: (item) => setOpenId(item.id),
     today,
-    openReserves: () => setReserving(true),
   }
 
   return (
@@ -91,14 +87,6 @@ export function AppShell({ session }: Props) {
         </nav>
       </div>
 
-      {reserving && (
-        <ReservesSheet
-          reserves={data.reserves}
-          onSave={(tax, ni) => data.saveReserves(tax, ni)}
-          onClose={closeReserves}
-        />
-      )}
-
       {capturing && (
         <CaptureSheet
           onSave={(title) => data.capture(title)}
@@ -124,6 +112,13 @@ export function AppShell({ session }: Props) {
           }
           onSetArea={(area_id) => data.update(openItem, { area_id })}
           costs={costsFor(data.costs, openItem.area_id)}
+          slice={sliceOfYear({
+            items: data.items,
+            shifts: data.shifts,
+            expenses: data.expenses,
+            taxYears: data.taxYears,
+            from: openItem.due ?? today,
+          })}
           onSaveCosts={(fuel, vehicle) =>
             openItem.area_id === null
               ? Promise.resolve()

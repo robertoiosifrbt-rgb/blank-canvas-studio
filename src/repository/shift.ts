@@ -44,12 +44,6 @@ export type Shift = {
    * earning. Null means none was set aside, not that none happened.
    */
   personal_km: number | null
-  /**
-   * The rates this shift was worked under, written by the database and never
-   * by a client. Null means they were not set yet when it was written down.
-   */
-  rate_tax_pct: number | null
-  rate_ni_pct: number | null
   rate_fuel_per_km: number | null
   rate_vehicle_per_km: number | null
   sessions: ShiftSession[]
@@ -112,8 +106,6 @@ export function shiftFromRow(
     odo_end,
     tips: optionalNumber(raw, 'tips'),
     personal_km: optionalNumber(raw, 'personal_km'),
-    rate_tax_pct: optionalNumber(raw, 'rate_tax_pct'),
-    rate_ni_pct: optionalNumber(raw, 'rate_ni_pct'),
     rate_fuel_per_km: optionalNumber(raw, 'rate_fuel_per_km'),
     rate_vehicle_per_km: optionalNumber(raw, 'rate_vehicle_per_km'),
     sessions,

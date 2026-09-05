@@ -16,7 +16,6 @@ import {
   recordExpense,
   removeExpense,
   removeSession as removeShiftSession,
-  saveReserves,
   saveRunningCosts,
   saveTaxYear,
   saveShift,
@@ -45,7 +44,6 @@ export type MoneyActions = {
     business_pct: number
   }) => Promise<void>
   unspend: (item: Item) => Promise<void>
-  saveReserves: (tax_pct: number, ni_pct: number) => Promise<void>
   saveTaxYear: (year: TaxYearPatch) => Promise<void>
   saveCosts: (
     area_id: string,
@@ -65,8 +63,6 @@ export function moneyActions(owner: string, write: Write): MoneyActions {
   unspend: (item) => write(() => removeExpense(owner, item, new Date())),
 
   spend: (what) => write(() => recordExpense(owner, what)),
-
-  saveReserves: (tax_pct, ni_pct) => write(() => saveReserves(owner, tax_pct, ni_pct)),
 
   saveTaxYear: (year) => write(() => saveTaxYear(owner, year)),
 

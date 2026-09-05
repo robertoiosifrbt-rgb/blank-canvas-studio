@@ -176,23 +176,16 @@ export function supabaseShiftWriter(owner: string) {
 
 /** The settings, whole: one row for the person, one per area. */
 export async function supabaseSettings(): Promise<{
-  reserves: unknown[]
   costs: unknown[]
   years: unknown[]
 }> {
-  const [reserves, costs, years] = await Promise.all([
-    supabase().from('reserves').select(ALL),
+  const [costs, years] = await Promise.all([
     supabase().from('running_costs').select(ALL),
     supabase().from('tax_years').select(ALL),
   ])
-  if (reserves.error !== null) fail('Fetching the reserves', reserves.error)
   if (costs.error !== null) fail('Fetching the running costs', costs.error)
   if (years.error !== null) fail('Fetching the tax years', years.error)
-  return {
-    reserves: reserves.data as unknown[],
-    costs: costs.data as unknown[],
-    years: years.data as unknown[],
-  }
+  return { costs: costs.data as unknown[], years: years.data as unknown[] }
 }
 
 /**
@@ -205,15 +198,6 @@ export async function supabaseSettings(): Promise<{
  */
 export function supabaseSettingsWriter() {
   return {
-    async saveReserves(values: { tax_pct: number; ni_pct: number }) {
-      const response = await supabase()
-        .from('reserves')
-        .upsert(values, { onConflict: 'owner' })
-        .select(ALL)
-        .single()
-      if (response.error !== null) fail('Writing the reserves', response.error)
-      return response.data as unknown
-    },
     async saveTaxYear(values: Record<string, number | string>) {
       const response = await supabase()
         .from('tax_years')

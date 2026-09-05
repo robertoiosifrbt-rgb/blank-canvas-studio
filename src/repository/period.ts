@@ -7,7 +7,8 @@
 
 import type { Expense } from './expense'
 import type { Item } from './item'
-import type { Reserves } from './settings'
+import type { Income, TaxFigures } from './hmrc'
+import { reserveFor } from './reserve'
 import { earnedPence } from './shift'
 import type { Shift } from './shift'
 
@@ -29,7 +30,7 @@ export type Period = {
   shifts: number
   minutes: number
   km: number
-  /** True when no percentages are set, so the reserve above is not an answer. */
+  /** True when the year's figures are not set, so the reserve is not an answer. */
   missingRates: boolean
 }
 
@@ -62,11 +63,18 @@ export function periodMoney(input: {
   items: readonly Item[]
   shifts: readonly Shift[]
   expenses: readonly Expense[]
-  reserves: Reserves | null
   from: string
   to: string
+  /** The tax year's figures, or null when it has not been set up. */
+  figures?: TaxFigures | null
+  /** The wage and dividends of the same year: they decide where profit lands. */
+  income?: Income | null
+  /** Trading profit of the year before this stretch began. */
+  beforePence?: number
 }): Period {
-  const { items, shifts, expenses, reserves, from, to } = input
+  const { items, shifts, expenses, from, to } = input
+  const figures = input.figures ?? null
+  const income = input.income ?? null
 
   const inside = new Map<string, Item>()
   for (const item of items) {
@@ -100,24 +108,24 @@ export function periodMoney(input: {
 
   const profitPence = grossPence - spentPence
 
-  let taxPence = 0
-  let niPence = 0
-  if (reserves !== null && profitPence > 0) {
-    taxPence = Math.round((profitPence * reserves.tax_pct) / 100)
-    niPence = Math.round((profitPence * reserves.ni_pct) / 100)
-  }
+  // What this stretch adds to the year's bill, not a percentage of it. Where
+  // the profit lands decides what it costs, and only the year knows that.
+  const reserve =
+    figures === null || income === null
+      ? { taxPence: 0, niPence: 0, totalPence: 0 }
+      : reserveFor(figures, income, input.beforePence ?? 0, profitPence)
 
   return {
     grossPence,
     spentPence,
     profitPence,
-    taxPence,
-    niPence,
-    leftPence: profitPence - taxPence - niPence,
+    taxPence: reserve.taxPence,
+    niPence: reserve.niPence,
+    leftPence: profitPence - reserve.totalPence,
     shifts: worked,
     minutes,
     km: Math.round(km * 10) / 10,
-    missingRates: reserves === null,
+    missingRates: figures === null || income === null,
   }
 }
 

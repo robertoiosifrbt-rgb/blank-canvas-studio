@@ -21,8 +21,6 @@ const shift: Shift = {
   odo_end: 10200,
   tips: null,
   personal_km: null,
-  rate_tax_pct: null,
-  rate_ni_pct: null,
   rate_fuel_per_km: null,
   rate_vehicle_per_km: null,
   sessions: [],
@@ -75,7 +73,6 @@ describe('the business share of a bill', () => {
       items: [anchor],
       shifts: [],
       expenses: [{ ...expense, business_pct }],
-      reserves: null,
       from: '2026-08-01',
       to: '2026-08-31',
     }).spentPence

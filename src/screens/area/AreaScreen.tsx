@@ -16,6 +16,12 @@ function monthOf(day: string): string {
 /**
  * One area, entered.
  *
+ * No reserve here, deliberately. Tax is worked out on a person's whole year,
+ * not on one area of it: the allowance and the bands are shared, so an area's
+ * "share" of the bill depends on which other area is counted first. Two areas
+ * would each show a number, both would look right, and they would not add up.
+ * The year's answer is on the HMRC screen, where the question belongs.
+ *
  * An area was a label: you tagged a shift with it and never went there. This
  * is the other half — the place the label points at. What belongs to this part
  * of your life, and what it came to this month.
@@ -58,7 +64,6 @@ export function AreaScreen() {
     items: mine,
     shifts: data.shifts,
     expenses: data.expenses,
-    reserves: data.reserves,
     ...monthRange(month),
   })
   const worked = sum.shifts > 0 || sum.spentPence > 0
@@ -122,8 +127,8 @@ export function AreaScreen() {
             <dd>{hoursAndMinutes(sum.minutes)}</dd>
           </div>
           <div>
-            <dt>Left</dt>
-            <dd>{sum.missingRates ? 'Not yet' : pounds(sum.leftPence)}</dd>
+            <dt>Profit</dt>
+            <dd>{pounds(sum.profitPence)}</dd>
           </div>
         </dl>
       )}

@@ -23,7 +23,6 @@ import type {
   Item,
   Patch,
   Expense,
-  Reserves,
   RunningCosts,
   TaxYearRow,
   Shift,
@@ -53,7 +52,6 @@ export type ItemsHandle = MoneyActions & {
   areas: Area[]
   shifts: Shift[]
   expenses: Expense[]
-  reserves: Reserves | null
   costs: RunningCosts[]
   taxYears: TaxYearRow[]
   loading: boolean
@@ -86,7 +84,6 @@ export function useItems(owner: string): ItemsHandle {
   const [areas, setAreas] = useState<Area[]>([])
   const [shifts, setShifts] = useState<Shift[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
-  const [reserves, setReserves] = useState<Reserves | null>(null)
   const [costs, setCosts] = useState<RunningCosts[]>([])
   const [taxYears, setTaxYears] = useState<TaxYearRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -99,7 +96,6 @@ export function useItems(owner: string): ItemsHandle {
     setAreas(snapshot.areas)
     setShifts(snapshot.shifts)
     setExpenses(snapshot.expenses)
-    setReserves(snapshot.reserves)
     setCosts(snapshot.costs)
     setTaxYears(snapshot.taxYears)
   }, [])
@@ -199,7 +195,6 @@ export function useItems(owner: string): ItemsHandle {
     areas,
     shifts,
     expenses,
-    reserves,
     costs,
     taxYears,
     loading,

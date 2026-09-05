@@ -19,8 +19,6 @@ function shift(over: Partial<Shift> = {}): Shift {
     odo_end: null,
     tips: null,
     personal_km: null,
-    rate_tax_pct: null,
-    rate_ni_pct: null,
     rate_fuel_per_km: null,
     rate_vehicle_per_km: null,
     sessions: [],

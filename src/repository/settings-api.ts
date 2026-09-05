@@ -3,8 +3,8 @@
 import { currentSession } from './auth'
 import { taxYearFromRow } from './hmrc-year'
 import type { TaxYearPatch, TaxYearRow } from './hmrc-year'
-import { reservesFromRow, runningCostsFromRow } from './settings'
-import type { Reserves, RunningCosts } from './settings'
+import { runningCostsFromRow } from './settings'
+import type { RunningCosts } from './settings'
 import { settingsStore } from './settings-store'
 import { supabaseSettings, supabaseSettingsWriter } from './source'
 
@@ -18,24 +18,11 @@ async function requireAccount(owner: string): Promise<void> {
   }
 }
 
-/** Reads both settings from the server and puts them in the cache. */
+/** Reads the settings from the server and puts them in the cache. */
 export async function syncSettings(owner: string): Promise<void> {
   const fetched = await supabaseSettings()
-  // A person has one row or none. More than one would mean the primary key
-  // let go, and taking the first would hide that rather than say it.
-  if (fetched.reserves.length > 1) {
-    throw new Error(`${fetched.reserves.length} reserve rows for one account`)
-  }
-  const reserves =
-    fetched.reserves.length === 1 ? reservesFromRow(fetched.reserves[0]) : null
-  await settingsStore.replaceReserves(owner, reserves)
   await settingsStore.replaceCosts(owner, fetched.costs.map(runningCostsFromRow))
   await settingsStore.replaceTaxYears(owner, fetched.years.map(taxYearFromRow))
-}
-
-export async function reservesOf(owner: string): Promise<Reserves | null> {
-  await requireAccount(owner)
-  return settingsStore.reserves(owner)
 }
 
 /** Every tax year the person has set up. A handful, fetched whole. */
@@ -47,17 +34,6 @@ export async function taxYearsOf(owner: string): Promise<TaxYearRow[]> {
 export async function runningCostsOf(owner: string): Promise<RunningCosts[]> {
   await requireAccount(owner)
   return settingsStore.costs(owner)
-}
-
-/** The percentages, once, for the person. */
-export async function saveReserves(
-  owner: string,
-  tax_pct: number,
-  ni_pct: number,
-): Promise<void> {
-  await requireAccount(owner)
-  await supabaseSettingsWriter().saveReserves({ tax_pct, ni_pct })
-  await syncSettings(owner)
 }
 
 /**

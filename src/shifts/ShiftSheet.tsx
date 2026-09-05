@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import {
   isOut,
@@ -6,10 +7,18 @@ import {
   minutesWorked,
   PLATFORM_NAMES,
   PLATFORMS,
+  reserveFor,
   takeHome,
 } from '../repository/items'
 import { treeOf } from '../repository/items'
-import type { Area, Item, Platform, RunningCosts, Shift } from '../repository/items'
+import type {
+  Area,
+  Item,
+  Platform,
+  RunningCosts,
+  Shift,
+  Slice,
+} from '../repository/items'
 import { Sheet } from '../ui/Sheet'
 import { ShiftCosts } from './ShiftCosts'
 import { ShiftOdometer } from './ShiftOdometer'
@@ -37,6 +46,8 @@ type Props = {
   /** What a kilometre costs in this shift's area, or null if nobody said. */
   costs: RunningCosts | null
   onSaveCosts: (fuel_per_km: number, vehicle_per_km: number) => Promise<void>
+  /** Where this shift's day sits in its tax year, for working out the reserve. */
+  slice: Slice
   onClose: () => void
 }
 
@@ -84,7 +95,15 @@ export function ShiftSheet(props: Props) {
 
   const worked = minutesWorked(shift)
   const km = kilometres(shift)
-  const sum = takeHome(shift)
+  // What this day adds to the year's bill, worked out where it lands rather
+  // than as a flat share of it. Early in the year, inside the allowance, that
+  // is nothing; later it is a fifth and then more.
+  const slice = props.slice
+  const sum = takeHome(shift, (profitPence) =>
+    slice.figures === null || slice.income === null
+      ? null
+      : reserveFor(slice.figures, slice.income, slice.beforePence, profitPence),
+  )
   const out = isOut(shift)
   const open = shift.sessions.find((session) => session.ended_at === null)
 
@@ -135,8 +154,8 @@ export function ShiftSheet(props: Props) {
           reserve of nothing, and £0 tax is the lie that costs money. */}
       {sum.missing.includes('rates') && (
         <p className="shift-missing">
-          No percentages set yet — tap <strong>Put aside</strong> in the
-          Calendar, under the month.
+          This year&rsquo;s figures are not set, so what this day owes is
+          unknown — not nothing. Put them in on <Link to="/hmrc">HMRC</Link>.
         </p>
       )}
       {sum.missing.includes('costs') && (

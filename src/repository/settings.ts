@@ -1,22 +1,16 @@
-// The two settings, and what they are for.
+// What a kilometre costs, for one line of work.
 //
-// They are apart on purpose. Tax and National Insurance are yours: one HMRC,
-// one allowance, one bill. Fuel and vehicle wear per kilometre belong to a
-// line of work, because a different vehicle and a different way of driving
-// cost different money.
+// Tax used to sit beside this as two typed percentages. It does not any more:
+// what a day owes depends on where its profit lands in the year, and only the
+// year knows that. This is what is left — the cost of driving, which does
+// belong to a line of work, because a different vehicle and a different way of
+// driving cost different money.
 //
-// Neither carries a cursor. There is one reserves row per person and one
-// running-costs row per area — a handful, fetched whole on every sync. They do
+// No cursor: one row per area, a handful, fetched whole on every sync. It does
 // carry a version, because two devices editing one setting is a real thing.
 
 import { asRecord, optionalNumber, requiredText, stampsOf } from './row'
 import type { Row } from './row'
-
-/** The percentages, one set for the whole person. */
-export type Reserves = Omit<Row, 'id'> & {
-  tax_pct: number
-  ni_pct: number
-}
 
 /** What a kilometre costs, for one area. */
 export type RunningCosts = Omit<Row, 'id'> & {
@@ -25,32 +19,12 @@ export type RunningCosts = Omit<Row, 'id'> & {
   vehicle_per_km: number
 }
 
-export type ReservesPatch = { tax_pct: number; ni_pct: number }
 export type RunningCostsPatch = { fuel_per_km: number; vehicle_per_km: number }
 
 function requiredNumber(raw: Record<string, unknown>, key: string): number {
   const value = optionalNumber(raw, key)
   if (value === null) throw new Error(`Row without ${key}`)
   return value
-}
-
-export function reservesFromRow(row: unknown): Reserves {
-  const raw = asRecord(row)
-  const tax_pct = requiredNumber(raw, 'tax_pct')
-  const ni_pct = requiredNumber(raw, 'ni_pct')
-  // The same three the database checks. A row breaking them did not come from
-  // there as it stands.
-  if (tax_pct < 0 || tax_pct > 100) throw new Error(`Tax outside 0–100: ${tax_pct}`)
-  if (ni_pct < 0 || ni_pct > 100) throw new Error(`NI outside 0–100: ${ni_pct}`)
-  if (tax_pct + ni_pct > 100) {
-    throw new Error(`Reserving more than there is: ${tax_pct} + ${ni_pct}`)
-  }
-  return {
-    owner: requiredText(raw, 'owner'),
-    tax_pct,
-    ni_pct,
-    ...stampsOf(raw),
-  }
 }
 
 export function runningCostsFromRow(row: unknown): RunningCosts {

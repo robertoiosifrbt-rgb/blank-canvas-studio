@@ -10,14 +10,6 @@ export type ScreenContext = {
   openItem: (item: Item) => void
   /** Today, from the device clock. */
   today: string
-  /**
-   * Opens the sheet for the tax and NI percentages.
-   *
-   * It lives here rather than on a button of its own: the bar has room for
-   * three screens and the header for two tools, and a fourth of either pushed
-   * the narrowest phone into scrolling before it could show anything.
-   */
-  openReserves: () => void
 }
 
 export function useScreen(): ScreenContext {

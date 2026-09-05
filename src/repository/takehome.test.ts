@@ -3,7 +3,17 @@ import { describe, expect, it } from 'vitest'
 import type { Shift } from './shift'
 import { takeHome, takeHomeOfAll } from './takehome'
 
-/** The day the owner showed: £126.45 over 167.4 km, at 20% / 6% / £0.116. */
+/** A day already past the year's allowance: 20% and 6% on what it adds. */
+const RESERVE = (profitPence: number) =>
+  profitPence <= 0
+    ? { taxPence: 0, niPence: 0, totalPence: 0 }
+    : {
+        taxPence: Math.round(profitPence * 0.2),
+        niPence: Math.round(profitPence * 0.06),
+        totalPence: Math.round(profitPence * 0.26),
+      }
+
+/** The day the owner showed: £126.45 over 167.4 km, at £0.116 the kilometre. */
 function day(over: Partial<Shift> = {}): Shift {
   return {
     item_id: 'i1',
@@ -12,8 +22,6 @@ function day(over: Partial<Shift> = {}): Shift {
     odo_end: 120512.4,
     tips: 12.5,
     personal_km: null,
-    rate_tax_pct: 20,
-    rate_ni_pct: 6,
     rate_fuel_per_km: 0.116,
     rate_vehicle_per_km: 0.116,
     sessions: [],
@@ -28,7 +36,7 @@ function day(over: Partial<Shift> = {}): Shift {
 
 describe('takeHome', () => {
   it('takes the reserves off the profit, not off the takings', () => {
-    const sum = takeHome(day())
+    const sum = takeHome(day(), RESERVE)
     expect(sum.grossPence).toBe(12645)
     // 167.4 km at £0.232 the kilometre.
     expect(sum.costsPence).toBe(3884)
@@ -40,15 +48,19 @@ describe('takeHome', () => {
   })
 
   it('says what it could not work out instead of calling it zero', () => {
-    const noRates = takeHome(day({ rate_tax_pct: null, rate_ni_pct: null }))
-    expect(noRates.taxPence).toBe(0)
-    expect(noRates.missing).toContain('rates')
+    // No way of asking the year: what is owed is unknown, not nothing.
+    const noYear = takeHome(day())
+    expect(noYear.taxPence).toBe(0)
+    expect(noYear.missing).toContain('rates')
 
-    const noCosts = takeHome(day({ rate_fuel_per_km: null, rate_vehicle_per_km: null }))
+    const noCosts = takeHome(
+      day({ rate_fuel_per_km: null, rate_vehicle_per_km: null }),
+      RESERVE,
+    )
     expect(noCosts.costsPence).toBe(0)
     expect(noCosts.missing).toContain('costs')
 
-    const noReading = takeHome(day({ odo_end: null }))
+    const noReading = takeHome(day({ odo_end: null }), RESERVE)
     expect(noReading.costsPence).toBe(0)
     expect(noReading.missing).toContain('kilometres')
   })
@@ -58,6 +70,7 @@ describe('takeHome', () => {
     // than the takings, and a percentage of a loss is not money coming back.
     const bad = takeHome(
       day({ odo_start: 0, odo_end: 200, tips: null, earnings: [] }),
+      RESERVE,
     )
     expect(bad.profitPence).toBeLessThan(0)
     expect(bad.taxPence).toBe(0)
@@ -65,22 +78,25 @@ describe('takeHome', () => {
     expect(bad.netPence).toBe(bad.profitPence)
   })
 
-  it('keeps the rates the shift was worked under, whatever is set now', () => {
-    // The pinning is the database's job; this only proves the sum reads the
-    // shift and never a setting.
-    const october = takeHome(day({ rate_tax_pct: 20 }))
-    const january = takeHome(day({ rate_tax_pct: 30 }))
-    expect(october.taxPence).toBe(1752)
-    expect(january.taxPence).toBe(2628)
+  it('keeps the driving rates the shift was worked under', () => {
+    // The pinning is the database's job; this only proves the costs come off
+    // the shift and never off a setting. What a kilometre cost in October is
+    // history, and the pump does not re-price last month.
+    const cheap = takeHome(day({ rate_fuel_per_km: 0.1, rate_vehicle_per_km: 0.1 }), RESERVE)
+    const dear = takeHome(day({ rate_fuel_per_km: 0.2, rate_vehicle_per_km: 0.2 }), RESERVE)
+    expect(cheap.costsPence).toBe(3348)
+    expect(dear.costsPence).toBe(6696)
   })
 })
 
 describe('takeHomeOfAll', () => {
   it('adds the parts up, and carries every gap forward', () => {
-    const total = takeHomeOfAll([day(), day({ rate_tax_pct: null, rate_ni_pct: null })])
+    const total = takeHomeOfAll(
+      [day(), day({ rate_fuel_per_km: null, rate_vehicle_per_km: null })],
+      RESERVE,
+    )
     expect(total.grossPence).toBe(25290)
-    expect(total.taxPence).toBe(1752)
-    expect(total.missing).toEqual(['rates'])
+    expect(total.missing).toEqual(['costs'])
   })
 
   it('is nothing at all over no shifts', () => {

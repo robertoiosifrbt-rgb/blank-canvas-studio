@@ -3,18 +3,8 @@ import { describe, expect, it } from 'vitest'
 import type { Expense } from './expense'
 import type { Item } from './item'
 import { monthRange, periodMoney } from './period'
-import type { Reserves } from './settings'
 import type { Shift } from './shift'
 
-const RESERVES: Reserves = {
-  owner: 'me',
-  tax_pct: 20,
-  ni_pct: 6,
-  version: 1,
-  created_at: '2026-09-01T00:00:00+00:00',
-  updated_at: '2026-09-01T00:00:00+00:00',
-  deleted_at: null,
-}
 
 function item(id: string, kind: Item['kind'], due: string, over: Partial<Item> = {}): Item {
   return {
@@ -42,8 +32,6 @@ function shift(item_id: string, pounds: number, over: Partial<Shift> = {}): Shif
     odo_end: null,
     tips: null,
     personal_km: null,
-    rate_tax_pct: null,
-    rate_ni_pct: null,
     rate_fuel_per_km: null,
     rate_vehicle_per_km: null,
     sessions: [],
@@ -66,18 +54,52 @@ function expense(item_id: string, pounds: number): Expense {
 
 const SEPTEMBER = { from: '2026-09-01', to: '2026-09-30' }
 
+// A year already past its allowance, so a month inside it is taxed at the
+// basic rate with Class 4 on top and nothing has to be argued about bands.
+const YEAR = {
+  figures: {
+    personalAllowancePence: 1_257_000,
+    taperFromPence: 10_000_000,
+    basicBandPence: 3_770_000,
+    higherBandToPence: 12_514_000,
+    basicPct: 20,
+    higherPct: 40,
+    additionalPct: 45,
+    dividendAllowancePence: 50_000,
+    dividendBasicPct: 8.75,
+    dividendHigherPct: 33.75,
+    dividendAdditionalPct: 39.35,
+    poaThresholdPence: 100_000,
+    class2SmallProfitsPence: 675_000,
+    class2YearPence: 17_940,
+    class4FromPence: 1_257_000,
+    class4ToPence: 5_027_000,
+    class4MainPct: 6,
+    class4UpperPct: 2,
+  },
+  income: {
+    tradingPence: 0,
+    employmentPence: 0,
+    employmentTaxPaidPence: 0,
+    dividendsPence: 0,
+    paidOnAccountPence: 0,
+  },
+  beforePence: 2_000_000,
+}
+
 describe('periodMoney', () => {
   it('counts what came in, what went out, and reserves on the difference', () => {
     const sum = periodMoney({
       items: [item('s1', 'shift', '2026-09-05'), item('e1', 'expense', '2026-09-03')],
       shifts: [shift('s1', 1000)],
       expenses: [expense('e1', 200)],
-      reserves: RESERVES,
       ...SEPTEMBER,
+      ...YEAR,
     })
     expect(sum.grossPence).toBe(100000)
     expect(sum.spentPence).toBe(20000)
     expect(sum.profitPence).toBe(80000)
+    // £800 of profit landing in the basic band: a fifth of it, and 6% Class 4.
     expect(sum.taxPence).toBe(16000)
     expect(sum.niPence).toBe(4800)
     expect(sum.leftPence).toBe(59200)
@@ -93,14 +115,11 @@ describe('periodMoney', () => {
       odo_end: 100500,
       rate_fuel_per_km: 0.5,
       rate_vehicle_per_km: 0.5,
-      rate_tax_pct: 20,
-      rate_ni_pct: 6,
     })
     const sum = periodMoney({
       items: [item('s1', 'shift', '2026-09-05'), item('e1', 'expense', '2026-09-03')],
       shifts: [driven],
       expenses: [expense('e1', 200)],
-      reserves: RESERVES,
       ...SEPTEMBER,
     })
     // 500 km at £1 would be £500 of consumption. Only the £200 counts.
@@ -118,7 +137,6 @@ describe('periodMoney', () => {
       ],
       shifts: [shift('s1', 100), shift('s2', 100), shift('s3', 100), shift('s4', 100)],
       expenses: [],
-      reserves: RESERVES,
       ...SEPTEMBER,
     })
     expect(sum.shifts).toBe(1)
@@ -130,8 +148,8 @@ describe('periodMoney', () => {
       items: [item('s1', 'shift', '2026-09-05'), item('e1', 'expense', '2026-09-03')],
       shifts: [shift('s1', 100)],
       expenses: [expense('e1', 500)],
-      reserves: RESERVES,
       ...SEPTEMBER,
+      ...YEAR,
     })
     expect(sum.profitPence).toBe(-40000)
     expect(sum.taxPence).toBe(0)
@@ -139,11 +157,12 @@ describe('periodMoney', () => {
   })
 
   it('says the reserve is unknown rather than calling it nothing', () => {
+    // No figures for the year: what is owed is unknown, and a screen showing
+    // £0.00 would be lying in the direction that costs money.
     const sum = periodMoney({
       items: [item('s1', 'shift', '2026-09-05')],
       shifts: [shift('s1', 100)],
       expenses: [],
-      reserves: null,
       ...SEPTEMBER,
     })
     expect(sum.missingRates).toBe(true)
@@ -166,7 +185,6 @@ describe('periodMoney', () => {
         }),
       ],
       expenses: [],
-      reserves: RESERVES,
       ...SEPTEMBER,
     })
     expect(sum.minutes).toBe(210)

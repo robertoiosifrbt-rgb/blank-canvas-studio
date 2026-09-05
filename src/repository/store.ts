@@ -32,16 +32,15 @@ const DB_NAME = 'life-control-centre'
 // says which table it belongs to. The old cursors are dropped rather than
 // converted — a missing cursor costs one full snapshot, and a converted one
 // that is wrong costs rows that never arrive.
-const DB_VERSION = 6
+const DB_VERSION = 7
 const ITEMS = 'items'
 const AREAS = 'areas'
 // The parts of a shift, one record per anchor. Not a synced table of its own:
 // it has no cursor, because the anchor carries the news that it changed.
 const SHIFTS = 'shifts'
 const EXPENSES = 'expenses'
-// The settings: one row per person, one row per area. No cursor either, and
+// The settings: one row per area, and one per tax year. No cursor either, and
 // few enough to be fetched whole every time.
-const RESERVES = 'reserves'
 const COSTS = 'running_costs'
 // One row per tax year, because the figures change every April and last
 // year's bill must not move when this year's are set.
@@ -63,7 +62,7 @@ export function completed(tx: IDBTransaction): Promise<void> {
   })
 }
 
-export const STORES = { RESERVES, COSTS, EXPENSES, TAX_YEARS }
+export const STORES = { COSTS, EXPENSES, TAX_YEARS }
 
 let db: Promise<IDBDatabase> | null = null
 
@@ -86,8 +85,11 @@ export function open(): Promise<IDBDatabase> {
         const spent = opened.createObjectStore(EXPENSES, { keyPath: 'item_id' })
         spent.createIndex('owner', 'owner', { unique: false })
       }
-      if (!opened.objectStoreNames.contains(RESERVES)) {
-        opened.createObjectStore(RESERVES, { keyPath: 'owner' })
+      // The two typed percentages went when the year's own figures arrived.
+      // Dropped rather than left behind: a store nothing writes to still gets
+      // read by an old tab, and would answer with last week's answer.
+      if (opened.objectStoreNames.contains('reserves')) {
+        opened.deleteObjectStore('reserves')
       }
       if (!opened.objectStoreNames.contains(TAX_YEARS)) {
         const years = opened.createObjectStore(TAX_YEARS, {

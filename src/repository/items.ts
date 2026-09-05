@@ -31,18 +31,20 @@ export type { Area, AreaPatch } from './area'
 export type { Platform, Shift, ShiftPatch, ShiftSession } from './shift'
 export { takeHome, takeHomeOfAll } from './takehome'
 export { monthRange, periodMoney } from './period'
+export { dayBefore, sliceOfYear } from './slice'
+export type { Slice } from './slice'
+export { reserveFor } from './reserve'
+export type { Reserve } from './reserve'
 export type { Period } from './period'
 export type { Category, Expense } from './expense'
 export { CATEGORIES, CATEGORY_NAMES, fillsOf } from './expense'
 export { fuelRate } from './fuel'
 export type { Fill, FuelRate } from './fuel'
 export { expensesOf, recordExpense, removeExpense } from './expenses'
-export type { Reserves, RunningCosts } from './settings'
+export type { RunningCosts } from './settings'
 export { costsFor, hasCosts } from './settings'
 export {
-  reservesOf,
   runningCostsOf,
-  saveReserves,
   saveRunningCosts,
   saveTaxYear,
   taxYearsOf,

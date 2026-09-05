@@ -1,42 +1,23 @@
 // Where the settings sit in the cache.
 //
 // Apart from store.ts because that file was at 295 of its 300 lines, and
-// because these two are not snapshots of a synced table: they are one row for
-// the person and one per area, replaced whole, with no cursor between them.
+// because these are not snapshots of a synced table: a handful of rows,
+// replaced whole, with no cursor between them.
 
 import type { Expense } from './expense'
 import type { TaxYearRow } from './hmrc-year'
-import type { Reserves, RunningCosts } from './settings'
+import type { RunningCosts } from './settings'
 import { completed, open, request, STORES } from './store'
 
-const { RESERVES, COSTS, EXPENSES, TAX_YEARS } = STORES
+const { COSTS, EXPENSES, TAX_YEARS } = STORES
 
 /**
  * The settings, kept the same way the shift parts are: whole, no cursor.
  *
- * Reserves are one row keyed by the person, so there is no index to read them
- * by — the key is the account. Running costs are one per area, so they are
+ * Running costs are one row per area and tax years one per April, so both are
  * read by owner like everything else.
  */
 export const settingsStore = {
-  async reserves(owner: string): Promise<Reserves | null> {
-    const opened = await open()
-    const tx = opened.transaction(RESERVES, 'readonly')
-    const row: unknown = await request(tx.objectStore(RESERVES).get(owner))
-    return row === undefined ? null : (row as Reserves)
-  },
-
-  async replaceReserves(owner: string, reserves: Reserves | null): Promise<void> {
-    if (reserves !== null && reserves.owner !== owner) {
-      throw new Error(`Reserves belong to ${reserves.owner}, not to ${owner}`)
-    }
-    const opened = await open()
-    const tx = opened.transaction(RESERVES, 'readwrite')
-    if (reserves === null) tx.objectStore(RESERVES).delete(owner)
-    else tx.objectStore(RESERVES).put(reserves)
-    await completed(tx)
-  },
-
   async taxYears(owner: string): Promise<TaxYearRow[]> {
     const opened = await open()
     const tx = opened.transaction(TAX_YEARS, 'readonly')

@@ -10,6 +10,7 @@
 // much early in the year and too little late, and the right numbers come from
 // an accountant, not from here.
 
+import type { Reserve } from './reserve'
 import { earnedPence, kilometres } from './shift'
 import type { Shift } from './shift'
 
@@ -34,26 +35,29 @@ export type TakeHome = {
   missing: ('rates' | 'costs' | 'kilometres')[]
 }
 
-/** Percent of an amount in pence, rounded to the penny. */
-function percentOf(pence: number, percent: number): number {
-  return Math.round((pence * percent) / 100)
-}
 
 /**
- * The whole sum for one shift, from the rates pinned on it.
+ * The whole sum for one shift.
  *
- * The rates come from the shift, never from today's settings: the shift was
- * worked under what was set then, and that is what it keeps.
+ * The costs come from the rates pinned on the shift, never from today's
+ * settings: it was driven at the price the pump was charging then, and that is
+ * what it keeps.
+ *
+ * The reserve does not, and cannot. What a day owes depends on where its
+ * profit lands in the year, so it is worked out against the year rather than
+ * frozen — which is why the caller hands in a way of asking. Without one, the
+ * reserve is unknown, and unknown is said rather than shown as nothing.
  */
-export function takeHome(shift: Shift): TakeHome {
+export function takeHome(
+  shift: Shift,
+  reserveOf?: (profitPence: number) => Reserve | null,
+): TakeHome {
   const grossPence = earnedPence(shift)
   const km = kilometres(shift)
   const missing: TakeHome['missing'] = []
 
   const fuel = shift.rate_fuel_per_km
   const vehicle = shift.rate_vehicle_per_km
-  const tax = shift.rate_tax_pct
-  const ni = shift.rate_ni_pct
 
   let costsPence = 0
   if (fuel === null || vehicle === null) missing.push('costs')
@@ -62,17 +66,12 @@ export function takeHome(shift: Shift): TakeHome {
 
   const profitPence = grossPence - costsPence
 
-  let taxPence = 0
-  let niPence = 0
-  if (tax === null || ni === null) {
-    missing.push('rates')
-  } else if (profitPence > 0) {
-    // A day that lost money owes nothing on it. Reserving a percentage of a
-    // negative profit would hand money back, which is not how any of this
-    // works.
-    taxPence = percentOf(profitPence, tax)
-    niPence = percentOf(profitPence, ni)
-  }
+  // A day that lost money owes nothing on it: `reserveFor` says so, and
+  // handing money back is not how any of this works.
+  const reserve = reserveOf === undefined ? null : reserveOf(profitPence)
+  if (reserve === null) missing.push('rates')
+  const taxPence = reserve?.taxPence ?? 0
+  const niPence = reserve?.niPence ?? 0
 
   return {
     grossPence,
@@ -86,7 +85,10 @@ export function takeHome(shift: Shift): TakeHome {
 }
 
 /** The same sum over many shifts: every part added, then nothing re-rounded. */
-export function takeHomeOfAll(shifts: readonly Shift[]): TakeHome {
+export function takeHomeOfAll(
+  shifts: readonly Shift[],
+  reserveOf?: (profitPence: number) => Reserve | null,
+): TakeHome {
   const total: TakeHome = {
     grossPence: 0,
     costsPence: 0,
@@ -98,7 +100,7 @@ export function takeHomeOfAll(shifts: readonly Shift[]): TakeHome {
   }
   const missing = new Set<TakeHome['missing'][number]>()
   for (const shift of shifts) {
-    const one = takeHome(shift)
+    const one = takeHome(shift, reserveOf)
     total.grossPence += one.grossPence
     total.costsPence += one.costsPence
     total.profitPence += one.profitPence
