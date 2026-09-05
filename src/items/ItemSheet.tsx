@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import type { Item, Patch } from '../repository/items'
 import { Sheet } from '../ui/Sheet'
+import { headingFor } from './heading'
 import './ItemSheet.css'
 
 type Props = {
@@ -52,12 +53,7 @@ export function ItemSheet({
   const patch = (changes: Patch, closeAfter = false) =>
     void run(() => onUpdate(item, changes), closeAfter)
 
-  const heading =
-    item.state === 'inbox'
-      ? 'What is this?'
-      : item.state === 'done'
-        ? 'Done'
-        : 'Task'
+  const heading = headingFor(item)
 
   return (
     <Sheet title={heading} onClose={onClose}>
