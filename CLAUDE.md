@@ -39,6 +39,16 @@ lucrurile deschise trăiesc doar în conversația unei sesiuni și mor cu ea.
 Nu se pune în issue ce explică de ce codul e așa cum e. Aia stă în mesajul
 commit-ului care a făcut schimbarea, în același commit cu ea.
 
+## Testele de mână
+
+[`docs/TESTE.md`](docs/TESTE.md) ține ce nu poate face nicio verificare
+automată: telefonul adevărat, Safari, producția. Fiecare are un ID din aceeași
+serie, `T-01` în sus, dat o dată și nefolosit niciodată a doua oară.
+
+Documentul ține **testele, nu starea lor**. Ce s-a trecut, când și pe ce commit
+stă în issues — un fișier nu poate ține asta, și de-aia a fost șters
+`docs/REGISTRU.md`. Un test e o definiție, deci nu rămâne în urmă.
+
 ## Auditurile
 
 `docs/audits/` ține câte un fișier pe audit, numit după ziua în care s-a făcut.
