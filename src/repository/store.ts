@@ -5,31 +5,35 @@
 // signing out of A and into B would show, if only for a moment, A's data.
 // That is why every method takes the owner instead of guessing it.
 
-import { fromRow } from './item'
+import { fromRow as fromAreaRow } from './area'
+import type { Area } from './area'
+import { fromRow as fromItemRow } from './item'
 import type { Item } from './item'
+import type { Row } from './row'
 
-export type Store = {
-  readAll(owner: string): Promise<Item[]>
+export type Store<T extends Row> = {
+  readAll(owner: string): Promise<T[]>
   cursor(owner: string): Promise<string | null>
   /**
    * Deletes everything this owner has and puts back exactly the given list.
    * Only a complete, successful snapshot has the right to do this.
    */
-  replaceSnapshot(
-    owner: string,
-    items: Item[],
-    cursor: string | null,
-  ): Promise<void>
+  replaceSnapshot(owner: string, rows: T[], cursor: string | null): Promise<void>
   /**
    * Adds or updates row by row. Deletes NOTHING.
    * `nextCursor === null` means "leave the cursor as it was".
    */
-  upsert(owner: string, items: Item[], nextCursor: string | null): Promise<void>
+  upsert(owner: string, rows: T[], nextCursor: string | null): Promise<void>
 }
 
 const DB_NAME = 'life-control-centre'
-const DB_VERSION = 1
+// Two, because areas arrived: a second object store, and a cursor key that
+// says which table it belongs to. The old cursors are dropped rather than
+// converted — a missing cursor costs one full snapshot, and a converted one
+// that is wrong costs rows that never arrive.
+const DB_VERSION = 2
 const ITEMS = 'items'
+const AREAS = 'areas'
 const CURSORS = 'cursors'
 
 function request<T>(req: IDBRequest<T>): Promise<T> {
@@ -54,13 +58,16 @@ function open(): Promise<IDBDatabase> {
     const req = indexedDB.open(DB_NAME, DB_VERSION)
     req.onupgradeneeded = () => {
       const opened = req.result
-      if (!opened.objectStoreNames.contains(ITEMS)) {
-        const items = opened.createObjectStore(ITEMS, { keyPath: 'id' })
-        items.createIndex('owner', 'owner', { unique: false })
+      for (const name of [ITEMS, AREAS]) {
+        if (!opened.objectStoreNames.contains(name)) {
+          const rows = opened.createObjectStore(name, { keyPath: 'id' })
+          rows.createIndex('owner', 'owner', { unique: false })
+        }
       }
-      if (!opened.objectStoreNames.contains(CURSORS)) {
-        opened.createObjectStore(CURSORS, { keyPath: 'owner' })
+      if (opened.objectStoreNames.contains(CURSORS)) {
+        opened.deleteObjectStore(CURSORS)
       }
+      opened.createObjectStore(CURSORS, { keyPath: ['table', 'owner'] })
     }
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error ?? new Error('IndexedDB did not open'))
@@ -91,72 +98,89 @@ function versionOf(row: unknown): number | null {
  * its success handler, not after an await: a transaction stays alive while
  * requests keep chaining off one another, and dies if the turn ends first.
  */
-function putIfNotOlder(store: IDBObjectStore, item: Item): void {
-  const existing = store.get(item.id)
+function putIfNotOlder(store: IDBObjectStore, row: Row): void {
+  const existing = store.get(row.id)
   existing.onsuccess = () => {
     const held = versionOf(existing.result)
-    if (held === null || held <= item.version) store.put(item)
+    if (held === null || held <= row.version) store.put(row)
   }
 }
 
 /** Another user's row has no business in this namespace. */
-function assertOwner(owner: string, items: Item[]) {
-  for (const item of items) {
-    if (item.owner !== owner) {
-      throw new Error(`Row ${item.id} belongs to ${item.owner}, not to ${owner}`)
+function assertOwner(owner: string, rows: readonly Row[]) {
+  for (const row of rows) {
+    if (row.owner !== owner) {
+      throw new Error(`Row ${row.id} belongs to ${row.owner}, not to ${owner}`)
     }
   }
 }
 
 async function write(
+  table: string,
   owner: string,
-  items: Item[],
+  rows: readonly Row[],
   nextCursor: string | null,
   clear: boolean,
 ): Promise<void> {
-  assertOwner(owner, items)
+  assertOwner(owner, rows)
   const opened = await open()
-  const tx = opened.transaction([ITEMS, CURSORS], 'readwrite')
-  const store = tx.objectStore(ITEMS)
+  const tx = opened.transaction([table, CURSORS], 'readwrite')
+  const store = tx.objectStore(table)
 
   if (clear) {
     const keys = await request(store.index('owner').getAllKeys(owner))
     for (const key of keys) store.delete(key)
-    for (const item of items) store.put(item)
+    for (const row of rows) store.put(row)
   } else {
-    for (const item of items) putIfNotOlder(store, item)
+    for (const row of rows) putIfNotOlder(store, row)
   }
 
   if (nextCursor !== null || clear) {
-    tx.objectStore(CURSORS).put({ owner, cursor: nextCursor })
+    tx.objectStore(CURSORS).put({ table, owner, cursor: nextCursor })
   }
 
   await completed(tx)
 }
 
-export const store: Store = {
-  async readAll(owner) {
-    const opened = await open()
-    const tx = opened.transaction(ITEMS, 'readonly')
-    const rows: unknown = await request(
-      tx.objectStore(ITEMS).index('owner').getAll(owner),
-    )
-    if (!Array.isArray(rows)) throw new Error('The cache did not return a list')
-    // Rows from the cache are checked exactly like rows from the server. A
-    // cache written by an older version must not enter half-formed.
-    return rows.map(fromRow)
-  },
+/**
+ * One adapter, told which table it is for and how to read a row of it.
+ *
+ * Items and areas differ in what a row means, not in how a snapshot is kept,
+ * so the keeping is written once. Each gets its own object store and its own
+ * cursor, because they travel by separate deltas.
+ */
+function storeFor<T extends Row>(
+  table: string,
+  parse: (row: unknown) => T,
+): Store<T> {
+  return {
+    async readAll(owner) {
+      const opened = await open()
+      const tx = opened.transaction(table, 'readonly')
+      const rows: unknown = await request(
+        tx.objectStore(table).index('owner').getAll(owner),
+      )
+      if (!Array.isArray(rows)) throw new Error('The cache did not return a list')
+      // Rows from the cache are checked exactly like rows from the server. A
+      // cache written by an older version must not enter half-formed.
+      return rows.map(parse)
+    },
 
-  async cursor(owner) {
-    const opened = await open()
-    const tx = opened.transaction(CURSORS, 'readonly')
-    const row: unknown = await request(tx.objectStore(CURSORS).get(owner))
-    if (typeof row !== 'object' || row === null) return null
-    const cursor = (row as Record<string, unknown>)['cursor']
-    return typeof cursor === 'string' ? cursor : null
-  },
+    async cursor(owner) {
+      const opened = await open()
+      const tx = opened.transaction(CURSORS, 'readonly')
+      const row: unknown = await request(tx.objectStore(CURSORS).get([table, owner]))
+      if (typeof row !== 'object' || row === null) return null
+      const cursor = (row as Record<string, unknown>)['cursor']
+      return typeof cursor === 'string' ? cursor : null
+    },
 
-  replaceSnapshot: (owner, items, cursor) => write(owner, items, cursor, true),
+    replaceSnapshot: (owner, rows, cursor) => write(table, owner, rows, cursor, true),
 
-  upsert: (owner, items, nextCursor) => write(owner, items, nextCursor, false),
+    upsert: (owner, rows, nextCursor) =>
+      write(table, owner, rows, nextCursor, false),
+  }
 }
+
+export const store: Store<Item> = storeFor(ITEMS, fromItemRow)
+export const areaStore: Store<Area> = storeFor(AREAS, fromAreaRow)

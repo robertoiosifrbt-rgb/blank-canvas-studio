@@ -19,6 +19,7 @@ function item(over: Partial<Item> = {}): Item {
     created_at: '2026-09-01T10:00:00+00:00',
     updated_at: '2026-09-01T10:00:00+00:00',
     deleted_at: null,
+    area_id: null,
     ...over,
   }
 }
@@ -33,7 +34,7 @@ function writerFor(initial: Item, options: { vanishes?: boolean } = {}) {
   let current = initial
   const calls: Call[] = []
 
-  const writer: Writer = {
+  const writer: Writer<Patch> = {
     insert: (values) =>
       Promise.resolve(
         item({ id: 'new', state: 'inbox', kind: null, version: 1, ...values }),
@@ -146,7 +147,7 @@ describe('applyPatch', () => {
     base.changeBehindOurBack({ title: 'changed once' })
     // ...and the row changes again right at the re-read: the second attempt
     // fails too.
-    const writer: Writer = {
+    const writer: Writer<Patch> = {
       ...base.writer,
       read: async () => {
         const row = await base.writer.read('i1')
@@ -169,7 +170,7 @@ describe('applyPatch', () => {
 
   it('does not retry forever', async () => {
     const base = writerFor(item({ version: 4 }))
-    const writer: Writer = {
+    const writer: Writer<Patch> = {
       ...base.writer,
       update: (id, version, patch) => {
         base.calls.push({ id, version, patch })

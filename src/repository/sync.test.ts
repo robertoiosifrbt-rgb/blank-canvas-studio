@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { fromRow } from './item'
 import type { Item } from './item'
 import type { Store } from './store'
 import { newest, PAGE, sync } from './sync'
@@ -20,6 +21,7 @@ function item(id: string, over: Partial<Item> = {}): Item {
     created_at: '2026-09-01T10:00:00+00:00',
     updated_at: '2026-09-01T10:00:00+00:00',
     deleted_at: null,
+    area_id: null,
     ...over,
   }
 }
@@ -29,7 +31,7 @@ function memoryStore(initial: Item[] = [], cursor: string | null = null) {
   const rows = new Map(initial.map((i) => [i.id, i]))
   let current = cursor
 
-  const store: Store = {
+  const store: Store<Item> = {
     readAll: () => Promise.resolve([...rows.values()]),
     cursor: () => Promise.resolve(current),
     replaceSnapshot: (_owner, items, nextCursor) => {
@@ -74,7 +76,7 @@ describe('sync — the three distinct cases', () => {
     const cache = memoryStore([item('old')], '2026-09-01T10:00:00+00:00')
     const source: Source = { page: () => Promise.reject(new Error('the network')) }
 
-    await expect(sync(A, source, cache.store)).rejects.toThrow('the network')
+    await expect(sync(A, source, cache.store, fromRow)).rejects.toThrow('the network')
 
     expect(cache.items.map((i) => i.id)).toEqual(['old'])
     expect(cache.cursor).toBe('2026-09-01T10:00:00+00:00')
@@ -84,7 +86,7 @@ describe('sync — the three distinct cases', () => {
     // No cursor means a first visit. Empty can be legitimate: you deleted your
     // last item.
     const cache = memoryStore([item('left-over')], null)
-    const result = await sync(A, sourceWith([]), cache.store)
+    const result = await sync(A, sourceWith([]), cache.store, fromRow)
 
     expect(result).toEqual({ kind: 'full', fetched: 0, cursor: null })
     expect(cache.items).toEqual([])
@@ -93,7 +95,7 @@ describe('sync — the three distinct cases', () => {
 
   it('empty delta: empties nothing and leaves the cursor where it was', async () => {
     const cache = memoryStore([item('one'), item('two')], '2026-09-01T10:00:00+00:00')
-    const result = await sync(A, sourceWith([]), cache.store)
+    const result = await sync(A, sourceWith([]), cache.store, fromRow)
 
     expect(result.kind).toBe('delta')
     expect(result.fetched).toBe(0)
@@ -113,7 +115,7 @@ describe('sync', () => {
       version: 2,
       updated_at: '2026-09-02T09:00:00+00:00',
     })
-    await sync(A, sourceWith([changed, item('four')]), cache.store)
+    await sync(A, sourceWith([changed, item('four')]), cache.store, fromRow)
 
     expect(cache.items.map((i) => i.id).sort()).toEqual([
       'four',
@@ -127,7 +129,7 @@ describe('sync', () => {
   it('asks for the delta from the cached cursor, inclusive', async () => {
     const cache = memoryStore([item('one')], '2026-09-01T10:00:00+00:00')
     const source = sourceWith([])
-    await sync(A, source, cache.store)
+    await sync(A, source, cache.store, fromRow)
 
     expect(source.calls).toEqual([
       { from: 0, to: PAGE - 1, sinceCursor: '2026-09-01T10:00:00+00:00' },
@@ -141,7 +143,7 @@ describe('sync', () => {
     const cache = memoryStore()
     const source = sourceWith(firstPage, [item('last')])
 
-    const result = await sync(A, source, cache.store)
+    const result = await sync(A, source, cache.store, fromRow)
 
     expect(result.fetched).toBe(PAGE + 1)
     expect(source.calls).toEqual([
@@ -156,6 +158,7 @@ describe('sync', () => {
       A,
       sourceWith([item('deleted', { deleted_at: '2026-09-02T08:00:00+00:00' })]),
       cache.store,
+      fromRow,
     )
 
     expect(cache.items).toHaveLength(1)
@@ -172,6 +175,7 @@ describe('sync', () => {
         item('three', { updated_at: '2026-09-01T23:00:00+00:00' }),
       ]),
       cache.store,
+      fromRow,
     )
 
     expect(result.cursor).toBe('2026-09-03T07:00:00+00:00')
@@ -180,13 +184,13 @@ describe('sync', () => {
 
   it('a cursor the cache cannot produce counts as a first visit', async () => {
     const cache = memoryStore([item('one')], '2026-09-01T10:00:00+00:00')
-    const broken: Store = {
+    const broken: Store<Item> = {
       ...cache.store,
       cursor: () => Promise.reject(new Error('unreadable cache')),
     }
     const source = sourceWith([item('fetched')])
 
-    const result = await sync(A, source, broken)
+    const result = await sync(A, source, broken, fromRow)
 
     expect(result.kind).toBe('full')
     expect(source.calls).toEqual([{ from: 0, to: PAGE - 1, sinceCursor: null }])
@@ -205,7 +209,7 @@ describe('sync', () => {
       },
     }
 
-    await expect(sync(A, source, cache.store)).rejects.toThrow('second page')
+    await expect(sync(A, source, cache.store, fromRow)).rejects.toThrow('second page')
     expect(replace).not.toHaveBeenCalled()
     expect(cache.items.map((i) => i.id)).toEqual(['old'])
   })
@@ -232,7 +236,7 @@ describe('a cache that cannot be read', () => {
     cache.store.readAll = () => Promise.reject(new Error('Not an item'))
 
     const source = sourceWith([item('fresh')])
-    const result = await sync(A, source, cache.store)
+    const result = await sync(A, source, cache.store, fromRow)
 
     expect(result.kind).toBe('full')
     expect(cache.items.map((i) => i.id)).toEqual(['fresh'])
@@ -243,7 +247,7 @@ describe('a cache that cannot be read', () => {
     cache.store.readAll = () => Promise.reject(new Error('Not an item'))
 
     const source = sourceWith([item('fresh')])
-    await sync(A, source, cache.store)
+    await sync(A, source, cache.store, fromRow)
 
     expect(source.calls).toEqual([
       { from: 0, to: PAGE - 1, sinceCursor: null },
@@ -252,7 +256,7 @@ describe('a cache that cannot be read', () => {
 
   it('still takes the delta when the cache reads fine', async () => {
     const cache = memoryStore([item('kept')], '2026-09-01T10:00:00+00:00')
-    const result = await sync(A, sourceWith([]), cache.store)
+    const result = await sync(A, sourceWith([]), cache.store, fromRow)
 
     expect(result.kind).toBe('delta')
     expect(cache.items.map((i) => i.id)).toEqual(['kept'])

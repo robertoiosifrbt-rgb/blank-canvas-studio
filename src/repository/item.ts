@@ -5,12 +5,15 @@
 // second vocabulary for the same thing is a place where mistakes hide, and a
 // patch has to line up with the columns without any conversion.
 
+import { asRecord, optionalDay, optionalText, requiredText, stampsOf } from './row'
+import type { Row } from './row'
+
+export { isDay } from './row'
+
 export type State = 'inbox' | 'active' | 'done'
 export type Kind = 'task' | 'letter'
 
-export type Item = {
-  id: string
-  owner: string
+export type Item = Row & {
   kind: Kind | null
   state: State
   title: string
@@ -18,10 +21,8 @@ export type Item = {
   due: string | null
   /** What actually happened: the day you ticked it off. */
   done_at: string | null
-  version: number
-  created_at: string
-  updated_at: string
-  deleted_at: string | null
+  /** The area it belongs to. Null until it is processed out of the inbox. */
+  area_id: string | null
 }
 
 /**
@@ -32,69 +33,14 @@ export type Item = {
  * anyway. Here the type refuses them earlier.
  */
 export type Patch = Partial<
-  Pick<Item, 'kind' | 'state' | 'title' | 'due' | 'done_at' | 'deleted_at'>
+  Pick<
+    Item,
+    'kind' | 'state' | 'title' | 'due' | 'done_at' | 'deleted_at' | 'area_id'
+  >
 >
 
 const STATES: readonly string[] = ['inbox', 'active', 'done']
 const KINDS: readonly string[] = ['task', 'letter']
-
-function requiredText(row: Record<string, unknown>, key: string): string {
-  const value = row[key]
-  if (typeof value !== 'string' || value === '') {
-    throw new Error(`Row without ${key}`)
-  }
-  return value
-}
-
-function optionalText(
-  row: Record<string, unknown>,
-  key: string,
-): string | null {
-  const value = row[key]
-  if (value === null || value === undefined) return null
-  if (typeof value !== 'string') throw new Error(`${key} is not text`)
-  return value
-}
-
-const DAY = /^(\d{4})-(\d{2})-(\d{2})$/
-
-/**
- * Whether the text is a real calendar day, as 'YYYY-MM-DD'.
- *
- * The shape is not enough: '2026-02-31' has the shape and is not a day. A
- * date column can never hold one, so a row carrying one did not come from the
- * database as it stands.
- */
-export function isDay(text: string): boolean {
-  const match = DAY.exec(text)
-  if (match === null) return false
-  const year = Number(match[1])
-  const month = Number(match[2])
-  const day = Number(match[3])
-  // Noon UTC: far enough from midnight that nothing can shift the day.
-  const at = new Date(Date.UTC(year, month - 1, day, 12))
-  return (
-    at.getUTCFullYear() === year &&
-    at.getUTCMonth() === month - 1 &&
-    at.getUTCDate() === day
-  )
-}
-
-function optionalDay(row: Record<string, unknown>, key: string): string | null {
-  const value = optionalText(row, key)
-  if (value !== null && !isDay(value)) {
-    throw new Error(`${key} is not a day: ${value}`)
-  }
-  return value
-}
-
-function requiredMoment(row: Record<string, unknown>, key: string): string {
-  const value = requiredText(row, key)
-  if (Number.isNaN(Date.parse(value))) {
-    throw new Error(`${key} is not a moment in time: ${value}`)
-  }
-  return value
-}
 
 /**
  * A row that came from the server, checked.
@@ -109,10 +55,7 @@ function requiredMoment(row: Record<string, unknown>, key: string): string {
  * where it came in.
  */
 export function fromRow(row: unknown): Item {
-  if (typeof row !== 'object' || row === null) {
-    throw new Error('The row is not an object')
-  }
-  const raw = row as Record<string, unknown>
+  const raw = asRecord(row)
 
   const state = requiredText(raw, 'state')
   if (!STATES.includes(state)) throw new Error(`Unknown state: ${state}`)
@@ -129,14 +72,6 @@ export function fromRow(row: unknown): Item {
     throw new Error(`State ${state} does not go with kind ${kind ?? 'null'}`)
   }
 
-  const version = raw['version']
-  if (typeof version !== 'number' || !Number.isInteger(version)) {
-    throw new Error('Row without version')
-  }
-  // The trigger writes 1 on insert and adds one on every update. Nothing the
-  // database produces is below that.
-  if (version < 1) throw new Error(`Version below one: ${version}`)
-
   const title = requiredText(raw, 'title')
   if (title.trim() === '') throw new Error('Title of nothing but spaces')
 
@@ -148,10 +83,8 @@ export function fromRow(row: unknown): Item {
     title,
     due: optionalDay(raw, 'due'),
     done_at: optionalDay(raw, 'done_at'),
-    version,
-    created_at: requiredMoment(raw, 'created_at'),
-    updated_at: requiredMoment(raw, 'updated_at'),
-    deleted_at: optionalText(raw, 'deleted_at'),
+    area_id: optionalText(raw, 'area_id'),
+    ...stampsOf(raw),
   }
 }
 

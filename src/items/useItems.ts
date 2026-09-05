@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   all,
   capture as captureItem,
-  Conflict,
+  isItemConflict,
   discard as discardItem,
   exportAll,
   NotCached,
@@ -127,7 +127,7 @@ export function useItems(owner: string): ItemsHandle {
           setRound((n) => n + 1)
           return
         }
-        if (error instanceof Conflict) {
+        if (isItemConflict(error)) {
           setUnsaved((left) => [
             ...left.filter((u) => u.item.id !== error.item.id),
             { item: error.item, patch: error.patch, reason: error.message },

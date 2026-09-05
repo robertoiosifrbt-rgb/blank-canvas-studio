@@ -1,14 +1,12 @@
-// The only place that actually talks to the items table.
+// The only place that actually talks to Supabase.
 //
 // The rest of the repository works against the Source and Writer interfaces,
 // so the sync and write logic can be checked without a network.
 
-import type { Patch } from './item'
 import { supabase } from './supabase'
 import type { Source } from './sync'
 import type { Writer } from './write'
 
-const TABLE = 'items'
 const ALL = '*'
 
 function fail(operation: string, error: { message: string }): never {
@@ -22,11 +20,11 @@ function fail(operation: string, error: { message: string }): never {
  * without them, an item deleted on the phone would stay forever in the
  * laptop's cache.
  */
-export function supabaseSource(): Source {
+export function supabaseSource(table: string): Source {
   return {
     async page({ from, to, sinceCursor }) {
       let query = supabase()
-        .from(TABLE)
+        .from(table)
         .select(ALL)
         // A stable order, otherwise pagination can skip or repeat rows.
         .order('id', { ascending: true })
@@ -55,11 +53,14 @@ export function supabaseSource(): Source {
  * `owner` is put in the conditions as well, even though the RLS policy already
  * enforces it: if the policy were ever wrong, the condition still stands.
  */
-export function supabaseWriter(owner: string): Writer {
+export function supabaseWriter<P extends object>(
+  table: string,
+  owner: string,
+): Writer<P> {
   return {
-    async insert(values: { title: string }) {
+    async insert(values) {
       const response = await supabase()
-        .from(TABLE)
+        .from(table)
         .insert(values)
         .select(ALL)
         .single()
@@ -67,11 +68,11 @@ export function supabaseWriter(owner: string): Writer {
       return response.data as unknown
     },
 
-    async update(id: string, version: number, patch: Patch) {
-      // update items set <patch>
+    async update(id: string, version: number, patch: P) {
+      // update <table> set <patch>
       // where id = :id and owner = auth.uid() and version = :version
       const response = await supabase()
-        .from(TABLE)
+        .from(table)
         .update(patch)
         .eq('id', id)
         .eq('owner', owner)
@@ -93,7 +94,7 @@ export function supabaseWriter(owner: string): Writer {
      */
     async read(id: string) {
       const response = await supabase()
-        .from(TABLE)
+        .from(table)
         .select(ALL)
         .eq('id', id)
         .eq('owner', owner)
