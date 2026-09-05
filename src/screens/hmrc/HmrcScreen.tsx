@@ -98,6 +98,18 @@ export function HmrcScreen() {
         </dl>
       )}
 
+      {/* Said only when there is something to say. Above the small profits
+          threshold the year counts by itself, and a line reading £0.00 would
+          make a choice that does not exist look like one that was declined. */}
+      {bill !== null && bill.class2OfferedPence > 0 && (
+        <p className="hmrc-offer">
+          Your profit is under the small profits threshold, so this year does
+          not count towards a State Pension on its own. Class 2 is voluntary:{' '}
+          <strong>{pounds(bill.class2OfferedPence)}</strong> buys the year. It is
+          not part of what is owed above, and HMRC will not ask for it.
+        </p>
+      )}
+
       <TaxYearForm
         year={settings}
         label={year.label}

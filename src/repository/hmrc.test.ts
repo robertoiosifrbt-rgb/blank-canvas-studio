@@ -17,6 +17,8 @@ const FIGURES: TaxFigures = {
   dividendBasicPct: 8.75,
   dividendHigherPct: 33.75,
   dividendAdditionalPct: 39.35,
+  class2SmallProfitsPence: 675_000,
+  class2YearPence: 17_940,
   class4FromPence: 1_257_000,
   class4ToPence: 5_027_000,
   class4MainPct: 6,
@@ -96,6 +98,29 @@ describe('taxBill', () => {
     // £9,730 above the upper limit at 2%.
     const bill = taxBill(FIGURES, { ...NOTHING, tradingPence: 6_000_000 })
     expect(bill.class4Pence).toBe(226_200 + 19_460)
+  })
+
+  it('offers Class 2 only below the small profits threshold', () => {
+    // £5,000 of profit is under the threshold, so the year does not count on
+    // its own and a full year of Class 2 is worth having.
+    const small = taxBill(FIGURES, { ...NOTHING, tradingPence: 500_000 })
+    expect(small.class2OfferedPence).toBe(17_940)
+    // £30,000 is over it: the year counts already, so there is nothing to buy.
+    const plenty = taxBill(FIGURES, { ...NOTHING, tradingPence: 3_000_000 })
+    expect(plenty.class2OfferedPence).toBe(0)
+  })
+
+  it('never puts Class 2 on the bill', () => {
+    // It is offered at a price, not asked for. Adding it would reserve money
+    // HMRC is not going to ask for.
+    const bill = taxBill(FIGURES, { ...NOTHING, tradingPence: 500_000 })
+    expect(bill.class2OfferedPence).toBeGreaterThan(0)
+    expect(bill.totalDuePence).toBe(bill.incomeTaxPence + bill.class4Pence)
+  })
+
+  it('offers nothing to a year with no trading at all', () => {
+    const wages = taxBill(FIGURES, { ...NOTHING, employmentPence: 500_000 })
+    expect(wages.class2OfferedPence).toBe(0)
   })
 
   it('is the same bill whichever module the income came from', () => {

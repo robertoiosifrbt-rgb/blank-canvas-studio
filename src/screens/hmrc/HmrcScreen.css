@@ -114,3 +114,15 @@
   text-transform: uppercase;
   color: var(--text-dim);
 }
+
+.hmrc-offer {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-dim);
+}
+
+.hmrc-offer strong {
+  color: var(--text);
+}

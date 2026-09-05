@@ -58,6 +58,11 @@ const GROUPS: readonly {
     note: 'Paid on trading profit and on nothing else.',
     fields: ['class4_from', 'class4_to', 'class4_main_pct', 'class4_upper_pct'],
   },
+  {
+    title: 'National Insurance, Class 2',
+    note: 'Not a bill. Below the small profits threshold the year stops counting towards a State Pension unless you volunteer this.',
+    fields: ['class2_small_profits', 'class2_year'],
+  },
 ]
 
 /** What each field is, in the words HMRC uses for it. */
@@ -78,6 +83,8 @@ const NAMES: Record<string, string> = {
   dividend_additional_pct: 'Additional %',
   class4_from: 'Starts at',
   class4_to: 'Upper limit',
+  class2_small_profits: 'Small profits threshold',
+  class2_year: 'A full year costs',
   class4_main_pct: 'Main %',
   class4_upper_pct: 'Above the upper limit %',
 }

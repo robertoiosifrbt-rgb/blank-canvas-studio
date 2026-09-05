@@ -37,6 +37,14 @@ export type TaxFigures = {
   dividendHigherPct: number
   dividendAdditionalPct: number
 
+  /**
+   * Below this much trading profit, the year does not count towards a State
+   * Pension on its own, and Class 2 becomes worth volunteering.
+   */
+  class2SmallProfitsPence: number
+  /** What a full year of Class 2 costs, if you choose to pay it. */
+  class2YearPence: number
+
   /** Class 4 National Insurance, paid on trading profit alone. */
   class4FromPence: number
   class4ToPence: number
@@ -63,6 +71,14 @@ export type TaxBill = {
   incomeTaxPence: number
   dividendTaxPence: number
   class4Pence: number
+  /**
+   * What a year of Class 2 would cost, when it is worth paying.
+   *
+   * Zero above the small profits threshold, where the year already counts.
+   * Never part of what is owed: HMRC is not asking for it. It is a state
+   * pension year on offer at a price, and the choice is the owner's.
+   */
+  class2OfferedPence: number
   /** Everything owed for the year, before anything already paid. */
   totalDuePence: number
   /** Owed less what PAYE has already taken. What to have ready. */
@@ -130,6 +146,13 @@ export function taxBill(figures: TaxFigures, income: Income): TaxBill {
     ) +
     pct(Math.max(0, tradingPence - figures.class4ToPence), figures.class4UpperPct)
 
+  // Class 2 is offered, not charged. Above the small profits threshold the
+  // year counts by itself, so there is nothing to offer.
+  const class2OfferedPence =
+    tradingPence > 0 && tradingPence < figures.class2SmallProfitsPence
+      ? figures.class2YearPence
+      : 0
+
   const totalDuePence = incomeTaxPence + dividendTaxPence + class4Pence
 
   return {
@@ -138,6 +161,7 @@ export function taxBill(figures: TaxFigures, income: Income): TaxBill {
     incomeTaxPence,
     dividendTaxPence,
     class4Pence,
+    class2OfferedPence,
     totalDuePence,
     // PAYE has already handed over its part. Reserving it again would put
     // aside money that is not owed.
