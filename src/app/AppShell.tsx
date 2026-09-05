@@ -92,6 +92,7 @@ export function AppShell({ session }: Props) {
           unsaved={data.unsaved.find((u) => u.item.id === openItem.id)?.reason}
           onUpdate={data.update}
           onDiscard={data.discard}
+          onRetry={(item) => data.retry(item.id)}
           onClose={() => setOpenId(null)}
         />
       )}

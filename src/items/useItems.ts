@@ -99,7 +99,18 @@ export function useItems(owner: string): ItemsHandle {
     }
   }, [owner, round])
 
-  /** Runs a write, keeping an unresolved conflict visible instead of losing it. */
+  /**
+   * Runs a write, keeping an unresolved conflict visible instead of losing it.
+   *
+   * It always throws on. A conflict is recorded so the row stays marked
+   * unsaved, but the caller still has to hear that the write did not happen —
+   * a screen that closes on a resolved promise would tell you it saved when it
+   * did not, and that is the one thing this system may not do.
+   *
+   * A failed write is not a failed sync, either. The snapshot can be perfectly
+   * fresh while one write is refused, and a sync indicator that lies in one
+   * direction is not believed in the other.
+   */
   const write = useCallback(
     async (body: () => Promise<Item>) => {
       try {
@@ -110,10 +121,8 @@ export function useItems(owner: string): ItemsHandle {
             ...left.filter((u) => u.item.id !== error.item.id),
             { item: error.item, patch: error.patch, reason: error.message },
           ])
-        } else {
-          setSync({ kind: 'failed', reason: reasonOf(error) })
-          throw error
         }
+        throw error
       } finally {
         await reload()
       }
