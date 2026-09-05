@@ -25,13 +25,20 @@ type Props = {
 export function Sheet({ title, onClose, children }: Props) {
   const sheet = useRef<HTMLDivElement>(null)
 
+  // Whatever had the focus before any of this mounted. Taken during the first
+  // render, not in the effect: effects run after the children have mounted,
+  // and the capture field focuses its own input as it opens — so by then the
+  // "element that opened the sheet" would be an input inside the sheet, and
+  // closing would hand the focus back to something that no longer exists.
+  const opener = useRef(document.activeElement)
+
   useEffect(() => {
     const opened = sheet.current
     if (opened === null) return
 
-    // Whatever had the focus gets it back on the way out. Captured before
-    // anything is moved.
-    const opener = document.activeElement
+    // Read once, here: by the time the cleanup runs, a ref could point
+    // somewhere else.
+    const back = opener.current
 
     // Not stolen if a child already took it: the capture field focuses its own
     // input as it opens, and writing must not cost an extra gesture.
@@ -57,7 +64,9 @@ export function Sheet({ title, onClose, children }: Props) {
     window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener('keydown', onKey)
-      if (opener instanceof HTMLElement) opener.focus()
+      // isConnected, because the thing that opened the sheet can be gone by
+      // now — a row that was deleted while its sheet was open.
+      if (back instanceof HTMLElement && back.isConnected) back.focus()
     }
   }, [onClose])
 
