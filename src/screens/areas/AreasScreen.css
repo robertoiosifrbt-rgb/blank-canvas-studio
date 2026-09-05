@@ -1,0 +1,114 @@
+/* Imported by exactly one .tsx in this directory: AreasScreen.tsx */
+
+.areas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.areas-empty {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--text-m);
+}
+
+.areas-tree {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.areas-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.areas-name {
+  flex: 1;
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: var(--text-m);
+  text-align: left;
+  color: var(--text);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+}
+
+.areas-add-under {
+  width: var(--tap);
+  min-height: var(--tap);
+  font: inherit;
+  font-size: var(--text-l);
+  line-height: 1;
+  color: var(--text-dim);
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+}
+
+.areas-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.areas-label {
+  color: var(--text-dim);
+  font-size: var(--text-s);
+  font-weight: 550;
+}
+
+.areas-input {
+  min-height: var(--tap);
+  width: 100%;
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: var(--text-m);
+  color: var(--text);
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+}
+
+.areas-input:focus-visible,
+.areas-name:focus-visible,
+.areas-add-under:focus-visible,
+.areas-add-root:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.areas-form-buttons {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.areas-save,
+.areas-cancel,
+.areas-add-root {
+  flex: 1;
+  min-height: var(--tap);
+  font: inherit;
+  font-size: var(--text-m);
+  border-radius: var(--radius-s);
+  border: 1px solid var(--line);
+  background: var(--bg-sunken);
+  color: var(--text);
+}
+
+.areas-save {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.areas-save:disabled {
+  opacity: 0.5;
+}

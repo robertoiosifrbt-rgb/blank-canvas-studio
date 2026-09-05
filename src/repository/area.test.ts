@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { fromRow, pathOf, treeOf } from './area'
+import { countUnder, fromRow, pathOf, treeOf } from './area'
 import type { Area } from './area'
 
 const GOOD_ROW = {
@@ -91,5 +91,30 @@ describe('pathOf', () => {
 
   it('gives back nothing for an area that is not there', () => {
     expect(pathOf([area('b')], 'gone')).toBe('')
+  })
+})
+
+describe('countUnder', () => {
+  const areas = [
+    area('b', { name: 'Business' }),
+    area('s', { name: 'Self-employed', parent_id: 'b' }),
+    area('d', { name: 'MultiApp Delivery', parent_id: 's' }),
+    area('h', { name: 'Home' }),
+  ]
+
+  it('counts every depth below, not only the children', () => {
+    expect(countUnder(areas, 'b')).toBe(2)
+    expect(countUnder(areas, 's')).toBe(1)
+  })
+
+  it('counts nothing under a leaf, or under an area that is not there', () => {
+    expect(countUnder(areas, 'd')).toBe(0)
+    expect(countUnder(areas, 'h')).toBe(0)
+    expect(countUnder(areas, 'gone')).toBe(0)
+  })
+
+  it('stops at the next branch instead of running into it', () => {
+    // Home follows the Business branch in the walk; it is not under it.
+    expect(countUnder(areas, 'b')).toBe(2)
   })
 })

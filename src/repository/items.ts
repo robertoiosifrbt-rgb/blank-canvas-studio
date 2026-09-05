@@ -25,7 +25,7 @@ export type { SyncResult } from './sync'
 export type { ExportFile } from './export'
 export { Conflict, isItemConflict } from './write'
 export type { Area, AreaPatch } from './area'
-export { pathOf, treeOf } from './area'
+export { countUnder, pathOf, treeOf } from './area'
 export {
   areasOf,
   createArea,

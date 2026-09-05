@@ -10,7 +10,13 @@ import {
   syncAccount,
   update as updateItem,
 } from '../repository/items'
-import type { Item, Patch } from '../repository/items'
+import {
+  areasOf,
+  createArea,
+  discardArea,
+  updateArea,
+} from '../repository/items'
+import type { Area, Item, Patch } from '../repository/items'
 import { downloadText } from '../ui/download'
 
 /**
@@ -31,6 +37,7 @@ export type Unsaved = { item: Item; patch: Patch; reason: string }
 
 export type ItemsHandle = {
   items: Item[]
+  areas: Area[]
   loading: boolean
   sync: SyncState
   unsaved: Unsaved[]
@@ -40,6 +47,9 @@ export type ItemsHandle = {
   discard: (item: Item) => Promise<void>
   retry: (itemId: string) => Promise<void>
   download: () => Promise<void>
+  addArea: (name: string, parent_id: string | null) => Promise<void>
+  renameArea: (area: Area, name: string) => Promise<void>
+  dropArea: (area: Area) => Promise<void>
 }
 
 function reasonOf(error: unknown): string {
@@ -55,13 +65,18 @@ function reasonOf(error: unknown): string {
  */
 export function useItems(owner: string): ItemsHandle {
   const [items, setItems] = useState<Item[]>([])
+  const [areas, setAreas] = useState<Area[]>([])
   const [loading, setLoading] = useState(true)
   const [sync, setSync] = useState<SyncState>({ kind: 'never' })
   const [unsaved, setUnsaved] = useState<Unsaved[]>([])
   const [round, setRound] = useState(0)
 
   const reload = useCallback(async () => {
-    setItems(await all(owner))
+    // Both, together: an item names an area, so a screen holding a fresh item
+    // and a stale area list would show a row pointing nowhere.
+    const [freshItems, freshAreas] = await Promise.all([all(owner), areasOf(owner)])
+    setItems(freshItems)
+    setAreas(freshAreas)
   }, [owner])
 
   useEffect(() => {
@@ -69,9 +84,13 @@ export function useItems(owner: string): ItemsHandle {
 
     const run = async () => {
       try {
-        const cached = await all(owner)
+        const [cachedItems, cachedAreas] = await Promise.all([
+          all(owner),
+          areasOf(owner),
+        ])
         if (active) {
-          setItems(cached)
+          setItems(cachedItems)
+          setAreas(cachedAreas)
           setLoading(false)
         }
       } catch (error) {
@@ -86,9 +105,13 @@ export function useItems(owner: string): ItemsHandle {
       if (active) setSync({ kind: 'syncing' })
       try {
         const result = await syncAccount(owner)
-        const fresh = await all(owner)
+        const [freshItems, freshAreas] = await Promise.all([
+          all(owner),
+          areasOf(owner),
+        ])
         if (active) {
-          setItems(fresh)
+          setItems(freshItems)
+          setAreas(freshAreas)
           setSync({ kind: 'synced', at: new Date(), fetched: result.fetched })
         }
       } catch (error) {
@@ -115,7 +138,7 @@ export function useItems(owner: string): ItemsHandle {
    * direction is not believed in the other.
    */
   const write = useCallback(
-    async (body: () => Promise<Item>) => {
+    async (body: () => Promise<unknown>) => {
       try {
         await body()
       } catch (error) {
@@ -150,6 +173,7 @@ export function useItems(owner: string): ItemsHandle {
 
   return {
     items,
+    areas,
     loading,
     sync,
     unsaved,
@@ -187,5 +211,13 @@ export function useItems(owner: string): ItemsHandle {
       const file = await exportAll(owner, new Date())
       downloadText(file.name, file.contents)
     },
+
+    // The area writes go through the same `write`: a conflict on an area is
+    // still a write that did not happen, and the caller still has to hear it.
+    addArea: (name, parent_id) => write(() => createArea(owner, name, parent_id)),
+
+    renameArea: (area, name) => write(() => updateArea(owner, area, { name })),
+
+    dropArea: (area) => write(() => discardArea(owner, area, new Date())),
   }
 }

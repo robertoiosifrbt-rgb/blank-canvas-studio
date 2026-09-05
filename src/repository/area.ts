@@ -84,6 +84,28 @@ export function treeOf(areas: readonly Area[]): { area: Area; depth: number }[] 
   return ordered
 }
 
+/**
+ * How many living areas hang under this one, at any depth.
+ *
+ * Read off the same walk that draws the tree rather than counted separately:
+ * two ways of asking "what is under this" is how a warning ends up naming a
+ * different number from the list it warns about.
+ */
+export function countUnder(areas: readonly Area[], id: string): number {
+  const rows = treeOf(areas)
+  const start = rows.findIndex((row) => row.area.id === id)
+  if (start === -1) return 0
+  // The walk is depth first, so everything under an area sits right after it,
+  // until the depth comes back to its own.
+  const depth = rows[start]?.depth ?? 0
+  let count = 0
+  for (let at = start + 1; at < rows.length; at += 1) {
+    if ((rows[at]?.depth ?? 0) <= depth) break
+    count += 1
+  }
+  return count
+}
+
 /** The path to an area, root first: 'Business › Self-employed › Delivery'. */
 export function pathOf(areas: readonly Area[], id: string): string {
   const byId = new Map(areas.map((area) => [area.id, area]))
