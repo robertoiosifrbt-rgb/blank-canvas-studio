@@ -56,11 +56,57 @@ function optionalText(
   return value
 }
 
+const DAY = /^(\d{4})-(\d{2})-(\d{2})$/
+
+/**
+ * Whether the text is a real calendar day, as 'YYYY-MM-DD'.
+ *
+ * The shape is not enough: '2026-02-31' has the shape and is not a day. A
+ * date column can never hold one, so a row carrying one did not come from the
+ * database as it stands.
+ */
+export function isDay(text: string): boolean {
+  const match = DAY.exec(text)
+  if (match === null) return false
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  // Noon UTC: far enough from midnight that nothing can shift the day.
+  const at = new Date(Date.UTC(year, month - 1, day, 12))
+  return (
+    at.getUTCFullYear() === year &&
+    at.getUTCMonth() === month - 1 &&
+    at.getUTCDate() === day
+  )
+}
+
+function optionalDay(row: Record<string, unknown>, key: string): string | null {
+  const value = optionalText(row, key)
+  if (value !== null && !isDay(value)) {
+    throw new Error(`${key} is not a day: ${value}`)
+  }
+  return value
+}
+
+function requiredMoment(row: Record<string, unknown>, key: string): string {
+  const value = requiredText(row, key)
+  if (Number.isNaN(Date.parse(value))) {
+    throw new Error(`${key} is not a moment in time: ${value}`)
+  }
+  return value
+}
+
 /**
  * A row that came from the server, checked.
  *
  * A partial answer is never treated as the whole truth: a row missing a field
  * does not enter the cache as half an item.
+ *
+ * It asks of a row exactly what the database asks of it, and for a reason
+ * beyond tidiness: the same check decides whether a cache is worth keeping. A
+ * check that lets a broken row through declares that cache good, so the
+ * rebuild never runs, and the row goes on to break a screen somewhere far from
+ * where it came in.
  */
 export function fromRow(row: unknown): Item {
   if (typeof row !== 'object' || row === null) {
@@ -76,22 +122,35 @@ export function fromRow(row: unknown): Item {
     throw new Error(`Unknown kind: ${kind}`)
   }
 
+  // The constraint goes both ways in the database, so it goes both ways here:
+  // not only "no leaving the inbox without a kind", but "in the inbox there is
+  // no kind" — otherwise the state and the kind can contradict each other.
+  if ((state === 'inbox') !== (kind === null)) {
+    throw new Error(`State ${state} does not go with kind ${kind ?? 'null'}`)
+  }
+
   const version = raw['version']
   if (typeof version !== 'number' || !Number.isInteger(version)) {
     throw new Error('Row without version')
   }
+  // The trigger writes 1 on insert and adds one on every update. Nothing the
+  // database produces is below that.
+  if (version < 1) throw new Error(`Version below one: ${version}`)
+
+  const title = requiredText(raw, 'title')
+  if (title.trim() === '') throw new Error('Title of nothing but spaces')
 
   return {
     id: requiredText(raw, 'id'),
     owner: requiredText(raw, 'owner'),
     kind: kind as Kind | null,
     state: state as State,
-    title: requiredText(raw, 'title'),
-    due: optionalText(raw, 'due'),
-    done_at: optionalText(raw, 'done_at'),
+    title,
+    due: optionalDay(raw, 'due'),
+    done_at: optionalDay(raw, 'done_at'),
     version,
-    created_at: requiredText(raw, 'created_at'),
-    updated_at: requiredText(raw, 'updated_at'),
+    created_at: requiredMoment(raw, 'created_at'),
+    updated_at: requiredMoment(raw, 'updated_at'),
     deleted_at: optionalText(raw, 'deleted_at'),
   }
 }
