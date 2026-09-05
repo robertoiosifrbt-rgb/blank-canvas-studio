@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 
+import { AreasScreen } from '../screens/areas/AreasScreen'
 import { CalendarScreen } from '../screens/calendar/CalendarScreen'
 import { TodayScreen } from '../screens/today/TodayScreen'
 
@@ -18,6 +19,7 @@ export type Screen = {
 export const SCREENS: readonly Screen[] = [
   { path: '/today', label: 'Today', element: <TodayScreen /> },
   { path: '/calendar', label: 'Calendar', element: <CalendarScreen /> },
+  { path: '/areas', label: 'Areas', element: <AreasScreen /> },
 ]
 
 /** Where you land from `/` and from any URL that does not exist. */
