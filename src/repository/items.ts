@@ -6,10 +6,11 @@ import { currentSession } from './auth'
 import type { Session } from './auth'
 import { exportFile } from './export'
 import type { ExportFile } from './export'
-import { localToday } from './item'
+import { fromRow as fromAreaRow } from './area'
+import { fromRow as fromItemRow, localToday } from './item'
 import type { Item, Patch } from './item'
 import { supabaseSource, supabaseWriter } from './source'
-import { store } from './store'
+import { areaStore, store } from './store'
 import { sync } from './sync'
 import type { SyncResult } from './sync'
 import { applyPatch, create, softDelete } from './write'
@@ -22,7 +23,19 @@ export { localToday } from './item'
 export type { CalendarDay, TodayGroups } from './filters'
 export type { SyncResult } from './sync'
 export type { ExportFile } from './export'
-export { Conflict } from './write'
+export { Conflict, isItemConflict } from './write'
+export type { Area, AreaPatch } from './area'
+export { pathOf, treeOf } from './area'
+export {
+  areasOf,
+  createArea,
+  discardArea,
+  updateArea,
+} from './areas'
+
+/** The two synced tables, named once. */
+export const ITEMS = 'items'
+export const AREAS = 'areas'
 
 /**
  * Checks that the requested namespace really belongs to the user signed in
@@ -44,10 +57,28 @@ async function requireAccount(owner: string): Promise<void> {
   assertAccount(owner, await currentSession())
 }
 
-/** Fetches what changed and puts it in the cache. The first time, everything. */
+/**
+ * Fetches what changed and puts it in the cache. The first time, everything.
+ *
+ * Two tables, two cursors, one sync — because "is it up to date?" is a
+ * question about the account, not about a table. Areas go first: an item can
+ * name an area, so arriving in the other order shows, for a moment, an item
+ * pointing at an area this device has never heard of.
+ *
+ * They are reported as one. A count split in two would have to be explained
+ * on every screen that shows it, and no screen cares which table a row was in.
+ */
 export async function syncAccount(owner: string): Promise<SyncResult> {
   await requireAccount(owner)
-  return sync(owner, supabaseSource(), store)
+  const areas = await sync(owner, supabaseSource(AREAS), areaStore, fromAreaRow)
+  const items = await sync(owner, supabaseSource(ITEMS), store, fromItemRow)
+  return {
+    // A full snapshot of either table is a full sync: something was rebuilt
+    // from nothing, and that is what the word has to keep meaning.
+    kind: areas.kind === 'full' || items.kind === 'full' ? 'full' : 'delta',
+    fetched: areas.fetched + items.fetched,
+    cursor: items.cursor,
+  }
 }
 
 /** Everything cached for this account, deleted rows included. */
@@ -59,7 +90,7 @@ export async function all(owner: string): Promise<Item[]> {
 /** Capture: a title, nothing else. */
 export async function capture(owner: string, title: string): Promise<Item> {
   await requireAccount(owner)
-  return cache(owner, await create(supabaseWriter(owner), title))
+  return cache(owner, await create(supabaseWriter(ITEMS, owner), title))
 }
 
 /** Changes an item, with a version check. Throws Conflict if it will not hold. */
@@ -72,7 +103,7 @@ export async function update(
   await requireAccount(owner)
   return cache(
     owner,
-    await applyPatch(supabaseWriter(owner), item, patch, localToday(now)),
+    await applyPatch(supabaseWriter(ITEMS, owner), item, patch, localToday(now)),
   )
 }
 
@@ -81,7 +112,7 @@ export async function discard(owner: string, item: Item, now: Date): Promise<Ite
   await requireAccount(owner)
   return cache(
     owner,
-    await softDelete(supabaseWriter(owner), item, now, localToday(now)),
+    await softDelete(supabaseWriter(ITEMS, owner), item, now, localToday(now)),
   )
 }
 

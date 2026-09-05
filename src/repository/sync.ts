@@ -5,8 +5,7 @@
 // changed", not "empty the cache". A partial answer is never treated as the
 // whole truth.
 
-import { fromRow } from './item'
-import type { Item } from './item'
+import type { Row } from './row'
 import type { Store } from './store'
 
 /** Supabase returns at most 1000 rows per request by default. */
@@ -37,12 +36,16 @@ export type SyncResult = {
  * Without pagination, "it fetches everything" becomes false at the 1001st item
  * — and it becomes false silently, which is worse.
  */
-async function fetchAll(source: Source, sinceCursor: string | null): Promise<Item[]> {
-  const items: Item[] = []
+async function fetchAll<T extends Row>(
+  source: Source,
+  parse: (row: unknown) => T,
+  sinceCursor: string | null,
+): Promise<T[]> {
+  const rows: T[] = []
   for (let from = 0; ; from += PAGE) {
-    const rows = await source.page({ from, to: from + PAGE - 1, sinceCursor })
-    for (const row of rows) items.push(fromRow(row))
-    if (rows.length < PAGE) return items
+    const page = await source.page({ from, to: from + PAGE - 1, sinceCursor })
+    for (const row of page) rows.push(parse(row))
+    if (page.length < PAGE) return rows
   }
 }
 
@@ -52,15 +55,15 @@ async function fetchAll(source: Source, sinceCursor: string | null): Promise<Ite
  * The cursor comes from the server, never from the phone's clock: it is the
  * very value the database wrote through the trigger.
  */
-export function newest(items: readonly Item[]): string | null {
+export function newest(rows: readonly Row[]): string | null {
   let cursor: string | null = null
   let best = -Infinity
-  for (const item of items) {
-    const at = Date.parse(item.updated_at)
-    if (Number.isNaN(at)) throw new Error(`Invalid updated_at: ${item.updated_at}`)
+  for (const row of rows) {
+    const at = Date.parse(row.updated_at)
+    if (Number.isNaN(at)) throw new Error(`Invalid updated_at: ${row.updated_at}`)
     if (at > best) {
       best = at
-      cursor = item.updated_at
+      cursor = row.updated_at
     }
   }
   return cursor
@@ -72,32 +75,33 @@ export function newest(items: readonly Item[]): string | null {
  * Any failure while fetching is thrown before the cache is touched: a failed
  * fetch must not damage what was already good.
  */
-export async function sync(
+export async function sync<T extends Row>(
   owner: string,
   source: Source,
-  store: Store,
+  store: Store<T>,
+  parse: (row: unknown) => T,
 ): Promise<SyncResult> {
   const previousCursor = await usableCursor(owner, store)
 
   if (previousCursor === null) {
     // First time on this account: a full snapshot.
-    const items = await fetchAll(source, null)
-    const cursor = newest(items)
+    const rows = await fetchAll(source, parse, null)
+    const cursor = newest(rows)
     // A complete, successful snapshot replaces the cache even if it is empty —
     // empty can be legitimate, you deleted your last item.
-    await store.replaceSnapshot(owner, items, cursor)
-    return { kind: 'full', fetched: items.length, cursor }
+    await store.replaceSnapshot(owner, rows, cursor)
+    return { kind: 'full', fetched: rows.length, cursor }
   }
 
   // The cursor is inclusive on purpose, not clever: because the upsert is
   // idempotent, a row fetched twice breaks nothing. That is how the problem of
   // two changes sharing an updated_at disappears, without a compound cursor.
-  const items = await fetchAll(source, previousCursor)
-  const nextCursor = newest(items)
+  const rows = await fetchAll(source, parse, previousCursor)
+  const nextCursor = newest(rows)
   // Upsert row by row. It replaces nothing, so an empty delta leaves the cache
   // exactly as it was.
-  await store.upsert(owner, items, nextCursor)
-  return { kind: 'delta', fetched: items.length, cursor: nextCursor ?? previousCursor }
+  await store.upsert(owner, rows, nextCursor)
+  return { kind: 'delta', fetched: rows.length, cursor: nextCursor ?? previousCursor }
 }
 
 /**
@@ -113,7 +117,10 @@ export async function sync(
  * row is never touched, readAll keeps throwing, and every open fails the same
  * way with no way out but clearing the browser's storage by hand.
  */
-async function usableCursor(owner: string, store: Store): Promise<string | null> {
+async function usableCursor<T extends Row>(
+  owner: string,
+  store: Store<T>,
+): Promise<string | null> {
   try {
     const cursor = await store.cursor(owner)
     if (cursor === null) return null

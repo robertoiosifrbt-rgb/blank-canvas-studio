@@ -1,0 +1,99 @@
+// The shape of an area: a name, and the area it hangs under.
+//
+// The field names are the column names, like everywhere else in the
+// repository. A second vocabulary for the same thing is a place for mistakes
+// to hide.
+
+import { asRecord, optionalText, requiredText, stampsOf } from './row'
+import type { Row } from './row'
+
+export type Area = Row & {
+  /** Null is a root. Business has no parent; MultiApp Delivery has one. */
+  parent_id: string | null
+  name: string
+}
+
+/**
+ * What a client is allowed to change.
+ *
+ * Exactly the column list in `grant update` — id, owner, version, created_at
+ * and updated_at are absent because the database refuses them anyway. Here
+ * the type refuses them earlier.
+ */
+export type AreaPatch = Partial<Pick<Area, 'name' | 'parent_id' | 'deleted_at'>>
+
+/**
+ * An area row, checked exactly as the database checks it.
+ *
+ * The same function decides whether a cached area is worth keeping, so a
+ * check that lets a broken row through declares the cache good, the rebuild
+ * never runs, and the row goes on to break the tree somewhere far from here.
+ */
+export function fromRow(row: unknown): Area {
+  const raw = asRecord(row)
+
+  const id = requiredText(raw, 'id')
+  const name = requiredText(raw, 'name')
+  if (name.trim() === '') throw new Error('Area named nothing but spaces')
+
+  const parent_id = optionalText(raw, 'parent_id')
+  // The one-hop loop, refused by a check constraint in the database and
+  // therefore refused here too: a row carrying it did not come from there.
+  if (parent_id === id) throw new Error(`Area ${id} is its own parent`)
+
+  return {
+    id,
+    owner: requiredText(raw, 'owner'),
+    parent_id,
+    name,
+    ...stampsOf(raw),
+  }
+}
+
+/**
+ * The areas of a tree, deepest path first, each with how deep it sits.
+ *
+ * The screens need the tree as a list they can render in order, and walking
+ * it is the kind of thing that gets written three slightly different ways if
+ * it is not written once. Deleted areas are left out, and so is anything that
+ * hangs under one: an area whose parent is gone has nowhere to be shown.
+ *
+ * A row whose parent is missing from the list is dropped rather than raised to
+ * the root. Silently reparenting is how a tree starts lying about itself.
+ */
+export function treeOf(areas: readonly Area[]): { area: Area; depth: number }[] {
+  const alive = areas.filter((area) => area.deleted_at === null)
+  const children = new Map<string | null, Area[]>()
+  for (const area of alive) {
+    const siblings = children.get(area.parent_id) ?? []
+    siblings.push(area)
+    children.set(area.parent_id, siblings)
+  }
+  for (const siblings of children.values()) {
+    siblings.sort((one, other) => one.name.localeCompare(other.name))
+  }
+
+  const ordered: { area: Area; depth: number }[] = []
+  const walk = (parent: string | null, depth: number) => {
+    for (const area of children.get(parent) ?? []) {
+      ordered.push({ area, depth })
+      walk(area.id, depth + 1)
+    }
+  }
+  walk(null, 0)
+  return ordered
+}
+
+/** The path to an area, root first: 'Business › Self-employed › Delivery'. */
+export function pathOf(areas: readonly Area[], id: string): string {
+  const byId = new Map(areas.map((area) => [area.id, area]))
+  const names: string[] = []
+  let at = byId.get(id)
+  // The database refuses cycles, and 64 is the depth it refuses beyond. This
+  // stops at the same place rather than trusting that it did.
+  for (let hops = 0; at !== undefined && hops <= 64; hops += 1) {
+    names.unshift(at.name)
+    at = at.parent_id === null ? undefined : byId.get(at.parent_id)
+  }
+  return names.join(' › ')
+}
