@@ -5,6 +5,7 @@ import './MonthMoney.css'
 
 type Props = {
   month: string
+  onOpenReserves: () => void
   items: Item[]
   shifts: Shift[]
   expenses: Expense[]
@@ -22,7 +23,14 @@ type Props = {
  * not a month that earned nothing; it is a month you have not written down,
  * and a row of zeroes says the wrong one of those.
  */
-export function MonthMoney({ month, items, shifts, expenses, reserves }: Props) {
+export function MonthMoney({
+  month,
+  items,
+  shifts,
+  expenses,
+  reserves,
+  onOpenReserves,
+}: Props) {
   const sum = periodMoney({ items, shifts, expenses, reserves, ...monthRange(month) })
   if (sum.shifts === 0 && sum.spentPence === 0) return null
 
@@ -43,8 +51,20 @@ export function MonthMoney({ month, items, shifts, expenses, reserves }: Props) 
           <dt>Profit</dt>
           <dd>{pounds(sum.profitPence)}</dd>
         </div>
+        {/* The one row you would want to change while looking at it, so it
+            is the way in. A button rather than a link somewhere else: the bar
+            has room for three screens and the header for two tools. */}
         <div className="money-row">
-          <dt>Put aside</dt>
+          <dt>
+            <button
+              type="button"
+              name="reserves"
+              className="money-open"
+              onClick={onOpenReserves}
+            >
+              Put aside
+            </button>
+          </dt>
           <dd>{sum.missingRates ? '—' : `−${pounds(reserve)}`}</dd>
         </div>
         <div className="money-row money-row-left">
@@ -60,7 +80,7 @@ export function MonthMoney({ month, items, shifts, expenses, reserves }: Props) 
 
       {sum.missingRates && (
         <p className="money-note">
-          No percentages set — open <strong>Put aside</strong> in the header.
+          No percentages set yet — tap <strong>Put aside</strong> above.
         </p>
       )}
 

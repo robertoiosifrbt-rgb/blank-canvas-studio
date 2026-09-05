@@ -9,7 +9,6 @@ type Props = {
   sync: SyncState
   onResync: () => void
   onDownload: () => void
-  onReserves: () => void
   onSignOut: () => void
   error: string | null
 }
@@ -20,7 +19,6 @@ export function ShellHeader({
   sync,
   onResync,
   onDownload,
-  onReserves,
   onSignOut,
   error,
 }: Props) {
@@ -47,11 +45,8 @@ export function ShellHeader({
         >
           {label.text}
         </button>
-        <button className="head-button" type="button" name="reserves" onClick={onReserves}>
-          Put aside
-        </button>
         <button className="head-button" type="button" name="download" onClick={onDownload}>
-          Download
+          Download everything
         </button>
       </div>
 
