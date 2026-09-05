@@ -81,6 +81,12 @@ export function TodayScreen() {
     data.unsaved.find((u) => u.item.id === item.id)?.reason
 
   const shared = { today, unsavedFor, onOpen: openItem }
+
+  // The day's shift, if there is one. Not a group of its own in the list —
+  // it is a single thing, and it has its own way in.
+  const todaysShift = data.items.find(
+    (item) => item.kind === 'shift' && item.due === today && item.deleted_at === null,
+  )
   const nothing =
     groups.inbox.length === 0 &&
     groups.today.length === 0 &&
@@ -96,6 +102,20 @@ export function TodayScreen() {
           Nothing for today. Write a line and it lands in the Inbox.
         </p>
       )}
+
+      {/* One button, whichever state the day is in. A driver opening this
+          at six in the morning and at eleven at night wants the same tap. */}
+      <button
+        type="button"
+        name="shift"
+        className="today-shift"
+        onClick={() => {
+          if (todaysShift === undefined) void data.startShift(today, null)
+          else openItem(todaysShift)
+        }}
+      >
+        {todaysShift === undefined ? "Start today's shift" : "Today's shift"}
+      </button>
 
       <Group heading="Inbox" items={groups.inbox} {...shared} />
       <Group heading="Today" items={groups.today} {...shared} />

@@ -14,5 +14,8 @@ export function headingFor(item: Item): string {
   if (item.state === 'inbox') return 'What is this?'
   const done = item.state === 'done'
   if (item.kind === 'letter') return done ? 'Letter, answered' : 'Letter'
+  // A shift is not done or undone the way a task is — it is a day that
+  // happened. What it needs saying about it is on its own sheet.
+  if (item.kind === 'shift') return 'Shift'
   return done ? 'Task, done' : 'Task'
 }

@@ -14,7 +14,7 @@ import { syncShifts } from './shifts'
 import { areaStore, store } from './store'
 import { sync } from './sync'
 import type { SyncResult } from './sync'
-import { applyPatch, create, softDelete } from './write'
+import { applyPatch, create, createShift as createShiftRow, softDelete } from './write'
 
 export type { Item, Patch } from './item'
 // The filters live here, in one place; the screens call them over the snapshot
@@ -112,6 +112,16 @@ export async function all(owner: string): Promise<Item[]> {
 export async function capture(owner: string, title: string): Promise<Item> {
   await requireAccount(owner)
   return cache(owner, await create(supabaseWriter(ITEMS, owner), title))
+}
+
+/** A day worked, as an item. The numbers hang off it afterwards. */
+export async function createShift(
+  owner: string,
+  day: string,
+  area_id: string | null,
+): Promise<Item> {
+  await requireAccount(owner)
+  return cache(owner, await createShiftRow(supabaseWriter(ITEMS, owner), day, area_id))
 }
 
 /** Changes an item, with a version check. Throws Conflict if it will not hold. */

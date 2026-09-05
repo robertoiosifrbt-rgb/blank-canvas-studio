@@ -54,6 +54,29 @@ export async function create(writer: Writer<Patch>, title: string): Promise<Item
 }
 
 /**
+ * A shift's anchor: made already processed, on the day it was worked.
+ *
+ * Not a capture. What you write on the phone is something you do not yet know
+ * the shape of; a day you drove is not that — you know exactly what it is,
+ * and the inbox would be a step that asks a question already answered.
+ */
+export async function createShift(
+  writer: Writer<Patch>,
+  day: string,
+  area_id: string | null,
+): Promise<Item> {
+  return fromRow(
+    await writer.insert({
+      title: 'Shift',
+      kind: 'shift',
+      state: 'active',
+      due: day,
+      area_id,
+    }),
+  )
+}
+
+/**
  * Applies a patch, with a single retry over the new version.
  *
  * The patch is only the changed fields. Otherwise the phone changing due would
