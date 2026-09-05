@@ -27,6 +27,8 @@ export const AMOUNTS = [
   'employment',
   'employment_tax_paid',
   'dividends',
+  'poa_threshold',
+  'paid_on_account',
 ] as const
 
 /** Every rate the year holds, as a percentage. */
@@ -99,6 +101,7 @@ export function figuresOf(year: TaxYearPatch): TaxFigures {
     dividendBasicPct: year.dividend_basic_pct,
     dividendHigherPct: year.dividend_higher_pct,
     dividendAdditionalPct: year.dividend_additional_pct,
+    poaThresholdPence: pence(year.poa_threshold),
     class2SmallProfitsPence: pence(year.class2_small_profits),
     class2YearPence: pence(year.class2_year),
     class4FromPence: pence(year.class4_from),
@@ -120,5 +123,6 @@ export function incomeOf(year: TaxYearPatch, tradingPence: number): Income {
     employmentPence: pence(year.employment),
     employmentTaxPaidPence: pence(year.employment_tax_paid),
     dividendsPence: pence(year.dividends),
+    paidOnAccountPence: pence(year.paid_on_account),
   }
 }

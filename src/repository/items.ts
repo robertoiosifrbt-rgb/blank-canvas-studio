@@ -51,8 +51,8 @@ export { taxBill } from './hmrc'
 export type { Income, TaxBill, TaxFigures } from './hmrc'
 export { AMOUNTS, RATES, figuresOf, incomeOf, yearIn } from './hmrc-year'
 export type { Figure, TaxYearPatch, TaxYearRow } from './hmrc-year'
-export { taxYearOf } from './taxyear'
-export type { TaxYear } from './taxyear'
+export { dueDates, taxYearOf } from './taxyear'
+export type { DueDates, TaxYear } from './taxyear'
 export type { TakeHome } from './takehome'
 export {
   earnedPence,

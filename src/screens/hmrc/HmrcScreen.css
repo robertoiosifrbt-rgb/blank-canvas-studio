@@ -126,3 +126,28 @@
 .hmrc-offer strong {
   color: var(--text);
 }
+
+.hmrc-when {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.hmrc-when div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.hmrc-when dt {
+  color: var(--text-dim);
+}
+
+.hmrc-when dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}

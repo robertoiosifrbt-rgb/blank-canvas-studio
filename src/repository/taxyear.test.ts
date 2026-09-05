@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { taxYearOf } from './taxyear'
+import { dueDates, taxYearOf } from './taxyear'
 
 describe('taxYearOf', () => {
   it('starts a year on 6 April', () => {
@@ -21,5 +21,16 @@ describe('taxYearOf', () => {
 
   it('keeps both digits when the century turns', () => {
     expect(taxYearOf('2099-06-01').label).toBe('2099/00')
+  })
+})
+
+describe('dueDates', () => {
+  it('wants the balance the January after the year closes', () => {
+    // 2026/27 ends on 5 April 2027, and is settled on 31 January 2028.
+    expect(dueDates(taxYearOf('2026-08-01')).balancing).toBe('2028-01-31')
+  })
+
+  it('wants the second instalment that July', () => {
+    expect(dueDates(taxYearOf('2026-08-01')).secondInstalment).toBe('2028-07-31')
   })
 })

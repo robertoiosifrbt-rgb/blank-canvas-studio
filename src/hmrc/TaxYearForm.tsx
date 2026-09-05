@@ -59,6 +59,11 @@ const GROUPS: readonly {
     fields: ['class4_from', 'class4_to', 'class4_main_pct', 'class4_upper_pct'],
   },
   {
+    title: 'Paying it',
+    note: 'The balance falls due the January after the year closes, with the first instalment towards the next year on the same day.',
+    fields: ['poa_threshold', 'paid_on_account'],
+  },
+  {
     title: 'National Insurance, Class 2',
     note: 'Not a bill. Below the small profits threshold the year stops counting towards a State Pension unless you volunteer this.',
     fields: ['class2_small_profits', 'class2_year'],
@@ -83,6 +88,8 @@ const NAMES: Record<string, string> = {
   dividend_additional_pct: 'Additional %',
   class4_from: 'Starts at',
   class4_to: 'Upper limit',
+  poa_threshold: 'Instalments start above',
+  paid_on_account: 'Already paid towards this year',
   class2_small_profits: 'Small profits threshold',
   class2_year: 'A full year costs',
   class4_main_pct: 'Main %',

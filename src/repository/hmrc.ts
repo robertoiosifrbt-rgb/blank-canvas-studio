@@ -45,6 +45,15 @@ export type TaxFigures = {
   /** What a full year of Class 2 costs, if you choose to pay it. */
   class2YearPence: number
 
+  /**
+   * Below this much still to find, HMRC asks for no payments on account.
+   *
+   * There is a second way out of them, and it is in the calculation rather
+   * than here: if four fifths of the bill was already taken at source, the
+   * instalments are not asked for either.
+   */
+  poaThresholdPence: number
+
   /** Class 4 National Insurance, paid on trading profit alone. */
   class4FromPence: number
   class4ToPence: number
@@ -62,6 +71,14 @@ export type Income = {
   employmentTaxPaidPence: number
   /** Dividends from a company, as received. */
   dividendsPence: number
+  /**
+   * What has already gone to HMRC in instalments towards this year.
+   *
+   * Set by last year's bill, not by this one, and paid before this year's
+   * numbers were known. The app has no record of it: those payments were made
+   * against a year it may never have seen.
+   */
+  paidOnAccountPence: number
 }
 
 export type TaxBill = {
@@ -81,8 +98,19 @@ export type TaxBill = {
   class2OfferedPence: number
   /** Everything owed for the year, before anything already paid. */
   totalDuePence: number
-  /** Owed less what PAYE has already taken. What to have ready. */
+  /** Owed less what PAYE has already taken. The year's own liability. */
   toFindPence: number
+  /** That, less the instalments already paid towards it. Due 31 January. */
+  balancingPence: number
+  /** Whether HMRC will ask for instalments towards the year that follows. */
+  instalmentsAsked: boolean
+  /**
+   * Each instalment towards next year: half of this year's liability.
+   *
+   * The first falls on the same 31 January as the balance above, so that day
+   * costs the balance plus half a year again. Zero when none are asked for.
+   */
+  instalmentPence: number
 }
 
 function pct(pence: number, percent: number): number {
@@ -155,6 +183,14 @@ export function taxBill(figures: TaxFigures, income: Income): TaxBill {
 
   const totalDuePence = incomeTaxPence + dividendTaxPence + class4Pence
 
+  const toFindPence = Math.max(0, totalDuePence - income.employmentTaxPaidPence)
+
+  // Two ways out of the instalments: a small enough bill, or a bill that was
+  // mostly collected at source already. Either one, and HMRC does not ask.
+  const mostlyAtSource =
+    totalDuePence > 0 && income.employmentTaxPaidPence * 100 >= totalDuePence * 80
+  const instalmentsAsked = toFindPence > figures.poaThresholdPence && !mostlyAtSource
+
   return {
     totalIncomePence,
     allowancePence,
@@ -165,6 +201,9 @@ export function taxBill(figures: TaxFigures, income: Income): TaxBill {
     totalDuePence,
     // PAYE has already handed over its part. Reserving it again would put
     // aside money that is not owed.
-    toFindPence: Math.max(0, totalDuePence - income.employmentTaxPaidPence),
+    toFindPence,
+    balancingPence: Math.max(0, toFindPence - income.paidOnAccountPence),
+    instalmentsAsked,
+    instalmentPence: instalmentsAsked ? Math.round(toFindPence / 2) : 0,
   }
 }

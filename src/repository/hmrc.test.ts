@@ -17,6 +17,7 @@ const FIGURES: TaxFigures = {
   dividendBasicPct: 8.75,
   dividendHigherPct: 33.75,
   dividendAdditionalPct: 39.35,
+  poaThresholdPence: 100_000,
   class2SmallProfitsPence: 675_000,
   class2YearPence: 17_940,
   class4FromPence: 1_257_000,
@@ -30,6 +31,7 @@ const NOTHING: Income = {
   employmentPence: 0,
   employmentTaxPaidPence: 0,
   dividendsPence: 0,
+  paidOnAccountPence: 0,
 }
 
 describe('taxBill', () => {
@@ -121,6 +123,56 @@ describe('taxBill', () => {
   it('offers nothing to a year with no trading at all', () => {
     const wages = taxBill(FIGURES, { ...NOTHING, employmentPence: 500_000 })
     expect(wages.class2OfferedPence).toBe(0)
+  })
+
+  it('asks for instalments once the bill is over the threshold', () => {
+    // £30,000 of profit leaves £4,531.80 to find, well over £1,000.
+    const bill = taxBill(FIGURES, { ...NOTHING, tradingPence: 3_000_000 })
+    expect(bill.instalmentsAsked).toBe(true)
+    expect(bill.instalmentPence).toBe(Math.round(bill.toFindPence / 2))
+  })
+
+  it('asks for none on a bill under the threshold', () => {
+    // £13,000 of profit: a few pounds over the allowance, and nothing like a
+    // thousand to find.
+    const bill = taxBill(FIGURES, { ...NOTHING, tradingPence: 1_300_000 })
+    expect(bill.instalmentsAsked).toBe(false)
+    expect(bill.instalmentPence).toBe(0)
+  })
+
+  it('asks for none when four fifths was taken at source', () => {
+    // An £80,000 wage that PAYE has nearly settled, and £2,000 of profit on
+    // top. Over £1,000 is still to find, but HMRC has had 94% of the bill
+    // already, so it does not ask for instalments as well.
+    const bill = taxBill(FIGURES, {
+      ...NOTHING,
+      employmentPence: 8_000_000,
+      employmentTaxPaidPence: 1_900_000,
+      tradingPence: 200_000,
+    })
+    expect(bill.toFindPence).toBeGreaterThan(FIGURES.poaThresholdPence)
+    expect(bill.instalmentsAsked).toBe(false)
+  })
+
+  it('takes the instalments already paid off what is left to settle', () => {
+    const owed = taxBill(FIGURES, { ...NOTHING, tradingPence: 3_000_000 })
+    const part = taxBill(FIGURES, {
+      ...NOTHING,
+      tradingPence: 3_000_000,
+      paidOnAccountPence: 200_000,
+    })
+    expect(part.balancingPence).toBe(owed.toFindPence - 200_000)
+    // What the year itself owes has not changed, only what is left to hand over.
+    expect(part.toFindPence).toBe(owed.toFindPence)
+  })
+
+  it('never asks for less than nothing when the instalments overshot', () => {
+    const bill = taxBill(FIGURES, {
+      ...NOTHING,
+      tradingPence: 3_000_000,
+      paidOnAccountPence: 9_000_000,
+    })
+    expect(bill.balancingPence).toBe(0)
   })
 
   it('is the same bill whichever module the income came from', () => {

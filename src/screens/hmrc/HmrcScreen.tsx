@@ -5,6 +5,7 @@ import {
   incomeOf,
   periodMoney,
   taxBill,
+  dueDates,
   taxYearOf,
   yearIn,
 } from '../../repository/items'
@@ -95,6 +96,36 @@ export function HmrcScreen() {
             <dt>To find</dt>
             <dd>{pounds(bill.toFindPence)}</dd>
           </div>
+        </dl>
+      )}
+
+      {/* When, not only how much. A first good year turns into a bad January
+          because the balance and half of the next year fall on the same day,
+          and somebody who put aside exactly what they owed is short. */}
+      {bill !== null && (
+        <dl className="hmrc-when" aria-label="When it is wanted">
+          <div className="hmrc-total">
+            <dt>{dueDates(year).balancing}</dt>
+            <dd>
+              {pounds(bill.balancingPence + bill.instalmentPence)}
+            </dd>
+          </div>
+          <div>
+            <dt>The year itself</dt>
+            <dd>{pounds(bill.balancingPence)}</dd>
+          </div>
+          {bill.instalmentsAsked && (
+            <>
+              <div>
+                <dt>Towards next year</dt>
+                <dd>{pounds(bill.instalmentPence)}</dd>
+              </div>
+              <div>
+                <dt>{dueDates(year).secondInstalment}</dt>
+                <dd>{pounds(bill.instalmentPence)}</dd>
+              </div>
+            </>
+          )}
         </dl>
       )}
 

@@ -14,6 +14,31 @@ export type TaxYear = {
   label: string
 }
 
+/** When the money is wanted for a year that has ended. */
+export type DueDates = {
+  /**
+   * The balance of the year, and the first instalment towards the next one.
+   * Both on the same day, which is what makes that January expensive.
+   */
+  balancing: string
+  /** The second instalment towards the year that follows. */
+  secondInstalment: string
+}
+
+/**
+ * The two days HMRC asks on, for a year that starts in April.
+ *
+ * Nearly ten months after the year closes, and by then the next one is most
+ * of the way through — which is why the January payment carries a piece of it.
+ */
+export function dueDates(year: TaxYear): DueDates {
+  const closes = Number(year.to.slice(0, 4))
+  return {
+    balancing: `${closes + 1}-01-31`,
+    secondInstalment: `${closes + 1}-07-31`,
+  }
+}
+
 /** The tax year a day falls in. Days are 'YYYY-MM-DD'. */
 export function taxYearOf(day: string): TaxYear {
   const year = Number(day.slice(0, 4))
