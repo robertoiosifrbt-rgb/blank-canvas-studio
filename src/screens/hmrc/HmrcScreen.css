@@ -1,0 +1,99 @@
+.hmrc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.hmrc-year {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--text-s);
+}
+
+.hmrc-sums,
+.hmrc-bill {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+}
+
+.hmrc-sums div,
+.hmrc-bill div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.hmrc-sums dt,
+.hmrc-bill dt {
+  color: var(--text-dim);
+}
+
+.hmrc-sums dd,
+.hmrc-bill dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.hmrc-total dt,
+.hmrc-total dd {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.hmrc-empty,
+.hmrc-note {
+  margin: 0;
+  color: var(--text-dim);
+}
+
+.hmrc-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.hmrc-heading {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-m);
+}
+
+.hmrc-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.hmrc-label {
+  color: var(--text-dim);
+}
+
+.hmrc-number {
+  width: 8rem;
+  padding: var(--space-2);
+  border: none;
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  color: var(--text);
+  font: inherit;
+  text-align: right;
+}
+
+.hmrc-error {
+  margin: 0;
+  color: var(--danger);
+}
+
+.hmrc-save {
+  padding: var(--space-3);
+  border: none;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: inherit;
+}

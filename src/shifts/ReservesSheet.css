@@ -65,3 +65,13 @@
 .reserve-save:disabled {
   opacity: 0.5;
 }
+
+.reserve-bill {
+  display: block;
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+  color: var(--text);
+  text-align: center;
+  text-decoration: none;
+}

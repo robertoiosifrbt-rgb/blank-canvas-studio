@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import type { Reserves } from '../repository/items'
 import { Sheet } from '../ui/Sheet'
@@ -89,13 +90,16 @@ export function ReservesSheet({ reserves, onSave, onClose }: Props) {
       </button>
 
       {/* Said plainly, because the number will look like a tax bill and is
-          not one. The first £12,570 of profit is not taxed, and National
-          Insurance drops above £50,270 — a flat percentage knows neither. */}
+          not one: a flat percentage knows nothing about an allowance, a band,
+          or a dividend. The bill that does is one tap away, so this says where
+          rather than sending anybody to find an accountant. */}
       <p className="reserve-warning">
-        These are estimates for putting money aside, not a tax calculation. A
-        flat percentage reserves too much early in the tax year and too little
-        late. Your accountant has the real numbers.
+        These are estimates for putting money aside, day by day. A flat
+        percentage reserves too much early in the tax year and too little late.
       </p>
+      <Link className="reserve-bill" to="/hmrc" onClick={onClose}>
+        What the year actually owes
+      </Link>
     </Sheet>
   )
 }

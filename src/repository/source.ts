@@ -207,6 +207,15 @@ export function supabaseSettingsWriter() {
       if (response.error !== null) fail('Writing the reserves', response.error)
       return response.data as unknown
     },
+    async saveTaxYear(values: Record<string, number | string>) {
+      const response = await supabase()
+        .from('reserves')
+        .upsert(values, { onConflict: 'owner' })
+        .select(ALL)
+        .single()
+      if (response.error !== null) fail("Writing the year's figures", response.error)
+      return response.data as unknown
+    },
     async saveCosts(values: {
       area_id: string
       fuel_per_km: number

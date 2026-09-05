@@ -1,6 +1,7 @@
 // The settings, as the screens ask for them.
 
 import { currentSession } from './auth'
+import type { TaxYearSettings } from './hmrc-year'
 import { reservesFromRow, runningCostsFromRow } from './settings'
 import type { Reserves, RunningCosts } from './settings'
 import { settingsStore } from './settings-store'
@@ -48,6 +49,33 @@ export async function saveReserves(
 ): Promise<void> {
   await requireAccount(owner)
   await supabaseSettingsWriter().saveReserves({ tax_pct, ni_pct })
+  await syncSettings(owner)
+}
+
+/**
+ * The year's figures and the income typed by hand, saved together.
+ *
+ * All of them at once, because a bill worked out from half of them is a number
+ * that looks like an answer with the expensive half missing.
+ *
+ * The two rough percentages come along for the ride. They are what a shift
+ * pins as it is written, they cannot be null in the database, and a person
+ * setting the year's figures for the first time has no row yet. Rather than
+ * invent a reserve, the basic rate and the main Class 4 rate stand in — the
+ * two figures that were just typed, and the right starting guess for a year
+ * spent inside the basic band.
+ */
+export async function saveTaxYear(
+  owner: string,
+  year: TaxYearSettings,
+  held: Reserves | null,
+): Promise<void> {
+  await requireAccount(owner)
+  await supabaseSettingsWriter().saveTaxYear({
+    ...year,
+    tax_pct: held?.tax_pct ?? year.basic_pct,
+    ni_pct: held?.ni_pct ?? year.class4_main_pct,
+  })
   await syncSettings(owner)
 }
 

@@ -18,11 +18,19 @@ import {
   removeSession as removeShiftSession,
   saveReserves,
   saveRunningCosts,
+  saveTaxYear,
   saveShift,
   setEarning,
   startSession,
 } from '../repository/items'
-import type { Category, Item, Platform, ShiftPatch } from '../repository/items'
+import type {
+  Category,
+  Item,
+  Platform,
+  Reserves,
+  ShiftPatch,
+  TaxYearSettings,
+} from '../repository/items'
 
 type Write = (body: () => Promise<unknown>) => Promise<void>
 
@@ -38,6 +46,7 @@ export type MoneyActions = {
   }) => Promise<void>
   unspend: (item: Item) => Promise<void>
   saveReserves: (tax_pct: number, ni_pct: number) => Promise<void>
+  saveTaxYear: (year: TaxYearSettings) => Promise<void>
   saveCosts: (
     area_id: string,
     fuel_per_km: number,
@@ -51,13 +60,19 @@ export type MoneyActions = {
   setPaid: (item_id: string, platform: Platform, amount: number) => Promise<void>
 }
 
-export function moneyActions(owner: string, write: Write): MoneyActions {
+export function moneyActions(
+  owner: string,
+  write: Write,
+  held: () => Reserves | null,
+): MoneyActions {
   return {
   unspend: (item) => write(() => removeExpense(owner, item, new Date())),
 
   spend: (what) => write(() => recordExpense(owner, what)),
 
   saveReserves: (tax_pct, ni_pct) => write(() => saveReserves(owner, tax_pct, ni_pct)),
+
+  saveTaxYear: (year) => write(() => saveTaxYear(owner, year, held())),
 
   saveCosts: (area_id, fuel_per_km, vehicle_per_km) =>
     write(() => saveRunningCosts(owner, area_id, fuel_per_km, vehicle_per_km)),

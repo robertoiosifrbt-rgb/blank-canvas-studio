@@ -237,7 +237,7 @@ export function useItems(owner: string): ItemsHandle {
 
     // The area writes go through the same `write`: a conflict on an area is
     // still a write that did not happen, and the caller still has to hear it.
-    ...moneyActions(owner, write),
+    ...moneyActions(owner, write, () => reserves),
 
     addArea: (name, parent_id) => write(() => createArea(owner, name, parent_id)),
 

@@ -2,6 +2,7 @@ import type { ReactElement } from 'react'
 
 import { AreaScreen } from '../screens/area/AreaScreen'
 import { AreasScreen } from '../screens/areas/AreasScreen'
+import { HmrcScreen } from '../screens/hmrc/HmrcScreen'
 import { CalendarScreen } from '../screens/calendar/CalendarScreen'
 import { TodayScreen } from '../screens/today/TodayScreen'
 
@@ -32,6 +33,7 @@ export const SCREENS: readonly Screen[] = [
  */
 export const INSIDE: readonly Screen[] = [
   { path: '/areas/:id', label: '', element: <AreaScreen /> },
+  { path: '/hmrc', label: '', element: <HmrcScreen /> },
 ]
 
 /** Where you land from `/` and from any URL that does not exist. */

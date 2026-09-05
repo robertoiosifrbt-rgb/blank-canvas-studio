@@ -9,6 +9,8 @@
 // running-costs row per area — a handful, fetched whole on every sync. They do
 // carry a version, because two devices editing one setting is a real thing.
 
+import { yearFromRow } from './hmrc-year'
+import type { TaxYearSettings } from './hmrc-year'
 import { asRecord, optionalNumber, requiredText, stampsOf } from './row'
 import type { Row } from './row'
 
@@ -16,6 +18,15 @@ import type { Row } from './row'
 export type Reserves = Omit<Row, 'id'> & {
   tax_pct: number
   ni_pct: number
+  /**
+   * The year's figures and the income the app holds no module for, or null
+   * until every one of them has been set.
+   *
+   * The two percentages above are the rough reserve a shift pins as it is
+   * written. This is the year's actual bill. They are different questions and
+   * they are answered in different places.
+   */
+  year: TaxYearSettings | null
 }
 
 /** What a kilometre costs, for one area. */
@@ -45,7 +56,13 @@ export function reservesFromRow(row: unknown): Reserves {
   if (tax_pct + ni_pct > 100) {
     throw new Error(`Reserving more than there is: ${tax_pct} + ${ni_pct}`)
   }
-  return { owner: requiredText(raw, 'owner'), tax_pct, ni_pct, ...stampsOf(raw) }
+  return {
+    owner: requiredText(raw, 'owner'),
+    tax_pct,
+    ni_pct,
+    year: yearFromRow(row),
+    ...stampsOf(raw),
+  }
 }
 
 export function runningCostsFromRow(row: unknown): RunningCosts {

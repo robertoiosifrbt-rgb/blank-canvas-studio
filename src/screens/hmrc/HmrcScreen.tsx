@@ -1,0 +1,104 @@
+import { TaxYearForm } from '../../hmrc/TaxYearForm'
+import { useScreen } from '../../items/context'
+import {
+  figuresOf,
+  incomeOf,
+  periodMoney,
+  taxBill,
+  taxYearOf,
+} from '../../repository/items'
+import { pounds } from '../../shifts/money'
+import './HmrcScreen.css'
+
+/**
+ * The year, and what it owes.
+ *
+ * Not a reserve. A percentage of profit cannot know that the first slice is
+ * untaxed, that Class 4 stops climbing, or that a dividend pays no National
+ * Insurance at all — and it has never had anything to say about a wage.
+ *
+ * It reads every module rather than sitting inside one, because there is a
+ * single allowance for the whole person and where it lands changes the answer.
+ * Three sums, each right on its own, come to a wrong total.
+ */
+export function HmrcScreen() {
+  const { data, today } = useScreen()
+  const year = taxYearOf(today)
+
+  // The trading profit is the app's to know: every shift's takings, less what
+  // was actually spent earning them, over the tax year rather than the month.
+  const trading = periodMoney({
+    items: data.items,
+    shifts: data.shifts,
+    expenses: data.expenses,
+    reserves: data.reserves,
+    from: year.from,
+    to: year.to,
+  })
+
+  const settings = data.reserves?.year ?? null
+  const bill =
+    settings === null
+      ? null
+      : taxBill(figuresOf(settings), incomeOf(settings, trading.profitPence))
+
+  return (
+    <section className="hmrc">
+      <p className="hmrc-year">
+        {year.label} — {year.from} to {year.to}
+      </p>
+
+      <dl className="hmrc-sums" aria-label="What the year has brought in">
+        <div>
+          <dt>Made from work</dt>
+          <dd>{pounds(trading.grossPence)}</dd>
+        </div>
+        <div>
+          <dt>Spent on it</dt>
+          <dd>{pounds(trading.spentPence)}</dd>
+        </div>
+        <div>
+          <dt>Profit</dt>
+          <dd>{pounds(trading.profitPence)}</dd>
+        </div>
+      </dl>
+
+      {bill === null ? (
+        <p className="hmrc-empty">
+          No bill yet. It needs this year&rsquo;s figures, below — the
+          allowance, the bands and the rates. Until they are in, what is owed is
+          unknown, which is not the same as nothing.
+        </p>
+      ) : (
+        <dl className="hmrc-bill" aria-label="What the year owes">
+          <div>
+            <dt>Income tax</dt>
+            <dd>{pounds(bill.incomeTaxPence)}</dd>
+          </div>
+          <div>
+            <dt>Dividend tax</dt>
+            <dd>{pounds(bill.dividendTaxPence)}</dd>
+          </div>
+          <div>
+            <dt>Class 4</dt>
+            <dd>{pounds(bill.class4Pence)}</dd>
+          </div>
+          <div className="hmrc-total">
+            <dt>Owed for the year</dt>
+            <dd>{pounds(bill.totalDuePence)}</dd>
+          </div>
+          <div className="hmrc-total">
+            <dt>To find</dt>
+            <dd>{pounds(bill.toFindPence)}</dd>
+          </div>
+        </dl>
+      )}
+
+      <TaxYearForm
+        year={settings}
+        label={year.label}
+        onSave={(next) => data.saveTaxYear(next)}
+      />
+    </section>
+  )
+}
