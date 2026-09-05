@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 
 import { CaptureSheet } from '../items/CaptureSheet'
@@ -27,6 +27,12 @@ export function AppShell({ session }: Props) {
   // the item is gone, the sheet closes itself with it.
   const openItem = data.items.find((item) => item.id === openId) ?? null
   const today = useToday()
+
+  // Stable, so the sheets' effects do not tear down and set up again on every
+  // render of the shell. One of those effects moves the focus, and a shell
+  // that re-renders on every keystroke would move it while you type.
+  const closeItem = useCallback(() => setOpenId(null), [])
+  const closeCapture = useCallback(() => setCapturing(false), [])
 
   function report(body: () => Promise<unknown>) {
     setError(null)
@@ -81,7 +87,7 @@ export function AppShell({ session }: Props) {
       {capturing && (
         <CaptureSheet
           onSave={(title) => data.capture(title)}
-          onClose={() => setCapturing(false)}
+          onClose={closeCapture}
         />
       )}
 
@@ -93,7 +99,7 @@ export function AppShell({ session }: Props) {
           onUpdate={data.update}
           onDiscard={data.discard}
           onRetry={(item) => data.retry(item.id)}
-          onClose={() => setOpenId(null)}
+          onClose={closeItem}
         />
       )}
     </div>
