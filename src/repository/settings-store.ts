@@ -4,10 +4,11 @@
 // because these two are not snapshots of a synced table: they are one row for
 // the person and one per area, replaced whole, with no cursor between them.
 
+import type { Expense } from './expense'
 import type { Reserves, RunningCosts } from './settings'
 import { completed, open, request, STORES } from './store'
 
-const { RESERVES, COSTS } = STORES
+const { RESERVES, COSTS, EXPENSES } = STORES
 
 /**
  * The settings, kept the same way the shift parts are: whole, no cursor.
@@ -57,6 +58,34 @@ export const settingsStore = {
     const keys = await request(store.index('owner').getAllKeys(owner))
     for (const key of keys) store.delete(key)
     for (const row of costs) store.put(row)
+    await completed(tx)
+  },
+}
+
+/** The expenses, replaced whole for the same reason the shift parts are. */
+export const expenseStore = {
+  async readAll(owner: string): Promise<Expense[]> {
+    const opened = await open()
+    const tx = opened.transaction(EXPENSES, 'readonly')
+    const rows: unknown = await request(
+      tx.objectStore(EXPENSES).index('owner').getAll(owner),
+    )
+    if (!Array.isArray(rows)) throw new Error('The cache did not return a list')
+    return rows as Expense[]
+  },
+
+  async replaceAll(owner: string, expenses: readonly Expense[]): Promise<void> {
+    for (const expense of expenses) {
+      if (expense.owner !== owner) {
+        throw new Error(`Expense ${expense.item_id} belongs to ${expense.owner}`)
+      }
+    }
+    const opened = await open()
+    const tx = opened.transaction(EXPENSES, 'readwrite')
+    const store = tx.objectStore(EXPENSES)
+    const keys = await request(store.index('owner').getAllKeys(owner))
+    for (const key of keys) store.delete(key)
+    for (const expense of expenses) store.put(expense)
     await completed(tx)
   },
 }

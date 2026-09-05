@@ -98,9 +98,11 @@ export function ShiftSheet(props: Props) {
           <dd>{pounds(sum.grossPence)}</dd>
         </div>
         <div className="shift-total shift-total-net">
-          <dt>Yours</dt>
-          {/* The number the day is actually worth. Only shown as an answer
-              when there is nothing missing behind it. */}
+          <dt>Roughly yours</dt>
+          {/* Roughly, and the word is not modesty. What this day is worth
+              depends on what was actually spent over the month; here the
+              fuel and the wear are what the day used up, at the rate the
+              pump has been charging. */}
           <dd>{sum.missing.length === 0 ? pounds(sum.netPence) : '—'}</dd>
         </div>
         <div className="shift-total">
@@ -116,13 +118,13 @@ export function ShiftSheet(props: Props) {
           <dd>{km === null ? '—' : `${km.toFixed(1)} km`}</dd>
         </div>
         <div className="shift-line">
-          <dt>Fuel and vehicle</dt>
+          <dt>Fuel and wear used</dt>
           <dd>{sum.missing.includes('costs') || sum.missing.includes('kilometres')
             ? '—'
             : `−${pounds(sum.costsPence)}`}</dd>
         </div>
         <div className="shift-line">
-          <dt>Tax and NI put aside</dt>
+          <dt>Tax and NI to put aside</dt>
           <dd>
             {sum.missing.includes('rates')
               ? '—'
@@ -140,7 +142,8 @@ export function ShiftSheet(props: Props) {
       )}
       {sum.missing.includes('costs') && (
         <p className="shift-missing">
-          This area has no cost per kilometre yet — open it in Areas.
+          No cost per kilometre yet. Write down two full tanks under Money out
+          and it works itself out.
         </p>
       )}
       {sum.missing.includes('kilometres') && (

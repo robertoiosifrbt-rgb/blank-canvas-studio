@@ -222,3 +222,32 @@ export function supabaseSettingsWriter() {
     },
   }
 }
+
+/** Every expense of this account, whole: they ride their anchors. */
+export async function supabaseExpenses(): Promise<unknown[]> {
+  const response = await supabase().from('expenses').select(ALL)
+  if (response.error !== null) fail('Fetching the expenses', response.error)
+  return response.data as unknown[]
+}
+
+export function supabaseExpenseWriter(owner: string) {
+  return {
+    async save(values: Record<string, unknown>) {
+      const response = await supabase()
+        .from('expenses')
+        .upsert(values, { onConflict: 'item_id' })
+        .select(ALL)
+        .single()
+      if (response.error !== null) fail('Writing the expense', response.error)
+      return response.data as unknown
+    },
+    async remove(item_id: string) {
+      const response = await supabase()
+        .from('expenses')
+        .delete()
+        .eq('item_id', item_id)
+        .eq('owner', owner)
+      if (response.error !== null) fail('Removing the expense', response.error)
+    },
+  }
+}

@@ -11,7 +11,7 @@ import type { Row } from './row'
 export { isDay } from './row'
 
 export type State = 'inbox' | 'active' | 'done'
-export type Kind = 'task' | 'letter' | 'shift'
+export type Kind = 'task' | 'letter' | 'shift' | 'expense'
 
 export type Item = Row & {
   kind: Kind | null
@@ -40,7 +40,7 @@ export type Patch = Partial<
 >
 
 const STATES: readonly string[] = ['inbox', 'active', 'done']
-const KINDS: readonly string[] = ['task', 'letter', 'shift']
+const KINDS: readonly string[] = ['task', 'letter', 'shift', 'expense']
 
 /**
  * A row that came from the server, checked.

@@ -8,16 +8,25 @@
 import {
   all,
   areasOf,
+  expensesOf,
   reservesOf,
   runningCostsOf,
   shiftsOf,
 } from '../repository/items'
-import type { Area, Item, Reserves, RunningCosts, Shift } from '../repository/items'
+import type {
+  Area,
+  Expense,
+  Item,
+  Reserves,
+  RunningCosts,
+  Shift,
+} from '../repository/items'
 
 export type Snapshot = {
   items: Item[]
   areas: Area[]
   shifts: Shift[]
+  expenses: Expense[]
   reserves: Reserves | null
   costs: RunningCosts[]
 }
@@ -30,12 +39,13 @@ export type Snapshot = {
  * pointing at nothing, or a cost of nothing where there is a cost.
  */
 export async function readSnapshot(owner: string): Promise<Snapshot> {
-  const [items, areas, shifts, reserves, costs] = await Promise.all([
+  const [items, areas, shifts, expenses, reserves, costs] = await Promise.all([
     all(owner),
     areasOf(owner),
     shiftsOf(owner),
+    expensesOf(owner),
     reservesOf(owner),
     runningCostsOf(owner),
   ])
-  return { items, areas, shifts, reserves, costs }
+  return { items, areas, shifts, expenses, reserves, costs }
 }
