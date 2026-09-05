@@ -1,0 +1,125 @@
+// What a stretch of days came to: earned, spent, and what is left.
+//
+// This is the honest figure, and the shift sheet's is not. A shift reports
+// what it used up at the rate the pump has been charging; here the money that
+// actually left the account is counted instead. Adding both would count the
+// same fuel twice, so nothing here looks at a shift's consumption.
+
+import type { Expense } from './expense'
+import type { Item } from './item'
+import type { Reserves } from './settings'
+import { earnedPence } from './shift'
+import type { Shift } from './shift'
+
+export type Period = {
+  /** Everything the platforms and the tips brought in. */
+  grossPence: number
+  /** Everything that actually went out: fuel, repairs, insurance, the rest. */
+  spentPence: number
+  /** What the tax is worked out on. Can be negative; a bad month is a fact. */
+  profitPence: number
+  taxPence: number
+  niPence: number
+  /** What is left after the reserve. */
+  leftPence: number
+
+  shifts: number
+  minutes: number
+  km: number
+  /** True when no percentages are set, so the reserve above is not an answer. */
+  missingRates: boolean
+}
+
+function inRange(day: string | null, from: string, to: string): boolean {
+  // Days are 'YYYY-MM-DD', so comparing them as text compares them as dates.
+  return day !== null && day >= from && day <= to
+}
+
+function minutesOf(shift: Shift): number {
+  let total = 0
+  for (const session of shift.sessions) {
+    if (session.ended_at === null) continue
+    total += (Date.parse(session.ended_at) - Date.parse(session.started_at)) / 60000
+  }
+  return Math.round(total)
+}
+
+/**
+ * The sum over the days from `from` to `to`, both included.
+ *
+ * A day range rather than a month, because the same question gets asked of a
+ * week and of a tax year, and the answer must not be written three times.
+ *
+ * The percentages come from the settings as they stand, not from what each
+ * shift pinned. A shift pins its rates so its own estimate stops moving; a
+ * period is not a shift, and what you should be putting aside now is what you
+ * have set now.
+ */
+export function periodMoney(input: {
+  items: readonly Item[]
+  shifts: readonly Shift[]
+  expenses: readonly Expense[]
+  reserves: Reserves | null
+  from: string
+  to: string
+}): Period {
+  const { items, shifts, expenses, reserves, from, to } = input
+
+  const inside = new Map<string, Item>()
+  for (const item of items) {
+    if (item.deleted_at === null && inRange(item.due, from, to)) {
+      inside.set(item.id, item)
+    }
+  }
+
+  let grossPence = 0
+  let minutes = 0
+  let km = 0
+  let worked = 0
+  for (const shift of shifts) {
+    if (!inside.has(shift.item_id)) continue
+    worked += 1
+    grossPence += earnedPence(shift)
+    minutes += minutesOf(shift)
+    if (shift.odo_start !== null && shift.odo_end !== null) {
+      km += shift.odo_end - shift.odo_start
+    }
+  }
+
+  let spentPence = 0
+  for (const expense of expenses) {
+    if (!inside.has(expense.item_id)) continue
+    spentPence += Math.round(expense.amount * 100)
+  }
+
+  const profitPence = grossPence - spentPence
+
+  let taxPence = 0
+  let niPence = 0
+  if (reserves !== null && profitPence > 0) {
+    taxPence = Math.round((profitPence * reserves.tax_pct) / 100)
+    niPence = Math.round((profitPence * reserves.ni_pct) / 100)
+  }
+
+  return {
+    grossPence,
+    spentPence,
+    profitPence,
+    taxPence,
+    niPence,
+    leftPence: profitPence - taxPence - niPence,
+    shifts: worked,
+    minutes,
+    km: Math.round(km * 10) / 10,
+    missingRates: reserves === null,
+  }
+}
+
+/** The first and last day of a month, as 'YYYY-MM-DD'. */
+export function monthRange(month: string): { from: string; to: string } {
+  const [year, index] = month.split('-').map(Number)
+  // Day zero of the next month is the last day of this one, and it handles
+  // February without anybody writing down how long February is.
+  const last = new Date(Date.UTC(year ?? 0, index ?? 1, 0)).getUTCDate()
+  return { from: `${month}-01`, to: `${month}-${String(last).padStart(2, '0')}` }
+}
