@@ -10,29 +10,90 @@ type Props = {
   onSave: (year: TaxYearSettings) => Promise<void>
 }
 
+/**
+ * The fields, grouped by what they mean.
+ *
+ * They used to come out of the two lists the parser keeps — every amount, then
+ * every rate — which grouped them by what kind of number they are rather than
+ * by what they are for. That put "Wages this year", one of the three figures
+ * that are actually yours, between the Class 4 upper limit and the basic rate.
+ *
+ * Yours first, because they are the only ones that change during a year. The
+ * rest are HMRC's, the same for everybody, and touched once each April.
+ */
+/** The name of any figure the year holds, apart from the year's own label. */
+type Field = (typeof AMOUNTS)[number] | (typeof RATES)[number]
+
+const GROUPS: readonly {
+  title: string
+  note?: string
+  fields: readonly Field[]
+}[] = [
+  {
+    title: 'Your income this year',
+    note: 'What the app cannot see yet: there is no module holding a wage or a company.',
+    fields: ['employment', 'employment_tax_paid', 'dividends'],
+  },
+  {
+    title: 'Income tax',
+    fields: [
+      'personal_allowance',
+      'taper_from',
+      'basic_band',
+      'basic_pct',
+      'higher_band_to',
+      'higher_pct',
+      'additional_pct',
+    ],
+  },
+  {
+    title: 'Dividends',
+    note: 'Their own allowance and their own rates. They pay no National Insurance.',
+    fields: [
+      'dividend_allowance',
+      'dividend_basic_pct',
+      'dividend_higher_pct',
+      'dividend_additional_pct',
+    ],
+  },
+  {
+    title: 'National Insurance, Class 4',
+    note: 'Paid on trading profit and on nothing else.',
+    fields: ['class4_from', 'class4_to', 'class4_main_pct', 'class4_upper_pct'],
+  },
+]
+
 /** What each field is, in the words HMRC uses for it. */
 const NAMES: Record<string, string> = {
+  employment: 'Wages, before tax',
+  employment_tax_paid: 'Tax already taken from them',
+  dividends: 'Dividends received',
   personal_allowance: 'Personal allowance',
   taper_from: 'Allowance shrinks above',
   basic_band: 'Basic rate band',
-  higher_band_to: 'Higher rate up to',
-  dividend_allowance: 'Dividend allowance',
-  class4_from: 'Class 4 starts at',
-  class4_to: 'Class 4 upper limit',
-  employment: 'Wages this year',
-  employment_tax_paid: 'Tax already taken from wages',
-  dividends: 'Dividends this year',
   basic_pct: 'Basic rate %',
+  higher_band_to: 'Higher rate up to',
   higher_pct: 'Higher rate %',
   additional_pct: 'Additional rate %',
-  dividend_basic_pct: 'Dividend basic %',
-  dividend_higher_pct: 'Dividend higher %',
-  dividend_additional_pct: 'Dividend additional %',
-  class4_main_pct: 'Class 4 main %',
-  class4_upper_pct: 'Class 4 upper %',
+  dividend_allowance: 'Dividend allowance',
+  dividend_basic_pct: 'Basic %',
+  dividend_higher_pct: 'Higher %',
+  dividend_additional_pct: 'Additional %',
+  class4_from: 'Starts at',
+  class4_to: 'Upper limit',
+  class4_main_pct: 'Main %',
+  class4_upper_pct: 'Above the upper limit %',
 }
 
-const FIELDS = [...AMOUNTS, ...RATES]
+const FIELDS = GROUPS.flatMap((group) => group.fields)
+
+// The groups and the parser must hold the same fields, or the form saves a
+// year the parser will refuse to read back. Checked here rather than trusted,
+// because the two lists are edited months apart.
+const KEYS = [...AMOUNTS, ...RATES]
+if (FIELDS.length !== KEYS.length || KEYS.some((key) => !FIELDS.includes(key))) {
+  throw new Error('The tax year form and the tax year row hold different fields')
+}
 
 function amount(typed: string): number {
   const trimmed = typed.trim().replace(/^£/, '').replace(/,/g, '')
@@ -84,26 +145,32 @@ export function TaxYearForm({ year, label, onSave }: Props) {
 
   return (
     <section className="hmrc-form">
-      <h3 className="hmrc-heading">The figures for {year?.tax_year ?? label}</h3>
+      <h3 className="hmrc-heading">{year?.tax_year ?? label}</h3>
       <p className="hmrc-note">
-        From the HMRC page for this year. Nothing is guessed for you: a rate
-        that is out of date costs money without saying so.
+        The rates come off the HMRC page for this year. Nothing is guessed for
+        you: one that is out of date costs money without saying so.
       </p>
 
-      {FIELDS.map((key) => (
-        <label key={key} className="hmrc-field">
-          <span className="hmrc-label">{NAMES[key]}</span>
-          <input
-            className="hmrc-number"
-            name={key}
-            inputMode="decimal"
-            value={typed[key] ?? ''}
-            disabled={busy}
-            onChange={(event) =>
-              setTyped((was) => ({ ...was, [key]: event.target.value }))
-            }
-          />
-        </label>
+      {GROUPS.map((group) => (
+        <section key={group.title} className="hmrc-group">
+          <h4 className="hmrc-group-title">{group.title}</h4>
+          {group.note !== undefined && <p className="hmrc-note">{group.note}</p>}
+          {group.fields.map((key) => (
+            <label key={key} className="hmrc-field">
+              <span className="hmrc-label">{NAMES[key]}</span>
+              <input
+                className="hmrc-number"
+                name={key}
+                inputMode="decimal"
+                value={typed[key] ?? ''}
+                disabled={busy}
+                onChange={(event) =>
+                  setTyped((was) => ({ ...was, [key]: event.target.value }))
+                }
+              />
+            </label>
+          ))}
+        </section>
       ))}
 
       {error !== null && <p className="hmrc-error">{error}</p>}
