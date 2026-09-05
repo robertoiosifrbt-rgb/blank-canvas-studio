@@ -77,7 +77,7 @@ export async function sync(
   source: Source,
   store: Store,
 ): Promise<SyncResult> {
-  const previousCursor = await cursorIfAny(owner, store)
+  const previousCursor = await usableCursor(owner, store)
 
   if (previousCursor === null) {
     // First time on this account: a full snapshot.
@@ -100,10 +100,26 @@ export async function sync(
   return { kind: 'delta', fetched: items.length, cursor: nextCursor ?? previousCursor }
 }
 
-/** A cache that is uninitialised or unreadable counts as a first visit. */
-async function cursorIfAny(owner: string, store: Store): Promise<string | null> {
+/**
+ * The cursor, but only if the cache it belongs to can still be read.
+ *
+ * A cache that is uninitialised, unreadable, or holding a single row this
+ * version can no longer parse counts as a first visit — and a first visit
+ * takes a full snapshot, which replaces every row this owner has.
+ *
+ * The row check is the point. Without it, one row written by an older version
+ * pins the account for good: the cursor is still valid, so every sync takes
+ * the delta path, and a delta upserts only what changed on the server. The bad
+ * row is never touched, readAll keeps throwing, and every open fails the same
+ * way with no way out but clearing the browser's storage by hand.
+ */
+async function usableCursor(owner: string, store: Store): Promise<string | null> {
   try {
-    return await store.cursor(owner)
+    const cursor = await store.cursor(owner)
+    if (cursor === null) return null
+    // Reading it is the only way to know it can be read.
+    await store.readAll(owner)
+    return cursor
   } catch {
     return null
   }

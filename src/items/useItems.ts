@@ -75,7 +75,9 @@ export function useItems(owner: string): ItemsHandle {
         }
       } catch (error) {
         // An unreadable cache is not a reason to hide the app: the sync below
-        // replaces it with a full snapshot.
+        // finds it unreadable too and takes a full snapshot, which replaces
+        // every row. That is now true — it used to say so while sync happily
+        // took the delta path and left the bad row where it was.
         console.warn('The cache could not be read:', error)
         if (active) setLoading(false)
       }
