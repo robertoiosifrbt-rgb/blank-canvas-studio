@@ -9,9 +9,17 @@ import {
   takeHome,
 } from '../repository/items'
 import { treeOf } from '../repository/items'
-import type { Area, Item, Platform, Shift } from '../repository/items'
+import type { Area, Item, Platform, RunningCosts, Shift } from '../repository/items'
 import { Sheet } from '../ui/Sheet'
-import { clock, hoursAndMinutes, penceOf, pounds, readingOf } from './money'
+import { ShiftCosts } from './ShiftCosts'
+import {
+  EMPTY_SHIFT,
+  clock,
+  hoursAndMinutes,
+  penceOf,
+  pounds,
+  readingOf,
+} from './money'
 import './ShiftSheet.css'
 
 type Props = {
@@ -25,21 +33,10 @@ type Props = {
   onSaveReadings: (odo_start: number | null, odo_end: number | null) => Promise<void>
   onSaveTips: (tips: number | null) => Promise<void>
   onSetArea: (area_id: string | null) => Promise<void>
+  /** What a kilometre costs in this shift's area, or null if nobody said. */
+  costs: RunningCosts | null
+  onSaveCosts: (fuel_per_km: number, vehicle_per_km: number) => Promise<void>
   onClose: () => void
-}
-
-const NOTHING: Shift = {
-  item_id: '',
-  owner: '',
-  odo_start: null,
-  odo_end: null,
-  tips: null,
-  rate_tax_pct: null,
-  rate_ni_pct: null,
-  rate_fuel_per_km: null,
-  rate_vehicle_per_km: null,
-  sessions: [],
-  earnings: [],
 }
 
 function amountOf(shift: Shift, platform: Platform): string {
@@ -56,7 +53,7 @@ function amountOf(shift: Shift, platform: Platform): string {
  */
 export function ShiftSheet(props: Props) {
   const { item, onClose } = props
-  const shift = props.shift ?? NOTHING
+  const shift = props.shift ?? EMPTY_SHIFT
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -259,6 +256,10 @@ export function ShiftSheet(props: Props) {
           </select>
         </label>
       </section>
+
+      {item.area_id !== null && (
+        <ShiftCosts costs={props.costs} onSave={props.onSaveCosts} />
+      )}
 
       <section className="shift-block">
         <h3 className="shift-heading">Odometer</h3>

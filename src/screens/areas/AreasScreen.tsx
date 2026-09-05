@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { AreaSheet } from '../../areas/AreaSheet'
 import { useScreen } from '../../items/context'
-import { costsFor, countUnder, treeOf } from '../../repository/items'
+import { countUnder, treeOf } from '../../repository/items'
 import './AreasScreen.css'
 
 /**
@@ -131,8 +131,6 @@ export function AreasScreen() {
         <AreaSheet
           area={open}
           under={countUnder(data.areas, open.id)}
-          costs={costsFor(data.costs, open.id)}
-          onSaveCosts={(fuel, vehicle) => data.saveCosts(open.id, fuel, vehicle)}
           onRename={(next) => data.renameArea(open, next)}
           onDrop={() => data.dropArea(open)}
           onClose={() => setOpenId(null)}

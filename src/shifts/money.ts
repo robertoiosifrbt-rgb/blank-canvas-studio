@@ -4,6 +4,8 @@
 // only turn a number into something a person recognises at a glance, on a
 // phone, in the dark, after nine hours of driving.
 
+import type { Shift } from '../repository/items'
+
 /** Pence as pounds: 12645 → '£126.45'. Never rounded away to whole pounds. */
 export function pounds(pence: number): string {
   const sign = pence < 0 ? '-' : ''
@@ -58,4 +60,26 @@ export function readingOf(typed: string): number | null {
     throw new Error(`That is not an odometer reading: ${typed}`)
   }
   return Number(trimmed.replace(',', '.'))
+}
+
+/**
+ * A shift with nothing in it yet.
+ *
+ * The anchor item exists before its numbers do — the row is written a moment
+ * after the item — so the sheet needs something to draw in between. Empty
+ * fields, not zeros: a shift that has not been filled in has no takings, and
+ * £0.00 is a claim.
+ */
+export const EMPTY_SHIFT: Shift = {
+  item_id: '',
+  owner: '',
+  odo_start: null,
+  odo_end: null,
+  tips: null,
+  rate_tax_pct: null,
+  rate_ni_pct: null,
+  rate_fuel_per_km: null,
+  rate_vehicle_per_km: null,
+  sessions: [],
+  earnings: [],
 }

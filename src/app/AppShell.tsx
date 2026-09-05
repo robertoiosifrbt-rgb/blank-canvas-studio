@@ -8,6 +8,7 @@ import { useItems } from '../items/useItems'
 import { ExpenseSheet } from '../spend/ExpenseSheet'
 import { ReservesSheet } from '../shifts/ReservesSheet'
 import { ShiftSheet } from '../shifts/ShiftSheet'
+import { costsFor } from '../repository/items'
 import { signOut } from '../repository/auth'
 import type { Session } from '../repository/auth'
 import { useToday } from './today'
@@ -119,6 +120,12 @@ export function AppShell({ session }: Props) {
           }
           onSaveTips={(tips) => data.saveShiftParts(openItem.id, { tips })}
           onSetArea={(area_id) => data.update(openItem, { area_id })}
+          costs={costsFor(data.costs, openItem.area_id)}
+          onSaveCosts={(fuel, vehicle) =>
+            openItem.area_id === null
+              ? Promise.resolve()
+              : data.saveCosts(openItem.area_id, fuel, vehicle)
+          }
           onClose={closeItem}
         />
       )}
